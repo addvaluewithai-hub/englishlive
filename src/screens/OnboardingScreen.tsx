@@ -2,7 +2,7 @@ import { useMemo, useState, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CharacterPortrait } from '../character/CharacterPortrait';
 import { characterRegistry, DEFAULT_CHARACTER_ID } from '../character/registry';
-import { FIRST_B1_MISSION_ID } from '../curriculum/catalog';
+import { B1_UNIT_1_LESSONS } from '../course/b1/unit1';
 import {
   goalLabel,
   learningGoals,
@@ -56,7 +56,7 @@ export function OnboardingScreen() {
       characterId,
       createdAt: existing?.createdAt ?? new Date().toISOString(),
     });
-    navigate(`/session/${FIRST_B1_MISSION_ID}?character=${characterId}&onboarding=1`);
+    navigate(`/lesson/${B1_UNIT_1_LESSONS[0].id}?character=${characterId}&onboarding=1`);
   }
 
   const canContinue = step === 0 || (step === 1 && goals.length > 0) || (step === 2 && comfort !== null);
@@ -66,23 +66,23 @@ export function OnboardingScreen() {
     <section className="onboarding-screen">
       <aside className="onboarding-rail">
         <div>
-          <p className="eyebrow">Set up your conversations</p>
-          <h1>Make speaking the easy part.</h1>
+          <p className="eyebrow">Set up your live course</p>
+          <h1>Learn by speaking with a real-time teacher.</h1>
         </div>
         <div className="onboarding-progress" aria-label={`Step ${step + 1} of 4`}>
           {[0, 1, 2, 3].map((value) => (
             <span key={value} className={value <= step ? 'is-active' : ''} />
           ))}
         </div>
-        <p className="rail-note">Four quick choices. Then you talk.</p>
+        <p className="rail-note">Four quick choices. Then Unit 1 begins live.</p>
       </aside>
 
       <div className="onboarding-panel">
         {step === 0 ? (
           <div className="onboarding-step">
             <span className="step-number">01</span>
-            <h2>What should your partner call you?</h2>
-            <p className="step-lead">Optional. We only use it to make the conversation feel less mechanical.</p>
+            <h2>What should your teacher call you?</h2>
+            <p className="step-lead">Optional. We only use it to make lessons and conversations feel less mechanical.</p>
             <label className="field-label" htmlFor="first-name">First name</label>
             <input
               id="first-name"
@@ -100,7 +100,7 @@ export function OnboardingScreen() {
           <div className="onboarding-step">
             <span className="step-number">02</span>
             <h2>Where do you want English to feel easier?</h2>
-            <p className="step-lead">Choose one or two. This changes the situations your partner brings into conversation.</p>
+            <p className="step-lead">Choose one or two. Your course sequence stays authored; examples and free conversations can lean toward what matters to you.</p>
             <div className="choice-list">
               {learningGoals.map((goal) => {
                 const selected = goals.includes(goal);
@@ -128,7 +128,7 @@ export function OnboardingScreen() {
           <div className="onboarding-step">
             <span className="step-number">03</span>
             <h2>How does speaking feel right now?</h2>
-            <p className="step-lead">No test yet. Pick the sentence that sounds most like you.</p>
+            <p className="step-lead">No placement claim yet. Pick the sentence that sounds most like you so the live teacher can pace the first lessons sensibly.</p>
             <div className="choice-list comfort-list">
               {speakingComfortLevels.map((value) => (
                 <button
@@ -149,8 +149,8 @@ export function OnboardingScreen() {
         {step === 3 ? (
           <div className="onboarding-step partner-step">
             <span className="step-number">04</span>
-            <h2>Who do you want to talk to first?</h2>
-            <p className="step-lead">You can switch any time. Personality changes the feel of the conversation, not what you are here to practise.</p>
+            <h2>Who do you want as your first live teacher?</h2>
+            <p className="step-lead">You can switch later without changing your Unit or Lesson progress.</p>
             <div className="onboarding-character-grid">
               {characterRegistry.map((character) => (
                 <button
@@ -170,8 +170,8 @@ export function OnboardingScreen() {
               ))}
             </div>
             <div className="mic-note">
-              <strong>Next: a short live conversation with {selectedCharacter.name}.</strong>
-              <span>Microphone access is requested only when you press Start conversation.</span>
+              <strong>Next: B1 · Unit 1 · Lesson 1 with {selectedCharacter.name}.</strong>
+              <span>Microphone access is requested only when you press Start lesson.</span>
             </div>
           </div>
         ) : null}
@@ -191,7 +191,7 @@ export function OnboardingScreen() {
             </button>
           ) : (
             <button type="button" className="button primary" onClick={finish}>
-              Meet {selectedCharacter.name}
+              Start Lesson 1 with {selectedCharacter.name}
             </button>
           )}
         </div>
