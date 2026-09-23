@@ -8,6 +8,7 @@ import {
 } from '../tutor/types';
 import type {
   CourseLessonBeat,
+  CourseLessonBeatState,
   CourseLessonDefinition,
   CourseLessonProgressSnapshot,
   CourseLessonState,
@@ -161,11 +162,20 @@ TEACHING STYLE
 
   private createInitialState(progress?: CourseLessonProgressSnapshot): CourseLessonState {
     const validProgress = progress?.lessonId === this.lesson.id ? progress : undefined;
-    const beats = Object.fromEntries(this.lesson.beats.map((beat, index) => {
+    const beats: Record<string, CourseLessonBeatState> = {};
+
+    this.lesson.beats.forEach((beat, index) => {
       const saved = validProgress?.beatStatuses[beat.id];
-      const status = saved === 'met' ? 'met' : saved === 'active' ? 'active' : 'pending';
-      return [beat.id, { status: index === 0 && !validProgress ? 'active' : status, evidence: [] }];
-    }));
+      const savedStatus: CourseLessonBeatState['status'] = saved === 'met'
+        ? 'met'
+        : saved === 'active'
+          ? 'active'
+          : 'pending';
+      beats[beat.id] = {
+        status: index === 0 && !validProgress ? 'active' : savedStatus,
+        evidence: [],
+      };
+    });
 
     let currentBeatId = validProgress?.currentBeatId;
     if (!currentBeatId || !this.lesson.beats.some((beat) => beat.id === currentBeatId)) {
