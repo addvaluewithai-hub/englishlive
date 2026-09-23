@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import {
   CharacterHost,
@@ -64,7 +64,7 @@ export function SessionScreen() {
     <section className="screen session-shell character-runtime-demo">
       <div
         className="character-hero-stage"
-        style={{ '--character-accent': character.accent } as React.CSSProperties}
+        style={{ '--character-accent': character.accent } as CSSProperties}
       >
         <div className="stage-glow" aria-hidden="true" />
         <CharacterHost ref={host} character={character} />
