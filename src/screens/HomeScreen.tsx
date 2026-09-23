@@ -1,11 +1,14 @@
-import type { CSSProperties } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import { CharacterPortrait } from '../character/CharacterPortrait';
 import { getCharacterDefinition } from '../character/registry';
-import { nextConversationForGoal, readLearnerProfile } from '../product/profile';
+import { FIRST_B1_MISSION_ID, resolveConversationMission } from '../curriculum/catalog';
+import { readEnglishLiveMemory, removeRelationshipMemory } from '../memory/store';
+import { readLearnerProfile } from '../product/profile';
 
 export function HomeScreen() {
   const profile = readLearnerProfile();
+  const [, setMemoryRevision] = useState(0);
 
   if (!profile) {
     return (
@@ -19,8 +22,20 @@ export function HomeScreen() {
   }
 
   const character = getCharacterDefinition(profile.characterId);
-  const next = nextConversationForGoal(profile.goals[0]);
+  const next = resolveConversationMission(FIRST_B1_MISSION_ID, profile.goals[0]);
+  const memory = readEnglishLiveMemory();
+  const recentCapabilities = Object.values(memory.capabilities)
+    .sort((left, right) => right.lastPractisedAt.localeCompare(left.lastPractisedAt))
+    .slice(0, 3);
+  const partnerNotes = memory.relationshipNotes
+    .filter((note) => note.characterId === character.id)
+    .slice(-3);
   const greeting = profile.firstName ? `Ready, ${profile.firstName}?` : 'Ready to speak?';
+
+  function forgetNote(noteId: string) {
+    removeRelationshipMemory(noteId);
+    setMemoryRevision((value) => value + 1);
+  }
 
   return (
     <section className="screen product-home">
@@ -32,11 +47,11 @@ export function HomeScreen() {
 
       <article className="next-conversation">
         <div className="next-copy">
-          <span className="session-meta">Warm-up conversation</span>
+          <span className="session-meta">B1 · connected conversation</span>
           <h2>{next.title}</h2>
-          <p>{next.description}</p>
+          <p>{next.purpose}</p>
           <div className="actions">
-            <Link className="button primary" to={`/session/foundation-demo?character=${character.id}`}>Talk with {character.name}</Link>
+            <Link className="button primary" to={`/session/${FIRST_B1_MISSION_ID}?character=${character.id}`}>Talk with {character.name}</Link>
             <Link className="button quiet" to="/characters">Change partner</Link>
           </div>
         </div>
@@ -57,18 +72,49 @@ export function HomeScreen() {
         <div className="path-list">
           <article>
             <span>01</span>
-            <div><strong>Keep talking when a word disappears.</strong><p>Clarify, rephrase, and repair instead of giving up the turn.</p></div>
+            <div><strong>Make the situation easy to follow.</strong><p>Give enough context, then connect what happened without needing a memorized script.</p></div>
           </article>
           <article>
             <span>02</span>
-            <div><strong>Make longer answers feel organized.</strong><p>Tell stories, give reasons, and connect one idea to the next.</p></div>
+            <div><strong>Explain why it mattered.</strong><p>Add a reason, reaction, or consequence instead of only listing events.</p></div>
           </article>
           <article>
             <span>03</span>
-            <div><strong>Sound like a person, not a worksheet.</strong><p>Ask back, react naturally, disagree politely, and handle interruptions.</p></div>
+            <div><strong>Handle the question you did not prepare for.</strong><p>Clarify, rephrase, and keep the exchange moving when the conversation changes direction.</p></div>
           </article>
         </div>
       </section>
+
+      {recentCapabilities.length || partnerNotes.length ? (
+        <section className="path-section">
+          <div className="path-heading">
+            <p className="eyebrow">What carries forward</p>
+            <h2>Memory without a fake score.</h2>
+            <p className="lead">EnglishLive keeps structured practice observations. Optional personal continuity with {character.name} is saved only after you approve it.</p>
+          </div>
+          <div className="path-list">
+            {recentCapabilities.map((capability, index) => (
+              <article key={capability.capabilityId}>
+                <span>{String(index + 1).padStart(2, '0')}</span>
+                <div>
+                  <strong>{capability.recycleSuggested ? 'Worth another natural try' : 'Seen successfully in practice'}</strong>
+                  <p>{capability.successfulSessions} successful session observation{capability.successfulSessions === 1 ? '' : 's'} across {capability.attemptedSessions} attempt{capability.attemptedSessions === 1 ? '' : 's'}. This is evidence, not a mastery score.</p>
+                </div>
+              </article>
+            ))}
+            {partnerNotes.map((note) => (
+              <article key={note.id}>
+                <span>↗</span>
+                <div>
+                  <strong>{character.name} can follow up on this</strong>
+                  <p>{note.text}</p>
+                  <button type="button" className="button quiet" onClick={() => forgetNote(note.id)}>Forget this</button>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
     </section>
   );
 }

@@ -6,19 +6,23 @@ import { CharacterHost, type CharacterHostHandle } from '../character/CharacterH
 import { CharacterPerformanceController } from '../character/CharacterPerformanceController';
 import { getCharacterDefinition } from '../character/registry';
 import { ConversationBoard } from '../components/ConversationBoard';
+import { FIRST_B1_MISSION_ID, resolveConversationMission } from '../curriculum/catalog';
 import { GeminiLiveTransport } from '../live/GeminiLiveTransport';
 import type { LiveStatus } from '../live/types';
+import { buildMemoryPrompt } from '../memory/context';
+import { recordSessionOutcome } from '../memory/learnerModel';
+import { RelationshipMemoryCollector } from '../memory/RelationshipMemoryCollector';
+import { keepRelationshipMemory, readEnglishLiveMemory } from '../memory/store';
+import type { RelationshipMemoryProposal } from '../memory/types';
 import { ConversationPresentation } from '../presentation/ConversationPresentation';
 import { StageDirector } from '../presentation/StageDirector';
 import { initialStageState, type StageState } from '../presentation/types';
 import {
   comfortLabel,
   goalPrompt,
-  nextConversationForGoal,
   readLearnerProfile,
 } from '../product/profile';
 import { ConversationTutorRuntime } from '../tutor/ConversationTutorRuntime';
-import { createFoundationDemoMission } from '../tutor/demoMission';
 import type { ConversationMissionState } from '../tutor/types';
 
 function pcmSampleRate(mimeType: string) {
@@ -44,16 +48,17 @@ const statusCopy: Record<LiveStatus, string> = {
   error: 'Try again',
 };
 
+interface SessionMeta {
+  sessionId: string;
+  startedAt: string;
+}
+
 export function SessionScreen() {
-  const { missionId = 'foundation-demo' } = useParams();
+  const { missionId = FIRST_B1_MISSION_ID } = useParams();
   const [params] = useSearchParams();
   const character = getCharacterDefinition(params.get('character'));
   const profile = readLearnerProfile();
-  const conversationFocus = nextConversationForGoal(profile?.goals[0]);
-  const missionDefinition = createFoundationDemoMission(
-    conversationFocus.title,
-    conversationFocus.description,
-  );
+  const missionDefinition = resolveConversationMission(missionId, profile?.goals[0]);
   const firstConversation = params.get('onboarding') === '1';
 
   const host = useRef<CharacterHostHandle | null>(null);
@@ -63,6 +68,9 @@ export function SessionScreen() {
   const performer = useRef<CharacterPerformanceController | null>(null);
   const tutor = useRef<ConversationTutorRuntime | null>(null);
   const stageDirector = useRef<StageDirector | null>(null);
+  const relationshipCollector = useRef<RelationshipMemoryCollector | null>(null);
+  const sessionMeta = useRef<SessionMeta | null>(null);
+  const sessionRecorded = useRef(false);
 
   const [status, setStatus] = useState<LiveStatus>('idle');
   const [micLevel, setMicLevel] = useState(0);
@@ -71,11 +79,28 @@ export function SessionScreen() {
   const [performanceLabel, setPerformanceLabel] = useState('audio-driven locally');
   const [missionState, setMissionState] = useState<ConversationMissionState | null>(null);
   const [stageState, setStageState] = useState<StageState>(initialStageState);
+  const [relationshipProposal, setRelationshipProposal] = useState<RelationshipMemoryProposal | null>(null);
   const [startedOnce, setStartedOnce] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  function persistSessionMemory() {
+    if (sessionRecorded.current) return;
+    const meta = sessionMeta.current;
+    const runtime = tutor.current;
+    if (!meta || !runtime) return;
+    recordSessionOutcome({
+      sessionId: meta.sessionId,
+      mission: missionDefinition,
+      state: runtime.snapshot,
+      characterId: character.id,
+      startedAt: meta.startedAt,
+    });
+    sessionRecorded.current = true;
+  }
+
   useEffect(() => {
     return () => {
+      persistSessionMemory();
       transport.current?.close();
       void microphone.current?.stop();
       void playback.current?.close();
@@ -92,6 +117,11 @@ export function SessionScreen() {
 
   async function startLive() {
     if (status !== 'idle' && status !== 'error') return;
+    persistSessionMemory();
+    sessionMeta.current = null;
+    sessionRecorded.current = false;
+    relationshipCollector.current = null;
+    setRelationshipProposal(null);
     setError(null);
     setInputTranscript('');
     setOutputTranscript('');
@@ -111,6 +141,9 @@ export function SessionScreen() {
       director,
       () => tutorRuntime.currentObjective,
     );
+
+    const memoryCollector = new RelationshipMemoryCollector(setRelationshipProposal);
+    relationshipCollector.current = memoryCollector;
 
     const characterPerformance = new CharacterPerformanceController(() => host.current);
     performer.current = characterPerformance;
@@ -162,7 +195,7 @@ export function SessionScreen() {
         onTurnComplete: () => queue.markTurnComplete(),
         onError: setError,
       },
-      [...tutorRuntime.tools, presentation.tool],
+      [...tutorRuntime.tools, presentation.tool, memoryCollector.tool],
     );
     transport.current = live;
 
@@ -171,14 +204,14 @@ export function SessionScreen() {
 
     const learnerContext = profile
       ? `The learner's first name is ${profile.firstName || 'not provided'}. Their main reason for speaking practice is to ${goalPrompt(profile.goals[0] ?? 'everyday')}. Their self-description is: ${comfortLabel(profile.comfort)} Treat these as private context for pacing and topic choice; never recite these labels back to them.`
-      : 'No learner profile is available yet. Start with an easy everyday topic and calibrate from the conversation itself.';
-
+      : 'No learner profile is available yet. Start with an easy familiar topic and calibrate from the conversation itself.';
+    const productMemory = buildMemoryPrompt(readEnglishLiveMemory(), missionDefinition, character.id);
     const characterPrompt = `You are ${character.name}, ${character.persona.style}. Stay in character as a natural English conversation partner for an adult learner. Speak only English unless the learner explicitly asks for a brief clarification. Keep spoken turns concise enough to invite the learner back in. Do not lecture. Allow interruptions. Correct selectively and naturally.`;
 
     try {
       await queue.unlock();
       await live.connect(
-        `${characterPrompt}\n\n${learnerContext}\n\n${tutorRuntime.systemPrompt}`,
+        `${characterPrompt}\n\n${learnerContext}\n\n${productMemory}\n\n${memoryCollector.systemPrompt}\n\n${tutorRuntime.systemPrompt}`,
       );
       await mic.start(
         (chunk) => live.sendAudio(chunk),
@@ -187,11 +220,15 @@ export function SessionScreen() {
           tutorRuntime.recordLearnerAudioLevel(level);
         },
       );
+      sessionMeta.current = {
+        sessionId: crypto.randomUUID(),
+        startedAt: new Date().toISOString(),
+      };
       setStartedOnce(true);
       live.sendText(
         `${firstConversation
           ? 'This is the learner’s first EnglishLive conversation. Greet them warmly and use their first name if it was provided.'
-          : `The visible conversation focus is: ${conversationFocus.title}.`
+          : `Continue naturally with this mission: ${missionDefinition.title}.`
         } Before speaking, call get_mission_state. Then follow this opening brief: ${missionDefinition.openingPrompt}`,
       );
     } catch (reason) {
@@ -207,6 +244,7 @@ export function SessionScreen() {
   }
 
   async function stopLive() {
+    persistSessionMemory();
     transport.current?.endAudioStream();
     transport.current?.close();
     transport.current = null;
@@ -218,9 +256,22 @@ export function SessionScreen() {
     performer.current = null;
     stageDirector.current?.reset();
     stageDirector.current = null;
+    tutor.current = null;
     setMicLevel(0);
     setPerformanceLabel('audio-driven locally');
     setStatus('idle');
+  }
+
+  function keepProposal() {
+    if (!relationshipProposal) return;
+    keepRelationshipMemory(relationshipProposal, missionDefinition.id, character.id);
+    relationshipCollector.current?.clear();
+    setRelationshipProposal(null);
+  }
+
+  function dismissProposal() {
+    relationshipCollector.current?.clear();
+    setRelationshipProposal(null);
   }
 
   const connecting = status === 'connecting' || status === 'reconnecting';
@@ -234,8 +285,8 @@ export function SessionScreen() {
     <section className="session-screen">
       <div className="session-stage" style={{ '--character-accent': character.accent } as CSSProperties}>
         <div className="session-stage-meta">
-          <span>{firstConversation ? 'First conversation' : 'Today’s conversation'}</span>
-          <strong>{conversationFocus.title}</strong>
+          <span>{firstConversation ? 'First conversation' : 'B1 conversation'}</span>
+          <strong>{missionDefinition.title}</strong>
         </div>
 
         <div className={`session-stage-body stage-mode-${stageState.mode}`}>
@@ -276,8 +327,8 @@ export function SessionScreen() {
       <aside className="conversation-sidebar">
         <div className="conversation-sidebar-heading">
           <p className="eyebrow">Live conversation</p>
-          <h2>Do not prepare the sentence.</h2>
-          <p>Say the version you have. You can repair it while you speak.</p>
+          <h2>Tell the story, not the perfect sentence.</h2>
+          <p>{missionDefinition.purpose}</p>
         </div>
 
         {error ? <div className="live-error" role="alert">{error}</div> : null}
@@ -296,14 +347,26 @@ export function SessionScreen() {
         {startedOnce && status === 'idle' ? (
           <div className="session-next-step">
             <strong>{missionComplete ? 'Practice complete.' : firstConversation ? 'First conversation done.' : 'Conversation ended.'}</strong>
-            <p>{missionComplete ? 'You covered every goal in this practice.' : 'You can come back and continue from another conversation.'}</p>
+            <p>{missionComplete ? 'You gave usable evidence across every goal in this conversation. That is one observation, not a level score.' : 'Any useful attempts from this conversation can shape what comes back in later practice.'}</p>
+
+            {relationshipProposal ? (
+              <div className="memory-consent-card">
+                <strong>Remember this with {character.name} for next time?</strong>
+                <p>{relationshipProposal.text}</p>
+                <div className="actions">
+                  <button type="button" className="button primary" onClick={keepProposal}>Keep</button>
+                  <button type="button" className="button quiet" onClick={dismissProposal}>Not now</button>
+                </div>
+              </div>
+            ) : null}
+
             <Link className="text-link" to="/home">Back to my plan →</Link>
           </div>
         ) : null}
 
         <details className="session-tech-details">
           <summary>Session details</summary>
-          <span>Route mission: {missionId}</span>
+          <span>Mission: {missionDefinition.id}</span>
           <span>Runtime: {missionState ? `${metObjectives}/${missionDefinition.objectives.length} objectives evidenced` : 'not started'}</span>
           <span>Stage: {stageState.mode}</span>
           <span>Performance: {performanceLabel}</span>

@@ -2,6 +2,7 @@ import { useMemo, useState, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CharacterPortrait } from '../character/CharacterPortrait';
 import { characterRegistry, DEFAULT_CHARACTER_ID } from '../character/registry';
+import { FIRST_B1_MISSION_ID } from '../curriculum/catalog';
 import {
   goalLabel,
   learningGoals,
@@ -55,7 +56,7 @@ export function OnboardingScreen() {
       characterId,
       createdAt: existing?.createdAt ?? new Date().toISOString(),
     });
-    navigate(`/session/foundation-demo?character=${characterId}&onboarding=1`);
+    navigate(`/session/${FIRST_B1_MISSION_ID}?character=${characterId}&onboarding=1`);
   }
 
   const canContinue = step === 0 || (step === 1 && goals.length > 0) || (step === 2 && comfort !== null);
