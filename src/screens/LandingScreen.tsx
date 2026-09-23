@@ -54,7 +54,7 @@ export function LandingScreen() {
               <span>01</span>
               <div>
                 <h3>Choose someone you actually want to talk to.</h3>
-                <p>Different personalities, same learning system underneath.</p>
+                <p>Different personalities, same goal: keep you speaking.</p>
               </div>
             </article>
             <article>
