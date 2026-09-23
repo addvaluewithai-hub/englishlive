@@ -1,3 +1,5 @@
+import type { CharacterPerformanceCue } from '../character/performance';
+
 export type LiveStatus = 'idle' | 'connecting' | 'listening' | 'speaking' | 'reconnecting' | 'error';
 
 export interface LiveTokenResponse {
@@ -10,6 +12,8 @@ export interface LiveCallbacks {
   onInputTranscript(text: string): void;
   onOutputTranscript(text: string): void;
   onAudio(data: string, mimeType: string): void;
+  onPerformanceCue(cue: CharacterPerformanceCue): void;
+  onPerformanceCancelled(): void;
   onInterrupted(): void;
   onTurnComplete(): void;
   onError(message: string): void;

@@ -1,3 +1,6 @@
+import type { MouthPose } from '../character/types';
+import { VisemeAnalyzer } from './VisemeAnalyzer';
+
 const base64ToInt16 = (base64: string) => {
   const binary = atob(base64);
   const evenLength = binary.length - (binary.length % 2);
@@ -10,6 +13,7 @@ export interface PlaybackCallbacks {
   onSpeechStart?: () => void;
   onSpeechEnd?: () => void;
   onTurnComplete?: () => void;
+  onMouthPose?: (pose: MouthPose | null) => void;
 }
 
 export class PcmPlaybackQueue {
@@ -22,20 +26,23 @@ export class PcmPlaybackQueue {
   private turnCompletePending = false;
   private turnHasAudio = false;
   private starvationTimer: number | null = null;
+  private timers = new Set<number>();
+  private readonly visemes = new VisemeAnalyzer();
 
   constructor(private readonly callbacks: PlaybackCallbacks = {}) {}
 
   async unlock() {
     if (!this.context) this.context = new AudioContext({ latencyHint: 'interactive' });
     if (this.context.state === 'suspended') await this.context.resume();
-
-    // Start a silent buffer while this method is still inside the user's click.
-    // This keeps delayed Gemini output playable on Safari/iOS autoplay policies.
     const buffer = this.context.createBuffer(1, 1, this.context.sampleRate);
     const source = this.context.createBufferSource();
     source.buffer = buffer;
     source.connect(this.context.destination);
     source.start();
+  }
+
+  pushTranscript(text: string) {
+    this.visemes.pushTranscript(text);
   }
 
   enqueue(base64: string, sampleRate = 24_000) {
@@ -48,7 +55,12 @@ export class PcmPlaybackQueue {
   markTurnComplete() {
     const generation = this.generation;
     void this.enqueueChain.then(() => {
-      if (generation !== this.generation || !this.turnHasAudio) return;
+      if (generation !== this.generation) return;
+      if (!this.turnHasAudio) {
+        this.visemes.resetTranscript();
+        this.callbacks.onTurnComplete?.();
+        return;
+      }
       this.turnCompletePending = true;
       if (this.active.size === 0) this.finishOutput();
     });
@@ -58,6 +70,7 @@ export class PcmPlaybackQueue {
     this.generation += 1;
     const hadPlayback = this.outputActive || this.active.size > 0;
     this.clearStarvationTimer();
+    this.clearTimers();
     for (const source of this.active) {
       source.onended = null;
       try { source.stop(); } catch { /* already stopped */ }
@@ -67,6 +80,8 @@ export class PcmPlaybackQueue {
     this.turnHasAudio = false;
     this.turnCompletePending = false;
     this.outputActive = false;
+    this.visemes.resetTranscript();
+    this.callbacks.onMouthPose?.(null);
     if (hadPlayback) this.callbacks.onSpeechEnd?.();
   }
 
@@ -97,9 +112,15 @@ export class PcmPlaybackQueue {
     const startAt = Math.max(now + (this.nextStart === 0 ? 0.075 : 0.012), this.nextStart);
     if (!this.outputActive) {
       this.outputActive = true;
-      const delay = Math.max(0, (startAt - now) * 1000);
-      window.setTimeout(() => this.callbacks.onSpeechStart?.(), delay);
+      this.schedule(startAt, generation, () => this.callbacks.onSpeechStart?.());
     }
+
+    for (const frame of this.visemes.analyze(samples, sampleRate)) {
+      this.schedule(startAt + frame.offsetSeconds, generation, () => {
+        this.callbacks.onMouthPose?.(frame.pose);
+      });
+    }
+
     this.turnHasAudio = true;
     source.start(startAt);
     this.nextStart = startAt + buffer.duration;
@@ -116,13 +137,26 @@ export class PcmPlaybackQueue {
     };
   }
 
+  private schedule(audioTime: number, generation: number, callback: () => void) {
+    if (!this.context) return;
+    const delay = Math.max(0, (audioTime - this.context.currentTime) * 1000);
+    const timer = window.setTimeout(() => {
+      this.timers.delete(timer);
+      if (generation === this.generation) callback();
+    }, delay);
+    this.timers.add(timer);
+  }
+
   private finishOutput() {
     const completed = this.turnCompletePending && this.turnHasAudio;
     this.clearStarvationTimer();
+    this.clearTimers();
     this.nextStart = 0;
     this.outputActive = false;
     this.turnCompletePending = false;
     this.turnHasAudio = false;
+    this.visemes.resetTranscript();
+    this.callbacks.onMouthPose?.(null);
     if (completed) this.callbacks.onTurnComplete?.();
     this.callbacks.onSpeechEnd?.();
   }
@@ -130,5 +164,10 @@ export class PcmPlaybackQueue {
   private clearStarvationTimer() {
     if (this.starvationTimer !== null) window.clearTimeout(this.starvationTimer);
     this.starvationTimer = null;
+  }
+
+  private clearTimers() {
+    for (const timer of this.timers) window.clearTimeout(timer);
+    this.timers.clear();
   }
 }
