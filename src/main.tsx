@@ -5,6 +5,7 @@ import { App } from './app/App';
 import './styles.css';
 import './session-stage.css';
 import './m9-shell.css';
+import './m9-5-course.css';
 
 const root = document.getElementById('root');
 if (!root) throw new Error('EnglishLive root element was not found.');
