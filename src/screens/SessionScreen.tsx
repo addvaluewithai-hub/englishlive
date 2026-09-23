@@ -3,6 +3,7 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { MicrophonePcmStream } from '../audio/MicrophonePcmStream';
 import { PcmPlaybackQueue } from '../audio/PcmPlaybackQueue';
 import { CharacterHost, type CharacterHostHandle } from '../character/CharacterHost';
+import { CharacterPerformanceController } from '../character/CharacterPerformanceController';
 import { getCharacterDefinition } from '../character/registry';
 import { GeminiLiveTransport } from '../live/GeminiLiveTransport';
 import type { LiveStatus } from '../live/types';
@@ -29,10 +30,12 @@ export function SessionScreen() {
   const transport = useRef<GeminiLiveTransport | null>(null);
   const microphone = useRef<MicrophonePcmStream | null>(null);
   const playback = useRef<PcmPlaybackQueue | null>(null);
+  const performer = useRef<CharacterPerformanceController | null>(null);
   const [status, setStatus] = useState<LiveStatus>('idle');
   const [micLevel, setMicLevel] = useState(0);
   const [inputTranscript, setInputTranscript] = useState('');
   const [outputTranscript, setOutputTranscript] = useState('');
+  const [performanceLabel, setPerformanceLabel] = useState('audio-driven locally');
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -40,15 +43,14 @@ export function SessionScreen() {
       transport.current?.close();
       void microphone.current?.stop();
       void playback.current?.close();
-      host.current?.cancel();
+      performer.current?.close();
     };
   }, []);
 
   useEffect(() => {
-    if (status === 'speaking') host.current?.setMode('speaking');
-    else if (status === 'listening') host.current?.setMode('listening');
-    else if (status === 'connecting' || status === 'reconnecting') host.current?.setMode('thinking');
-    else host.current?.setMode('idle');
+    if (status === 'connecting' || status === 'reconnecting') performer.current?.thinking();
+    else if (status === 'listening') performer.current?.listening();
+    else if (status === 'idle' || status === 'error') host.current?.setMode('idle');
   }, [status, character.id]);
 
   async function startLive() {
@@ -56,14 +58,20 @@ export function SessionScreen() {
     setError(null);
     setInputTranscript('');
     setOutputTranscript('');
+    setPerformanceLabel('audio-driven locally');
+
+    const characterPerformance = new CharacterPerformanceController(() => host.current);
+    performer.current = characterPerformance;
 
     const queue = new PcmPlaybackQueue({
+      onMouthPose: (pose) => characterPerformance.setMouth(pose),
       onSpeechStart: () => {
         setStatus('speaking');
-        host.current?.setMode('speaking');
+        characterPerformance.speechStart();
       },
       onSpeechEnd: () => {
-        host.current?.setMode('listening');
+        setStatus((current) => current === 'idle' || current === 'error' ? current : 'listening');
+        characterPerformance.speechEnd();
       },
     });
     playback.current = queue;
@@ -71,12 +79,23 @@ export function SessionScreen() {
     const live = new GeminiLiveTransport({
       onStatus: setStatus,
       onInputTranscript: (text) => setInputTranscript((current) => appendTranscript(current, text)),
-      onOutputTranscript: (text) => setOutputTranscript((current) => appendTranscript(current, text)),
+      onOutputTranscript: (text) => {
+        queue.pushTranscript(text);
+        setOutputTranscript((current) => appendTranscript(current, text));
+      },
       onAudio: (data, mimeType) => void queue.enqueue(data, pcmSampleRate(mimeType)),
+      onPerformanceCue: (cue) => {
+        characterPerformance.applyCue(cue);
+        setPerformanceLabel(`${cue.emotion} · ${cue.gesture}`);
+      },
+      onPerformanceCancelled: () => {
+        characterPerformance.cancelCue();
+        setPerformanceLabel('audio-driven locally');
+      },
       onInterrupted: () => {
         queue.interrupt();
-        host.current?.cancel();
-        host.current?.setMode('listening');
+        characterPerformance.interrupt();
+        setPerformanceLabel('audio-driven locally');
       },
       onTurnComplete: () => queue.markTurnComplete(),
       onError: setError,
@@ -87,7 +106,6 @@ export function SessionScreen() {
     microphone.current = mic;
 
     try {
-      // Unlock playback inside the user's click before token/network awaits.
       await queue.unlock();
       await live.connect(
         `You are ${character.name}, ${character.persona.style}. You are a natural English conversation partner for an adult learner around CEFR B1-B2. Speak only English unless the learner explicitly asks for a brief clarification. Keep replies conversational and usually short enough to invite the learner back in. Do not lecture. Ask natural follow-up questions, allow interruptions, and gently recast important mistakes without correcting every sentence.`,
@@ -101,6 +119,7 @@ export function SessionScreen() {
       live.close();
       await mic.stop();
       await queue.close();
+      characterPerformance.close();
     }
   }
 
@@ -112,9 +131,10 @@ export function SessionScreen() {
     microphone.current = null;
     await playback.current?.close();
     playback.current = null;
+    performer.current?.close();
+    performer.current = null;
     setMicLevel(0);
-    host.current?.cancel();
-    host.current?.setMode('idle');
+    setPerformanceLabel('audio-driven locally');
     setStatus('idle');
   }
 
@@ -133,7 +153,7 @@ export function SessionScreen() {
       </div>
 
       <aside className="character-lab-card live-control-card">
-        <p className="eyebrow">Milestone 3 · Live Voice Core</p>
+        <p className="eyebrow">Milestone 4 · Character Performance</p>
         <h2>{character.name}</h2>
         <p>{character.tagline}</p>
 
@@ -153,6 +173,10 @@ export function SessionScreen() {
         {error ? <div className="live-error" role="alert">{error}</div> : null}
 
         <div className="transcript-card">
+          <small>Character performance</small>
+          <p>{performanceLabel}</p>
+        </div>
+        <div className="transcript-card">
           <small>You</small>
           <p>{inputTranscript || 'Your transcript will appear here.'}</p>
         </div>
@@ -162,7 +186,7 @@ export function SessionScreen() {
         </div>
 
         <small className="runtime-note">
-          Mission: {missionId}. This milestone proves live audio, interruption, transcription and session resumption. Curriculum control comes later.
+          Mission: {missionId}. Mouth shape and speech energy follow audible PCM locally. Gemini may add at most one sparse semantic acting cue per turn.
         </small>
       </aside>
     </section>

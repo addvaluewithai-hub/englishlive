@@ -1,3 +1,9 @@
+import {
+  normalizePerformanceCue,
+  PERFORMANCE_GUIDANCE,
+  PERFORMANCE_TOOL_NAME,
+  performanceToolDeclaration,
+} from '../character/performance';
 import { apiUrl } from '../config/api';
 import { DEFAULT_LIVE_MODEL, isLiveModel, type LiveModel } from './models';
 import type { LiveCallbacks, LiveTokenResponse, LiveTransport } from './types';
@@ -6,7 +12,14 @@ const LIVE_ENDPOINT =
   'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContentConstrained';
 const SETUP_TIMEOUT_MS = 12_000;
 
+interface FunctionCall {
+  id?: string;
+  name: string;
+  args?: Record<string, unknown>;
+}
+
 interface ServerMessage {
+  error?: { message?: string };
   setupComplete?: Record<string, never>;
   serverContent?: {
     interrupted?: boolean;
@@ -21,6 +34,8 @@ interface ServerMessage {
       }>;
     };
   };
+  toolCall?: { functionCalls?: FunctionCall[] };
+  toolCallCancellation?: { ids?: string[] };
   sessionResumptionUpdate?: { newHandle?: string; resumable?: boolean };
   goAway?: { timeLeft?: string };
 }
@@ -30,9 +45,7 @@ async function decodeSocketMessage(data: unknown): Promise<string> {
   if (data instanceof Blob) return data.text();
   if (data instanceof ArrayBuffer) return new TextDecoder().decode(data);
   if (ArrayBuffer.isView(data)) {
-    return new TextDecoder().decode(
-      new Uint8Array(data.buffer, data.byteOffset, data.byteLength),
-    );
+    return new TextDecoder().decode(new Uint8Array(data.buffer, data.byteOffset, data.byteLength));
   }
   throw new Error(`Unsupported Gemini Live message: ${Object.prototype.toString.call(data)}`);
 }
@@ -46,6 +59,9 @@ export class GeminiLiveTransport implements LiveTransport {
   private systemInstruction = '';
   private resumptionHandle: string | null = null;
   private reconnecting = false;
+  private performanceCueUsedThisTurn = false;
+  private readonly acknowledgedCallIds = new Set<string>();
+  private readonly activePerformanceCallIds = new Set<string>();
 
   constructor(
     private readonly callbacks: LiveCallbacks,
@@ -73,7 +89,6 @@ export class GeminiLiveTransport implements LiveTransport {
     const generation = ++this.connectGeneration;
     this.systemInstruction = systemInstruction.trim();
     this.callbacks.onStatus('connecting');
-
     const issued = await this.tokenProvider();
     if (generation !== this.connectGeneration) throw new Error('Session was closed.');
     if (!isLiveModel(issued.model)) throw new Error(`Unexpected Live model: ${issued.model}`);
@@ -84,11 +99,7 @@ export class GeminiLiveTransport implements LiveTransport {
 
   sendAudio(base64Pcm16: string) {
     if (!this.connected) return;
-    this.send({
-      realtimeInput: {
-        audio: { data: base64Pcm16, mimeType: 'audio/pcm;rate=16000' },
-      },
-    });
+    this.send({ realtimeInput: { audio: { data: base64Pcm16, mimeType: 'audio/pcm;rate=16000' } } });
   }
 
   endAudioStream() {
@@ -97,14 +108,17 @@ export class GeminiLiveTransport implements LiveTransport {
 
   sendText(text: string) {
     const value = text.trim();
-    if (!this.connected || !value) return;
-    this.send({ realtimeInput: { text: value } });
+    if (this.connected && value) this.send({ realtimeInput: { text: value } });
   }
 
   close() {
     this.connectGeneration += 1;
     this.reconnecting = false;
     this.setupComplete = false;
+    this.performanceCueUsedThisTurn = false;
+    this.activePerformanceCallIds.clear();
+    this.acknowledgedCallIds.clear();
+    this.callbacks.onPerformanceCancelled();
     this.socket?.close(1000, 'client close');
     this.socket = null;
     this.callbacks.onStatus('idle');
@@ -117,7 +131,6 @@ export class GeminiLiveTransport implements LiveTransport {
       this.socket = socket;
       let settled = false;
       let setupTimer: number | null = null;
-
       const clearSetupTimer = () => {
         if (setupTimer !== null) window.clearTimeout(setupTimer);
         setupTimer = null;
@@ -154,8 +167,11 @@ export class GeminiLiveTransport implements LiveTransport {
             model: `models/${this.model}`,
             generationConfig: { responseModalities: ['AUDIO'] },
             systemInstruction: {
-              parts: [{ text: this.systemInstruction || 'You are a warm English conversation partner. Keep the conversation natural and concise.' }],
+              parts: [{
+                text: `${this.systemInstruction || 'You are a warm English conversation partner. Keep the conversation natural and concise.'}\n\n${PERFORMANCE_GUIDANCE}`,
+              }],
             },
+            tools: [{ functionDeclarations: [performanceToolDeclaration] }],
             realtimeInputConfig: {
               activityHandling: 'START_OF_ACTIVITY_INTERRUPTS',
               automaticActivityDetection: {
@@ -167,7 +183,7 @@ export class GeminiLiveTransport implements LiveTransport {
               },
               turnCoverage: 'TURN_INCLUDES_ONLY_ACTIVITY',
             },
-            inputAudioTranscription: {},
+            inputAudioTranscription: { languageCodes: ['en-US', 'ar-EG'] },
             outputAudioTranscription: {},
             contextWindowCompression: { slidingWindow: {} },
             sessionResumption: this.resumptionHandle ? { handle: this.resumptionHandle } : {},
@@ -180,6 +196,8 @@ export class GeminiLiveTransport implements LiveTransport {
           .then(async () => {
             if (this.socket !== socket) return;
             const message = JSON.parse(await decodeSocketMessage(event.data)) as ServerMessage;
+            if (message.error) throw new Error(message.error.message || 'Gemini Live returned an error.');
+
             if (message.setupComplete !== undefined) {
               this.setupComplete = true;
               this.callbacks.onStatus('listening');
@@ -188,25 +206,45 @@ export class GeminiLiveTransport implements LiveTransport {
 
             const content = message.serverContent;
             if (content?.interrupted) {
+              this.performanceCueUsedThisTurn = false;
+              this.activePerformanceCallIds.clear();
               this.callbacks.onInterrupted();
+              this.callbacks.onPerformanceCancelled();
               this.callbacks.onStatus('listening');
+            }
+
+            if (message.toolCallCancellation?.ids?.length) {
+              const cancelledPerformance = message.toolCallCancellation.ids.some((id) =>
+                this.activePerformanceCallIds.has(id),
+              );
+              for (const id of message.toolCallCancellation.ids) this.activePerformanceCallIds.delete(id);
+              if (cancelledPerformance) {
+                this.performanceCueUsedThisTurn = false;
+                this.callbacks.onPerformanceCancelled();
+              }
+            }
+
+            if (message.toolCall?.functionCalls?.length) {
+              this.handleToolCalls(message.toolCall.functionCalls, Boolean(content?.interrupted));
             }
 
             const input = content?.inputTranscription?.text?.trim();
             if (input) this.callbacks.onInputTranscript(input);
             const output = content?.outputTranscription?.text?.trim();
-            if (output) this.callbacks.onOutputTranscript(output);
+            if (output && !content?.interrupted) this.callbacks.onOutputTranscript(output);
 
-            for (const part of content?.modelTurn?.parts ?? []) {
-              if (part.inlineData?.data && part.inlineData.mimeType?.startsWith('audio/pcm')) {
-                this.callbacks.onStatus('speaking');
-                this.callbacks.onAudio(part.inlineData.data, part.inlineData.mimeType);
+            if (!content?.interrupted) {
+              for (const part of content?.modelTurn?.parts ?? []) {
+                if (part.inlineData?.data && part.inlineData.mimeType?.startsWith('audio/pcm')) {
+                  this.callbacks.onAudio(part.inlineData.data, part.inlineData.mimeType);
+                }
               }
             }
 
             if (content?.turnComplete) {
+              this.performanceCueUsedThisTurn = false;
+              this.activePerformanceCallIds.clear();
               this.callbacks.onTurnComplete();
-              this.callbacks.onStatus('listening');
             }
 
             if (message.sessionResumptionUpdate?.resumable && message.sessionResumptionUpdate.newHandle) {
@@ -246,6 +284,48 @@ export class GeminiLiveTransport implements LiveTransport {
         }
       });
     });
+  }
+
+  private handleToolCalls(functionCalls: FunctionCall[], interrupted: boolean) {
+    const responses: Array<{
+      id?: string;
+      name: string;
+      scheduling: 'SILENT';
+      response: { result: string };
+    }> = [];
+
+    for (const call of functionCalls) {
+      if (call.id && this.acknowledgedCallIds.has(call.id)) continue;
+      if (call.id) this.acknowledgedCallIds.add(call.id);
+
+      if (interrupted) {
+        responses.push({ id: call.id, name: call.name, scheduling: 'SILENT', response: { result: 'cancelled' } });
+        continue;
+      }
+
+      if (call.name !== PERFORMANCE_TOOL_NAME) {
+        responses.push({ id: call.id, name: call.name, scheduling: 'SILENT', response: { result: 'unsupported tool' } });
+        continue;
+      }
+
+      if (this.performanceCueUsedThisTurn) {
+        responses.push({ id: call.id, name: call.name, scheduling: 'SILENT', response: { result: 'ignored: one deliberate performance cue per turn' } });
+        continue;
+      }
+
+      const cue = normalizePerformanceCue(call.args ?? {});
+      if (!cue) {
+        responses.push({ id: call.id, name: call.name, scheduling: 'SILENT', response: { result: 'invalid performance cue' } });
+        continue;
+      }
+
+      this.performanceCueUsedThisTurn = true;
+      if (call.id) this.activePerformanceCallIds.add(call.id);
+      this.callbacks.onPerformanceCue(cue);
+      responses.push({ id: call.id, name: call.name, scheduling: 'SILENT', response: { result: 'accepted; client will synchronize the cue with audible playback' } });
+    }
+
+    if (responses.length && this.connected) this.send({ toolResponse: { functionResponses: responses } });
   }
 
   private async resumeSession() {
