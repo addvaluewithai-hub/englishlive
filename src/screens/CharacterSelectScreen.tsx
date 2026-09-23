@@ -17,7 +17,7 @@ export function CharacterSelectScreen() {
       <div className="partners-heading">
         <p className="eyebrow">Conversation partners</p>
         <h1>Pick the energy you want in the room.</h1>
-        <p className="lead">The learning standard stays the same. The person you practise with changes how direct, playful, patient, or challenging the conversation feels.</p>
+        <p className="lead">Your goal stays the same. The person you practise with changes how direct, playful, patient, or challenging the conversation feels.</p>
       </div>
 
       <div className="character-grid">
