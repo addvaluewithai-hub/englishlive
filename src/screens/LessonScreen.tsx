@@ -204,6 +204,8 @@ export function LessonScreen() {
         onInterrupted: () => {
           queue.interrupt();
           director.interrupt();
+          lastBoardBeatId.current = null;
+          syncAuthoredBoard(tutor.snapshot, director);
           characterPerformance.interrupt();
           setPerformanceLabel('audio-driven locally');
         },
