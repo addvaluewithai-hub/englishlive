@@ -6,6 +6,7 @@ import {
 } from '../character/performance';
 import { apiUrl } from '../config/api';
 import { DEFAULT_LIVE_MODEL, isLiveModel, type LiveModel } from './models';
+import type { LiveClientTool } from './tools';
 import type { LiveCallbacks, LiveTokenResponse, LiveTransport } from './types';
 
 const LIVE_ENDPOINT =
@@ -40,6 +41,13 @@ interface ServerMessage {
   goAway?: { timeLeft?: string };
 }
 
+interface FunctionResponse {
+  id?: string;
+  name: string;
+  scheduling: 'SILENT';
+  response: Record<string, unknown>;
+}
+
 async function decodeSocketMessage(data: unknown): Promise<string> {
   if (typeof data === 'string') return data;
   if (data instanceof Blob) return data.text();
@@ -48,6 +56,13 @@ async function decodeSocketMessage(data: unknown): Promise<string> {
     return new TextDecoder().decode(new Uint8Array(data.buffer, data.byteOffset, data.byteLength));
   }
   throw new Error(`Unsupported Gemini Live message: ${Object.prototype.toString.call(data)}`);
+}
+
+function responseObject(value: unknown): Record<string, unknown> {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  return { result: value == null ? 'ok' : String(value) };
 }
 
 export class GeminiLiveTransport implements LiveTransport {
@@ -65,6 +80,7 @@ export class GeminiLiveTransport implements LiveTransport {
 
   constructor(
     private readonly callbacks: LiveCallbacks,
+    private readonly customTools: readonly LiveClientTool[] = [],
     private readonly tokenProvider: () => Promise<LiveTokenResponse> = async () => {
       const response = await fetch(apiUrl('/api/gemini-token'), {
         method: 'POST',
@@ -124,6 +140,13 @@ export class GeminiLiveTransport implements LiveTransport {
     this.callbacks.onStatus('idle');
   }
 
+  private toolDeclarations() {
+    const custom = this.customTools
+      .filter((tool) => tool.declaration.name !== PERFORMANCE_TOOL_NAME)
+      .map((tool) => tool.declaration);
+    return [performanceToolDeclaration, ...custom];
+  }
+
   private async openSocket(token: string) {
     return new Promise<void>((resolve, reject) => {
       const socket = new WebSocket(`${LIVE_ENDPOINT}?access_token=${encodeURIComponent(token)}`);
@@ -171,7 +194,7 @@ export class GeminiLiveTransport implements LiveTransport {
                 text: `${this.systemInstruction || 'You are a warm English conversation partner. Keep the conversation natural and concise.'}\n\n${PERFORMANCE_GUIDANCE}`,
               }],
             },
-            tools: [{ functionDeclarations: [performanceToolDeclaration] }],
+            tools: [{ functionDeclarations: this.toolDeclarations() }],
             realtimeInputConfig: {
               activityHandling: 'START_OF_ACTIVITY_INTERRUPTS',
               automaticActivityDetection: {
@@ -225,7 +248,7 @@ export class GeminiLiveTransport implements LiveTransport {
             }
 
             if (message.toolCall?.functionCalls?.length) {
-              this.handleToolCalls(message.toolCall.functionCalls, Boolean(content?.interrupted));
+              await this.handleToolCalls(message.toolCall.functionCalls, Boolean(content?.interrupted));
             }
 
             const input = content?.inputTranscription?.text?.trim();
@@ -286,43 +309,86 @@ export class GeminiLiveTransport implements LiveTransport {
     });
   }
 
-  private handleToolCalls(functionCalls: FunctionCall[], interrupted: boolean) {
-    const responses: Array<{
-      id?: string;
-      name: string;
-      scheduling: 'SILENT';
-      response: { result: string };
-    }> = [];
+  private async handleToolCalls(functionCalls: FunctionCall[], interrupted: boolean) {
+    const responses: FunctionResponse[] = [];
 
     for (const call of functionCalls) {
       if (call.id && this.acknowledgedCallIds.has(call.id)) continue;
       if (call.id) this.acknowledgedCallIds.add(call.id);
 
       if (interrupted) {
-        responses.push({ id: call.id, name: call.name, scheduling: 'SILENT', response: { result: 'cancelled' } });
+        responses.push({
+          id: call.id,
+          name: call.name,
+          scheduling: 'SILENT',
+          response: { result: 'cancelled' },
+        });
         continue;
       }
 
-      if (call.name !== PERFORMANCE_TOOL_NAME) {
-        responses.push({ id: call.id, name: call.name, scheduling: 'SILENT', response: { result: 'unsupported tool' } });
+      if (call.name === PERFORMANCE_TOOL_NAME) {
+        if (this.performanceCueUsedThisTurn) {
+          responses.push({
+            id: call.id,
+            name: call.name,
+            scheduling: 'SILENT',
+            response: { result: 'ignored: one deliberate performance cue per turn' },
+          });
+          continue;
+        }
+
+        const cue = normalizePerformanceCue(call.args ?? {});
+        if (!cue) {
+          responses.push({
+            id: call.id,
+            name: call.name,
+            scheduling: 'SILENT',
+            response: { result: 'invalid performance cue' },
+          });
+          continue;
+        }
+
+        this.performanceCueUsedThisTurn = true;
+        if (call.id) this.activePerformanceCallIds.add(call.id);
+        this.callbacks.onPerformanceCue(cue);
+        responses.push({
+          id: call.id,
+          name: call.name,
+          scheduling: 'SILENT',
+          response: { result: 'accepted; client will synchronize the cue with audible playback' },
+        });
         continue;
       }
 
-      if (this.performanceCueUsedThisTurn) {
-        responses.push({ id: call.id, name: call.name, scheduling: 'SILENT', response: { result: 'ignored: one deliberate performance cue per turn' } });
+      const tool = this.customTools.find((candidate) => candidate.declaration.name === call.name);
+      if (!tool) {
+        responses.push({
+          id: call.id,
+          name: call.name,
+          scheduling: 'SILENT',
+          response: { error: `Unsupported client tool: ${call.name}` },
+        });
         continue;
       }
 
-      const cue = normalizePerformanceCue(call.args ?? {});
-      if (!cue) {
-        responses.push({ id: call.id, name: call.name, scheduling: 'SILENT', response: { result: 'invalid performance cue' } });
-        continue;
+      try {
+        const result = await tool.handle(call.args ?? {});
+        responses.push({
+          id: call.id,
+          name: call.name,
+          scheduling: 'SILENT',
+          response: responseObject(result),
+        });
+      } catch (reason) {
+        responses.push({
+          id: call.id,
+          name: call.name,
+          scheduling: 'SILENT',
+          response: {
+            error: reason instanceof Error ? reason.message : `Client tool ${call.name} failed.`,
+          },
+        });
       }
-
-      this.performanceCueUsedThisTurn = true;
-      if (call.id) this.activePerformanceCallIds.add(call.id);
-      this.callbacks.onPerformanceCue(cue);
-      responses.push({ id: call.id, name: call.name, scheduling: 'SILENT', response: { result: 'accepted; client will synchronize the cue with audible playback' } });
     }
 
     if (responses.length && this.connected) this.send({ toolResponse: { functionResponses: responses } });
