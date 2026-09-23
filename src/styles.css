@@ -23,6 +23,7 @@ button { color: inherit; }
 .lead { max-width: 720px; color: #b8c0d4; line-height: 1.7; font-size: clamp(17px, 2vw, 21px); }
 .actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 30px; }
 .button { border: 0; cursor: pointer; padding: 13px 18px; border-radius: 14px; text-decoration: none; font-weight: 750; }
+.button:disabled { cursor: wait; opacity: .65; }
 .button.primary { background: #eef2ff; color: #111827; }
 .button.secondary { background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.09); }
 .foundation-grid, .character-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: clamp(40px, 8vw, 86px); }
@@ -37,7 +38,7 @@ button { color: inherit; }
 .character-portrait svg { width: 92%; height: 92%; display: block; filter: drop-shadow(0 24px 24px rgba(0,0,0,.22)); }
 .text-link { display: inline-block; margin-top: 8px; font-weight: 750; text-decoration: none; color: #c7d2fe; }
 
-.session-shell { display: grid; grid-template-columns: minmax(0, 1fr) 310px; gap: 18px; align-items: stretch; min-height: min(700px, 74vh); }
+.session-shell { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 18px; align-items: stretch; min-height: min(700px, 74vh); }
 .session-hero-placeholder { min-height: 520px; border-radius: 34px; border: 1px solid rgba(255,255,255,.09); background: linear-gradient(160deg, rgba(37,48,82,.9), rgba(12,17,29,.8)); display: grid; place-items: center; align-content: center; gap: 12px; text-align: center; overflow: hidden; }
 .session-hero-placeholder span { color: #9ca3af; }
 .orb { width: clamp(180px, 32vw, 330px); aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #c7d2fe, #6366f1 38%, #1e293b 72%); box-shadow: 0 32px 100px rgba(99,102,241,.28); }
@@ -60,6 +61,17 @@ button { color: inherit; }
 .control-chip { border: 1px solid rgba(255,255,255,.09); background: rgba(255,255,255,.05); border-radius: 999px; padding: 7px 10px; cursor: pointer; color: #aeb7c9; font-size: 12px; }
 .control-chip:hover, .control-chip.is-active { color: #fff; background: color-mix(in srgb, var(--character-accent, #818cf8) 24%, rgba(255,255,255,.07)); border-color: color-mix(in srgb, var(--character-accent, #818cf8) 42%, transparent); }
 .runtime-note { margin-top: auto; color: #7f899d; line-height: 1.55; }
+.live-status { text-transform: capitalize; }
+.status-listening { color: #9ee7c2 !important; }
+.status-speaking { color: #f4d58d !important; }
+.status-connecting, .status-reconnecting { color: #c7d2fe !important; }
+.status-error { color: #fca5a5 !important; }
+.mic-meter { height: 8px; overflow: hidden; border-radius: 999px; background: rgba(255,255,255,.07); }
+.mic-meter span { display: block; height: 100%; border-radius: inherit; background: #c7d2fe; transition: width 80ms linear; }
+.live-error { padding: 11px 12px; border-radius: 12px; background: rgba(239,68,68,.12); border: 1px solid rgba(248,113,113,.22); color: #fecaca; font-size: 13px; line-height: 1.45; }
+.transcript-card { padding: 12px 13px; border: 1px solid rgba(255,255,255,.07); border-radius: 14px; background: rgba(0,0,0,.12); }
+.transcript-card small { display: block; margin-bottom: 5px; color: #8f99ad; font-weight: 800; }
+.transcript-card p { margin: 0 !important; color: #d5d9e4 !important; font-size: 13px; line-height: 1.5 !important; max-height: 92px; overflow: auto; }
 
 .app-nav { position: sticky; z-index: 10; bottom: 0; display: flex; justify-content: center; gap: 8px; padding: 12px max(16px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); background: rgba(9,13,23,.88); border-top: 1px solid rgba(255,255,255,.08); backdrop-filter: blur(20px); }
 .app-nav-link { padding: 10px 14px; border-radius: 12px; text-decoration: none; color: #8f99ad; font-weight: 700; font-size: 14px; }
@@ -67,7 +79,7 @@ button { color: inherit; }
 
 @media (max-width: 900px) {
   .character-grid { grid-template-columns: repeat(2, 1fr); }
-  .session-shell { grid-template-columns: minmax(0, 1fr) 280px; }
+  .session-shell { grid-template-columns: minmax(0, 1fr) 300px; }
 }
 
 @media (max-width: 760px) {
