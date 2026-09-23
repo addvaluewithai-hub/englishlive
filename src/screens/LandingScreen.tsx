@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import { CharacterPortrait } from '../character/CharacterPortrait';
 import { getCharacterDefinition } from '../character/registry';
@@ -26,7 +27,7 @@ export function LandingScreen() {
           <p className="hero-note">Built first for B1–B2 speakers who understand more than they comfortably say.</p>
         </div>
 
-        <div className="landing-character" style={{ '--character-accent': featured.accent } as React.CSSProperties}>
+        <div className="landing-character" style={{ '--character-accent': featured.accent } as CSSProperties}>
           <div className="landing-character-frame">
             <CharacterPortrait character={featured} />
           </div>
