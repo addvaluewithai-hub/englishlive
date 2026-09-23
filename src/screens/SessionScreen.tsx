@@ -87,6 +87,8 @@ export function SessionScreen() {
     microphone.current = mic;
 
     try {
+      // Unlock playback inside the user's click before token/network awaits.
+      await queue.unlock();
       await live.connect(
         `You are ${character.name}, ${character.persona.style}. You are a natural English conversation partner for an adult learner around CEFR B1-B2. Speak only English unless the learner explicitly asks for a brief clarification. Keep replies conversational and usually short enough to invite the learner back in. Do not lecture. Ask natural follow-up questions, allow interruptions, and gently recast important mistakes without correcting every sentence.`,
       );
