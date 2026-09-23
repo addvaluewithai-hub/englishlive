@@ -8,7 +8,7 @@ export const conversationResponseKinds = [
 
 export type ConversationResponseKind = (typeof conversationResponseKinds)[number];
 export type ConversationRubricVerdict = 'meets' | 'partial' | 'does_not_meet';
-export type ConversationEvidenceSource = 'live_audio' | 'automatic_transcript' | 'text';
+export type ConversationEvidenceSource = 'live_audio' | 'automatic_transcript';
 
 export interface ConversationObjective {
   id: string;
