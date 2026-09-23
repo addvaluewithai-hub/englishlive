@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { MicrophonePcmStream } from '../audio/MicrophonePcmStream';
 import { PcmPlaybackQueue } from '../audio/PcmPlaybackQueue';
 import { CharacterHost, type CharacterHostHandle } from '../character/CharacterHost';
@@ -12,7 +12,7 @@ import type { LiveStatus } from '../live/types';
 import { buildMemoryPrompt } from '../memory/context';
 import { recordSessionOutcome } from '../memory/learnerModel';
 import { RelationshipMemoryCollector } from '../memory/RelationshipMemoryCollector';
-import { keepRelationshipMemory, readEnglishLiveMemory } from '../memory/store';
+import { readEnglishLiveMemory } from '../memory/store';
 import type { RelationshipMemoryProposal } from '../memory/types';
 import { ConversationPresentation } from '../presentation/ConversationPresentation';
 import { StageDirector } from '../presentation/StageDirector';
@@ -56,6 +56,7 @@ interface SessionMeta {
 export function SessionScreen() {
   const { missionId = FIRST_B1_MISSION_ID } = useParams();
   const [params] = useSearchParams();
+  const navigate = useNavigate();
   const character = getCharacterDefinition(params.get('character'));
   const profile = readLearnerProfile();
   const missionDefinition = resolveConversationMission(missionId, profile?.goals[0]);
@@ -80,22 +81,23 @@ export function SessionScreen() {
   const [missionState, setMissionState] = useState<ConversationMissionState | null>(null);
   const [stageState, setStageState] = useState<StageState>(initialStageState);
   const [relationshipProposal, setRelationshipProposal] = useState<RelationshipMemoryProposal | null>(null);
-  const [startedOnce, setStartedOnce] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   function persistSessionMemory() {
-    if (sessionRecorded.current) return;
     const meta = sessionMeta.current;
     const runtime = tutor.current;
-    if (!meta || !runtime) return;
-    recordSessionOutcome({
-      sessionId: meta.sessionId,
-      mission: missionDefinition,
-      state: runtime.snapshot,
-      characterId: character.id,
-      startedAt: meta.startedAt,
-    });
-    sessionRecorded.current = true;
+    if (!meta || !runtime) return meta;
+    if (!sessionRecorded.current) {
+      recordSessionOutcome({
+        sessionId: meta.sessionId,
+        mission: missionDefinition,
+        state: runtime.snapshot,
+        characterId: character.id,
+        startedAt: meta.startedAt,
+      });
+      sessionRecorded.current = true;
+    }
+    return meta;
   }
 
   useEffect(() => {
@@ -224,7 +226,6 @@ export function SessionScreen() {
         sessionId: crypto.randomUUID(),
         startedAt: new Date().toISOString(),
       };
-      setStartedOnce(true);
       live.sendText(
         `${firstConversation
           ? 'This is the learner’s first EnglishLive conversation. Greet them warmly and use their first name if it was provided.'
@@ -243,8 +244,8 @@ export function SessionScreen() {
     }
   }
 
-  async function stopLive() {
-    persistSessionMemory();
+  async function finishAndReview() {
+    const meta = persistSessionMemory();
     transport.current?.endAudioStream();
     transport.current?.close();
     transport.current = null;
@@ -256,22 +257,15 @@ export function SessionScreen() {
     performer.current = null;
     stageDirector.current?.reset();
     stageDirector.current = null;
-    tutor.current = null;
     setMicLevel(0);
     setPerformanceLabel('audio-driven locally');
     setStatus('idle');
-  }
 
-  function keepProposal() {
-    if (!relationshipProposal) return;
-    keepRelationshipMemory(relationshipProposal, missionDefinition.id, character.id);
-    relationshipCollector.current?.clear();
-    setRelationshipProposal(null);
-  }
-
-  function dismissProposal() {
-    relationshipCollector.current?.clear();
-    setRelationshipProposal(null);
+    if (meta) {
+      navigate(`/review/${meta.sessionId}`, {
+        state: relationshipProposal ? { relationshipProposal } : undefined,
+      });
+    }
   }
 
   const connecting = status === 'connecting' || status === 'reconnecting';
@@ -315,10 +309,10 @@ export function SessionScreen() {
             <button
               type="button"
               className={liveConversation ? 'button stop-conversation' : 'button primary'}
-              onClick={liveConversation ? () => void stopLive() : () => void startLive()}
+              onClick={liveConversation ? () => void finishAndReview() : () => void startLive()}
               disabled={connecting}
             >
-              {connecting ? 'Getting ready…' : liveConversation ? 'End conversation' : error ? 'Try again' : 'Start conversation'}
+              {connecting ? 'Getting ready…' : liveConversation ? (missionComplete ? 'Finish & review' : 'End & review') : error ? 'Try again' : 'Start conversation'}
             </button>
           </div>
         </div>
@@ -327,7 +321,7 @@ export function SessionScreen() {
       <aside className="conversation-sidebar">
         <div className="conversation-sidebar-heading">
           <p className="eyebrow">Live conversation</p>
-          <h2>Tell the story, not the perfect sentence.</h2>
+          <h2>{missionDefinition.title}</h2>
           <p>{missionDefinition.purpose}</p>
         </div>
 
@@ -343,26 +337,6 @@ export function SessionScreen() {
             <p>{outputTranscript || `${character.name} is ready when you are.`}</p>
           </article>
         </div>
-
-        {startedOnce && status === 'idle' ? (
-          <div className="session-next-step">
-            <strong>{missionComplete ? 'Practice complete.' : firstConversation ? 'First conversation done.' : 'Conversation ended.'}</strong>
-            <p>{missionComplete ? 'You gave usable evidence across every goal in this conversation. That is one observation, not a level score.' : 'Any useful attempts from this conversation can shape what comes back in later practice.'}</p>
-
-            {relationshipProposal ? (
-              <div className="memory-consent-card">
-                <strong>Remember this with {character.name} for next time?</strong>
-                <p>{relationshipProposal.text}</p>
-                <div className="actions">
-                  <button type="button" className="button primary" onClick={keepProposal}>Keep</button>
-                  <button type="button" className="button quiet" onClick={dismissProposal}>Not now</button>
-                </div>
-              </div>
-            ) : null}
-
-            <Link className="text-link" to="/home">Back to my plan →</Link>
-          </div>
-        ) : null}
 
         <details className="session-tech-details">
           <summary>Session details</summary>
