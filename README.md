@@ -24,6 +24,30 @@ The most important boundaries are:
 - **Memory is product state** — learner profile, learning memory and relationship memory are explicit application data, not accidental model context.
 - **Web-first + Capacitor** — one React application ships to web, iOS and Android; native escape hatches stay behind platform interfaces.
 
+## Development
+
+Requires Node 22.18+.
+
+```sh
+cp .env.example .env.local
+npm install
+npm run dev
+```
+
+Useful commands:
+
+```sh
+npm run check
+npm run cf:dev
+npm run cap:add:ios
+npm run cap:add:android
+npm run cap:sync
+```
+
+Web deployments may use same-origin `/api`. Native builds must set `VITE_API_BASE_URL` to the public HTTPS API origin. Never place provider secrets in `VITE_*` values.
+
+Milestone 1 implementation details and acceptance criteria live in [`docs/MILESTONE_01_FOUNDATION.md`](docs/MILESTONE_01_FOUNDATION.md).
+
 ## Reference repositories
 
 EnglishLive is a new product and owns its runtime contracts. Existing repositories are references/upstreams, not authorities that may leak their product architecture into this app.
