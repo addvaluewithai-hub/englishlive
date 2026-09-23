@@ -91,6 +91,10 @@
 .memory-review-card > p:not(.eyebrow) { color: var(--ink-soft); font-size: 18px; line-height: 1.55; }
 .memory-review-card small { display: block; margin-top: 14px; color: var(--muted); line-height: 1.45; }
 
+@media (max-width: 820px) {
+  .app-nav { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
 @media (max-width: 760px) {
   .home-path-summary, .progress-next-card, .review-next, .review-hero, .review-grid { grid-template-columns: 1fr; }
   .home-path-summary > .text-link { justify-self: start; }
