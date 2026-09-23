@@ -3,6 +3,8 @@ import { CharacterSelectScreen } from '../screens/CharacterSelectScreen';
 import { HomeScreen } from '../screens/HomeScreen';
 import { LandingScreen } from '../screens/LandingScreen';
 import { OnboardingScreen } from '../screens/OnboardingScreen';
+import { ProgressScreen } from '../screens/ProgressScreen';
+import { ReviewScreen } from '../screens/ReviewScreen';
 import { SessionScreen } from '../screens/SessionScreen';
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
@@ -13,7 +15,8 @@ export function App() {
   const isLanding = location.pathname === '/';
   const isOnboarding = location.pathname.startsWith('/onboarding');
   const isSession = location.pathname.startsWith('/session/');
-  const isApp = !isLanding && !isOnboarding && !isSession;
+  const isReview = location.pathname.startsWith('/review/');
+  const isApp = !isLanding && !isOnboarding && !isSession && !isReview;
 
   return (
     <div className={`app-shell${isSession ? ' is-session' : ''}${isLanding ? ' is-landing' : ''}`}>
@@ -29,9 +32,12 @@ export function App() {
           <Link className="header-action quiet-link" to="/">Not now</Link>
         ) : isSession ? (
           <Link className="header-action quiet-link" to="/home">Leave session</Link>
+        ) : isReview ? (
+          <Link className="header-action quiet-link" to="/home">Back to plan</Link>
         ) : (
           <nav className="desktop-nav" aria-label="Primary navigation">
             <NavLink end to="/home" className={navClass}>Home</NavLink>
+            <NavLink to="/progress" className={navClass}>Progress</NavLink>
             <NavLink to="/characters" className={navClass}>Partners</NavLink>
           </nav>
         )}
@@ -42,8 +48,10 @@ export function App() {
           <Route path="/" element={<LandingScreen />} />
           <Route path="/onboarding" element={<OnboardingScreen />} />
           <Route path="/home" element={<HomeScreen />} />
+          <Route path="/progress" element={<ProgressScreen />} />
           <Route path="/characters" element={<CharacterSelectScreen />} />
           <Route path="/session/:missionId" element={<SessionScreen />} />
+          <Route path="/review/:sessionId" element={<ReviewScreen />} />
           <Route path="*" element={<LandingScreen />} />
         </Routes>
       </main>
@@ -51,6 +59,7 @@ export function App() {
       {isApp ? (
         <nav className="app-nav" aria-label="Primary navigation">
           <NavLink end to="/home" className={navClass}>Home</NavLink>
+          <NavLink to="/progress" className={navClass}>Progress</NavLink>
           <NavLink to="/characters" className={navClass}>Partners</NavLink>
         </nav>
       ) : null}
