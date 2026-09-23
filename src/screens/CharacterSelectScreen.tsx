@@ -2,6 +2,7 @@ import type { CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import { CharacterPortrait } from '../character/CharacterPortrait';
 import { characterRegistry } from '../character/registry';
+import { FIRST_B1_MISSION_ID } from '../curriculum/catalog';
 import { readLearnerProfile, saveLearnerProfile } from '../product/profile';
 
 export function CharacterSelectScreen() {
@@ -35,7 +36,7 @@ export function CharacterSelectScreen() {
               <p>{character.description}</p>
               <Link
                 className="text-link"
-                to={`/session/foundation-demo?character=${character.id}`}
+                to={`/session/${FIRST_B1_MISSION_ID}?character=${character.id}`}
                 onClick={() => rememberPartner(character.id)}
               >
                 Talk with {character.name} →
