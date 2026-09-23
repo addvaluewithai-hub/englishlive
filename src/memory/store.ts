@@ -25,11 +25,21 @@ export function readEnglishLiveMemory(): EnglishLiveMemoryState {
     if (parsed.version !== 1 || !parsed.capabilities || !Array.isArray(parsed.recentSessions) || !Array.isArray(parsed.relationshipNotes)) {
       return emptyEnglishLiveMemory();
     }
+    const relationshipNotes = parsed.relationshipNotes.filter((note): note is RelationshipMemoryNote =>
+      Boolean(
+        note
+        && typeof note.id === 'string'
+        && typeof note.text === 'string'
+        && typeof note.characterId === 'string'
+        && typeof note.sourceMissionId === 'string'
+        && typeof note.createdAt === 'string',
+      ),
+    );
     return {
       version: 1,
       capabilities: parsed.capabilities,
       recentSessions: parsed.recentSessions.slice(-12),
-      relationshipNotes: parsed.relationshipNotes.slice(-12),
+      relationshipNotes: relationshipNotes.slice(-12),
       ...(typeof parsed.lastPartnerId === 'string' ? { lastPartnerId: parsed.lastPartnerId } : {}),
       updatedAt: typeof parsed.updatedAt === 'string' ? parsed.updatedAt : new Date().toISOString(),
     };
@@ -46,12 +56,14 @@ export function saveEnglishLiveMemory(memory: EnglishLiveMemoryState) {
 export function keepRelationshipMemory(
   proposal: RelationshipMemoryProposal,
   sourceMissionId: string,
+  characterId: string,
 ): RelationshipMemoryNote {
   const memory = readEnglishLiveMemory();
   const note: RelationshipMemoryNote = {
     id: crypto.randomUUID(),
     kind: proposal.kind,
     text: proposal.text.trim().slice(0, 160),
+    characterId,
     sourceMissionId,
     createdAt: new Date().toISOString(),
   };
