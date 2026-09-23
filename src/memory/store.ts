@@ -10,6 +10,7 @@ export function emptyEnglishLiveMemory(): EnglishLiveMemoryState {
   return {
     version: 1,
     capabilities: {},
+    missions: {},
     recentSessions: [],
     relationshipNotes: [],
     updatedAt: new Date().toISOString(),
@@ -38,6 +39,7 @@ export function readEnglishLiveMemory(): EnglishLiveMemoryState {
     return {
       version: 1,
       capabilities: parsed.capabilities,
+      missions: parsed.missions && typeof parsed.missions === 'object' ? parsed.missions : {},
       recentSessions: parsed.recentSessions.slice(-12),
       relationshipNotes: relationshipNotes.slice(-12),
       ...(typeof parsed.lastPartnerId === 'string' ? { lastPartnerId: parsed.lastPartnerId } : {}),
