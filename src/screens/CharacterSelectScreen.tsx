@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import { CharacterPortrait } from '../character/CharacterPortrait';
 import { characterRegistry } from '../character/registry';
@@ -17,7 +18,7 @@ export function CharacterSelectScreen() {
           <article
             className="character-card"
             key={character.id}
-            style={{ '--character-accent': character.accent } as React.CSSProperties}
+            style={{ '--character-accent': character.accent } as CSSProperties}
           >
             <CharacterPortrait character={character} />
             <h2>{character.name}</h2>
