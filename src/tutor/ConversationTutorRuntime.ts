@@ -11,7 +11,8 @@ import {
 } from './types';
 
 const rubricVerdicts = new Set<ConversationRubricVerdict>(['meets', 'partial', 'does_not_meet']);
-const evidenceSources = new Set<ConversationEvidenceSource>(['live_audio', 'automatic_transcript', 'text']);
+const evidenceSources = new Set<ConversationEvidenceSource>(['live_audio', 'automatic_transcript']);
+const LEARNER_AUDIO_ACTIVITY_THRESHOLD = 0.04;
 
 function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
@@ -29,6 +30,7 @@ function appendTranscript(previous: string, incoming: string) {
 export class ConversationTutorRuntime {
   readonly tools: readonly LiveClientTool[];
   private state: ConversationMissionState;
+  private learnerAudioObserved = false;
   private readonly listeners = new Set<(state: ConversationMissionState) => void>();
 
   constructor(
@@ -72,7 +74,7 @@ MISSION LOOP
 - Before the first spoken turn, call get_mission_state.
 - Keep the exchange natural. The learner should feel like they are having a conversation, not being marched through a rubric.
 - Work only toward the currentObjective returned by the tool. Future objectives are intentionally hidden.
-- When a learner turn materially demonstrates the current objective, call assess_current_objective BEFORE you respond to that turn.
+- After any content-bearing learner turn that answers or attempts the current objective, call assess_current_objective BEFORE you respond to that turn.
 - Do not assess greetings, filler, silence, room noise, a request for help, or a side question as successful evidence unless the current objective explicitly accepts that conversational action.
 - If assessment passes, continue from the NEW currentObjective returned by the tool. Never advance from memory.
 - If assessment stays, repair only the missing gap and create another natural chance to demonstrate it.
@@ -81,7 +83,8 @@ MISSION LOOP
 
 EVIDENCE
 - You hear live audio directly. Automatic transcription is only an approximate audit hint and can be wrong.
-- Use evidenceSource=live_audio whenever the learner meaning is clear from speech even if the transcript is poor or absent.
+- Use evidenceSource=live_audio when the learner meaning is clear from speech even if the transcript is poor or absent.
+- The application independently requires observed microphone activity before it will accept live_audio evidence.
 - evidenceSummary must describe what the learner actually demonstrated, not quote an invented transcript.
 - Never pass an objective because the learner used one keyword. Judge the communicative action and meaning.
 - If uncertain, ask a natural clarification and stay on the current objective.
@@ -100,12 +103,28 @@ TEACHING STYLE
     return () => this.listeners.delete(listener);
   }
 
+  recordLearnerAudioLevel(level: number) {
+    if (this.state.completedAt || !Number.isFinite(level)) return;
+    if (level >= LEARNER_AUDIO_ACTIVITY_THRESHOLD) this.learnerAudioObserved = true;
+  }
+
   recordAutomaticTranscript(text: string) {
     if (this.state.completedAt) return;
     const objective = this.currentObjective;
     const current = this.state.objectives[objective.id];
     current.automaticTranscript = appendTranscript(current.automaticTranscript ?? '', text);
+    this.learnerAudioObserved = true;
     this.persistAndEmit();
+  }
+
+  markPartnerTurnComplete() {
+    this.learnerAudioObserved = false;
+    if (this.state.completedAt) return;
+    const current = this.state.objectives[this.currentObjective.id];
+    if (current?.automaticTranscript) {
+      current.automaticTranscript = '';
+      this.persistAndEmit();
+    }
   }
 
   private persistAndEmit() {
@@ -179,7 +198,7 @@ TEACHING STYLE
     return {
       declaration: {
         name: 'assess_current_objective',
-        description: 'Semantically assess evidence for the current objective before responding to a learner turn that may demonstrate it.',
+        description: 'Semantically assess the learner’s current voice turn before responding when that turn answers or attempts the current objective.',
         behavior: 'BLOCKING',
         parameters: {
           type: 'OBJECT',
@@ -188,7 +207,7 @@ TEACHING STYLE
             decision: { type: 'STRING', enum: ['pass', 'stay'] },
             responseKind: { type: 'STRING', enum: [...conversationResponseKinds] },
             rubricVerdict: { type: 'STRING', enum: ['meets', 'partial', 'does_not_meet'] },
-            evidenceSource: { type: 'STRING', enum: ['live_audio', 'automatic_transcript', 'text'] },
+            evidenceSource: { type: 'STRING', enum: ['live_audio', 'automatic_transcript'] },
             evidenceSummary: { type: 'STRING', description: 'Short semantic summary of what the learner actually demonstrated.' },
             misconception: { type: 'STRING', description: 'Optional concise gap that still needs repair.' },
           },
@@ -217,8 +236,11 @@ TEACHING STYLE
         if ((decision !== 'pass' && decision !== 'stay') || !responseKind || !rubricVerdict || !source || !summary) {
           return { error: 'Invalid assessment. Supply the required semantic evidence fields.', state: this.compactState() };
         }
+        if (source === 'live_audio' && !this.learnerAudioObserved) {
+          return { error: 'No learner microphone activity was observed for this turn. Do not invent live-audio evidence.', state: this.compactState() };
+        }
         if (source === 'automatic_transcript' && !this.state.objectives[objective.id]?.automaticTranscript) {
-          return { error: 'No automatic transcript evidence is available. Use live_audio if the spoken meaning was clear, otherwise clarify.', state: this.compactState() };
+          return { error: 'No automatic transcript evidence is available. Use live_audio only if the spoken meaning was clear and learner audio was observed; otherwise clarify.', state: this.compactState() };
         }
         if (decision === 'pass' && !objective.acceptedResponseKinds.includes(responseKind)) {
           return { error: `Pass rejected: ${responseKind} is not valid evidence for this objective.`, state: this.compactState() };
@@ -239,6 +261,7 @@ TEACHING STYLE
         };
         const current = this.state.objectives[objective.id];
         current.evidence = [...current.evidence, evidence].slice(-8);
+        this.learnerAudioObserved = false;
 
         if (decision === 'pass') {
           current.status = 'met';
