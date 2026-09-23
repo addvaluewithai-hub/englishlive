@@ -32,7 +32,7 @@ export function HomeScreen() {
 
       <article className="next-conversation">
         <div className="next-copy">
-          <span className="session-meta">8 min · warm-up conversation</span>
+          <span className="session-meta">Warm-up conversation</span>
           <h2>{next.title}</h2>
           <p>{next.description}</p>
           <div className="actions">
