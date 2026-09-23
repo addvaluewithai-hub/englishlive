@@ -26,14 +26,19 @@ export function recordSessionOutcome(input: RecordSessionOutcomeInput): EnglishL
 
     observedCapabilities.push(objective.capability);
     const existing = memory.capabilities[objective.capability];
-    const recentEvidence: CapabilityEvidenceMemory[] = evidence.slice(-2).map((item) => ({
-      id: item.id,
-      missionId: input.mission.id,
-      objectiveId: objective.id,
-      outcome: objectiveState.status === 'met' ? 'met' : 'attempted',
-      summary: item.summary.slice(0, 280),
-      recordedAt: item.recordedAt,
-    }));
+    const latestEvidence = evidence.at(-1);
+    const recentEvidence: CapabilityEvidenceMemory[] = latestEvidence
+      ? [{
+          id: latestEvidence.id,
+          missionId: input.mission.id,
+          objectiveId: objective.id,
+          outcome: objectiveState.status === 'met' ? 'met' : 'attempted',
+          summary: objectiveState.status === 'met'
+            ? `Met the authored evidence for “${objective.title}” in this session.`
+            : `Attempted “${objective.title}”; another natural observation is useful.`,
+          recordedAt: latestEvidence.recordedAt,
+        }]
+      : [];
 
     memory.capabilities[objective.capability] = {
       capabilityId: objective.capability,
