@@ -58,10 +58,17 @@ export function snapshotLessonProgress(
   };
 }
 
-export function persistLessonProgress(lesson: CourseLessonDefinition, state: CourseLessonState) {
+export function persistLessonProgress(
+  lesson: CourseLessonDefinition,
+  state: CourseLessonState,
+  options: { preserveCompletedFloor?: boolean } = {},
+) {
   const progress = readCourseProgress();
-  progress.lessonProgress[lesson.id] = snapshotLessonProgress(lesson, state);
-  saveCourseProgress(progress);
+  const previous = progress.lessonProgress[lesson.id];
+  if (!(options.preserveCompletedFloor && previous?.completedAt && !state.completedAt)) {
+    progress.lessonProgress[lesson.id] = snapshotLessonProgress(lesson, state);
+    saveCourseProgress(progress);
+  }
   return progress;
 }
 
@@ -103,14 +110,19 @@ export function recordLessonRun(input: {
     observations,
   };
 
-  const previous = progress.lessonStats[input.lesson.id];
+  const previousStats = progress.lessonStats[input.lesson.id];
   progress.lessonStats[input.lesson.id] = {
     lessonId: input.lesson.id,
-    attemptedRuns: (previous?.attemptedRuns ?? 0) + 1,
-    completedRuns: (previous?.completedRuns ?? 0) + (input.state.completedAt ? 1 : 0),
+    attemptedRuns: (previousStats?.attemptedRuns ?? 0) + 1,
+    completedRuns: (previousStats?.completedRuns ?? 0) + (input.state.completedAt ? 1 : 0),
     lastPractisedAt: endedAt,
   };
-  progress.lessonProgress[input.lesson.id] = snapshotLessonProgress(input.lesson, input.state);
+
+  const previousProgress = progress.lessonProgress[input.lesson.id];
+  if (!previousProgress?.completedAt || input.state.completedAt) {
+    progress.lessonProgress[input.lesson.id] = snapshotLessonProgress(input.lesson, input.state);
+  }
+
   progress.recentRuns = [...progress.recentRuns, summary].slice(-12);
   saveCourseProgress(progress);
   return progress;
