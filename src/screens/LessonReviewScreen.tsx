@@ -13,7 +13,7 @@ interface LessonReviewNavigationState {
 export function LessonReviewScreen() {
   const { runId = '' } = useParams();
   const location = useLocation();
-  const [courseProgress, setCourseProgress] = useState(() => readCourseProgress());
+  const [courseProgress] = useState(() => readCourseProgress());
   const [relationshipMemory, setRelationshipMemory] = useState(() => readEnglishLiveMemory());
   const [proposal, setProposal] = useState<RelationshipMemoryProposal | null>(
     () => (location.state as LessonReviewNavigationState | null)?.relationshipProposal ?? null,
@@ -44,11 +44,13 @@ export function LessonReviewScreen() {
     );
   }
 
-  const character = getCharacterDefinition(run.characterId);
+  const reviewRun = run;
+  const reviewLesson = lesson;
+  const character = getCharacterDefinition(reviewRun.characterId);
 
   function keepProposal() {
     if (!proposal) return;
-    keepRelationshipMemory(proposal, lesson.id, character.id);
+    keepRelationshipMemory(proposal, reviewLesson.id, character.id);
     setProposal(null);
     setRelationshipMemory(readEnglishLiveMemory());
   }
@@ -58,10 +60,10 @@ export function LessonReviewScreen() {
   return (
     <section className="screen lesson-review-screen">
       <header className="lesson-review-hero">
-        <p className="eyebrow">B1 · Unit 1 · Lesson {lesson.order}</p>
-        <h1>{run.completed ? 'Lesson complete.' : previouslyCompleted ? 'Practice run ended.' : 'Your lesson is saved.'}</h1>
+        <p className="eyebrow">B1 · Unit 1 · Lesson {reviewLesson.order}</p>
+        <h1>{reviewRun.completed ? 'Lesson complete.' : previouslyCompleted ? 'Practice run ended.' : 'Your lesson is saved.'}</h1>
         <p className="lead">
-          {run.completed
+          {reviewRun.completed
             ? 'You completed the authored lesson path. The observations below describe this run only — they are not a B1 score.'
             : previouslyCompleted
               ? 'You had already completed this lesson before this replay. That completion is preserved.'
@@ -121,9 +123,9 @@ export function LessonReviewScreen() {
       <section className="review-next">
         <div>
           <p className="eyebrow">Next step</p>
-          <h2>{run.completed ? (nextLesson?.title ?? 'Unit 1 complete') : previouslyCompleted ? 'Return to your course' : `Continue ${lesson.title}`}</h2>
+          <h2>{reviewRun.completed ? (nextLesson?.title ?? 'Unit 1 complete') : previouslyCompleted ? 'Return to your course' : `Continue ${reviewLesson.title}`}</h2>
           <p>
-            {run.completed
+            {reviewRun.completed
               ? nextLesson
                 ? nextLesson.subtitle
                 : 'You completed all six authored lessons in Unit 1. This is course completion, not a proficiency certification.'
@@ -133,10 +135,10 @@ export function LessonReviewScreen() {
           </p>
         </div>
         <div className="actions">
-          {run.completed && nextLesson ? (
+          {reviewRun.completed && nextLesson ? (
             <Link className="button primary" to={`/lesson/${nextLesson.id}?character=${character.id}`}>Continue course</Link>
-          ) : !run.completed && !previouslyCompleted ? (
-            <Link className="button primary" to={`/lesson/${lesson.id}?character=${character.id}`}>Continue lesson</Link>
+          ) : !reviewRun.completed && !previouslyCompleted ? (
+            <Link className="button primary" to={`/lesson/${reviewLesson.id}?character=${character.id}`}>Continue lesson</Link>
           ) : (
             <Link className="button primary" to="/learn">Back to Learn</Link>
           )}
