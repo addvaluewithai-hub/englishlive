@@ -66,13 +66,15 @@ export function planNextConversation(
   memory: EnglishLiveMemoryState,
 ): PlannedConversation {
   const path = buildMissionPath(goal, memory);
-  const firstUnobserved = path.find((item) => item.observedSessions === 0);
+  // The first pass is exposure, not an exam gate. Any real attempt opens the next
+  // speaking job; evidence quality controls later recycle instead of locking the path.
+  const firstUntried = path.find((item) => item.attemptedSessions === 0);
 
-  if (firstUnobserved) {
+  if (firstUntried) {
     const firstEver = path.every((item) => item.attemptedSessions === 0);
     return {
-      mission: firstUnobserved.mission,
-      pathIndex: firstUnobserved.order - 1,
+      mission: firstUntried.mission,
+      pathIndex: firstUntried.order - 1,
       reason: firstEver ? 'start' : 'continue_path',
       reasonLabel: firstEver
         ? 'Start with connected familiar speaking.'
@@ -82,7 +84,7 @@ export function planNextConversation(
 
   const lastMissionId = memory.recentSessions.at(-1)?.missionId;
   const recycleCandidates = path
-    .filter((item) => item.status === 'revisit')
+    .filter((item) => item.status === 'revisit' || item.status === 'seen')
     .sort((left, right) => {
       const leftIsLast = left.mission.id === lastMissionId ? 1 : 0;
       const rightIsLast = right.mission.id === lastMissionId ? 1 : 0;
@@ -97,7 +99,9 @@ export function planNextConversation(
       mission: next.mission,
       pathIndex: next.order - 1,
       reason: 'recycle',
-      reasonLabel: 'Bring one useful capability back in a fresh conversation instead of drilling it.',
+      reasonLabel: next.status === 'seen'
+        ? 'Try this speaking job again in a fresh conversation so we can collect usable evidence.'
+        : 'Bring one useful capability back in a fresh conversation instead of drilling it.',
     };
   }
 
