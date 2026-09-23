@@ -22,6 +22,9 @@ export class RelationshipMemoryCollector {
       },
     },
     handle: (args) => {
+      if (this.current) {
+        return { result: 'A relationship-memory proposal is already queued. Do not create another in this session.' };
+      }
       const kind = args.kind as RelationshipMemoryKind;
       const text = typeof args.text === 'string' ? args.text.trim().slice(0, 160) : '';
       if (!allowedKinds.has(kind) || !text) return { error: 'Invalid relationship-memory proposal.' };
