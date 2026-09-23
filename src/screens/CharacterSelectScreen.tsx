@@ -2,11 +2,13 @@ import type { CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import { CharacterPortrait } from '../character/CharacterPortrait';
 import { characterRegistry } from '../character/registry';
-import { FIRST_B1_MISSION_ID } from '../curriculum/catalog';
+import { planNextConversation } from '../curriculum/planner';
+import { readEnglishLiveMemory } from '../memory/store';
 import { readLearnerProfile, saveLearnerProfile } from '../product/profile';
 
 export function CharacterSelectScreen() {
   const profile = readLearnerProfile();
+  const next = planNextConversation(profile?.goals[0], readEnglishLiveMemory());
 
   function rememberPartner(characterId: string) {
     if (!profile) return;
@@ -18,7 +20,7 @@ export function CharacterSelectScreen() {
       <div className="partners-heading">
         <p className="eyebrow">Conversation partners</p>
         <h1>Pick the energy you want in the room.</h1>
-        <p className="lead">Your goal stays the same. The person you practise with changes how direct, playful, patient, or challenging the conversation feels.</p>
+        <p className="lead">Your curriculum state stays the same. The person you practise with changes the feel of the exchange, not which evidence counts.</p>
       </div>
 
       <div className="character-grid">
@@ -36,10 +38,10 @@ export function CharacterSelectScreen() {
               <p>{character.description}</p>
               <Link
                 className="text-link"
-                to={`/session/${FIRST_B1_MISSION_ID}?character=${character.id}`}
+                to={`/session/${next.mission.id}?character=${character.id}`}
                 onClick={() => rememberPartner(character.id)}
               >
-                Talk with {character.name} →
+                Continue with {character.name} →
               </Link>
             </div>
           </article>

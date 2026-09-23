@@ -1,0 +1,105 @@
+/* Milestone 9 — MVP curriculum + product shell */
+.planner-reason { margin: -4px 0 0; color: var(--muted); font-size: 14px; line-height: 1.55; }
+
+.home-path-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 24px 36px;
+  align-items: end;
+  padding: clamp(24px, 4vw, 38px);
+  border: 1px solid var(--line-strong);
+  background: var(--paper-strong);
+}
+.home-path-summary h2 { margin: 8px 0 8px; font-family: Georgia, "Times New Roman", serif; font-size: clamp(28px, 3vw, 42px); font-weight: 500; letter-spacing: -.035em; }
+.home-path-summary p { margin: 0; color: var(--muted); line-height: 1.6; }
+.home-path-summary > .text-link { justify-self: end; }
+.home-path-dots { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+.path-dot { height: 8px; border-radius: 999px; background: var(--paper-muted); border: 1px solid var(--line); }
+.path-dot.status-observed { background: var(--success); border-color: var(--success); }
+.path-dot.status-revisit { background: #b98242; border-color: #9e6c32; }
+.path-dot.status-seen { background: #a9a298; border-color: #91897e; }
+.path-dot.is-next { outline: 3px solid rgba(201, 83, 55, .22); outline-offset: 3px; }
+
+.progress-screen { display: grid; gap: clamp(44px, 7vw, 82px); }
+.progress-heading { max-width: 900px; }
+.progress-heading h1, .review-screen h1 {
+  margin: 12px 0 18px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(48px, 7vw, 92px);
+  line-height: .94;
+  font-weight: 500;
+  letter-spacing: -.05em;
+}
+.progress-next-card, .review-next {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 24px;
+  align-items: center;
+  padding: clamp(24px, 4vw, 42px);
+  background: var(--ink);
+  color: #f7f2e8;
+}
+.progress-next-card h2, .review-next h2 { margin: 7px 0; font-family: Georgia, "Times New Roman", serif; font-size: clamp(30px, 4vw, 50px); font-weight: 500; letter-spacing: -.035em; }
+.progress-next-card p, .review-next p { margin: 0; color: #bdb6aa; line-height: 1.55; }
+.progress-next-card .button.primary, .review-next .button.primary { background: #f7f2e8; color: var(--ink); }
+.review-next .button.quiet { border-color: #706b63; color: #f7f2e8; }
+.review-next .text-link { color: #f7f2e8; }
+.progress-next-card .session-meta { color: #d98a72; }
+
+.mission-path-list { display: grid; border-top: 1px solid var(--line-strong); }
+.mission-path-card {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr) auto;
+  gap: 22px;
+  align-items: center;
+  padding: 26px 0;
+  border-bottom: 1px solid var(--line);
+}
+.mission-path-card.is-next { background: rgba(255, 253, 248, .72); box-shadow: inset 4px 0 0 var(--action); padding-left: 18px; padding-right: 18px; }
+.mission-path-index { color: var(--action-dark); font-size: 12px; font-weight: 900; letter-spacing: .1em; }
+.mission-path-copy { display: grid; gap: 8px; }
+.mission-path-copy h2 { margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: clamp(25px, 3vw, 36px); font-weight: 500; letter-spacing: -.03em; }
+.mission-path-copy > p { margin: 0; color: var(--muted); line-height: 1.55; }
+.mission-path-meta { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; font-size: 12px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.mission-path-meta > span { color: var(--muted); }
+.mission-status { padding: 4px 8px; border: 1px solid var(--line); border-radius: 999px; color: var(--ink-soft); }
+.mission-status.status-revisit { border-color: #b98242; color: #7d521f; }
+.mission-status.status-observed { border-color: #75927d; color: var(--success); }
+.mission-path-evidence { color: var(--muted); font-size: 13px; }
+.progress-principle { max-width: 760px; border-top: 1px solid var(--line-strong); padding-top: 28px; }
+.progress-principle h2 { margin: 8px 0; font-family: Georgia, "Times New Roman", serif; font-size: clamp(30px, 4vw, 50px); font-weight: 500; }
+.progress-principle > p:last-child { color: var(--muted); line-height: 1.65; }
+
+.review-screen { display: grid; gap: clamp(40px, 6vw, 72px); }
+.review-empty { max-width: 820px; display: grid; justify-items: start; gap: 18px; }
+.review-hero { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(240px, .6fr); gap: clamp(30px, 6vw, 80px); align-items: end; }
+.review-copy { max-width: 820px; }
+.review-character { min-width: 0; border-top: 4px solid var(--character-accent); background: var(--paper-muted); }
+.review-character .character-portrait { height: 280px; overflow: hidden; display: grid; place-items: end center; }
+.review-character .character-portrait svg { width: 108%; height: 108%; }
+.review-character > div:last-child { display: grid; gap: 4px; padding: 14px 16px; border: 1px solid var(--line); border-top: 0; background: var(--paper-strong); }
+.review-character span { color: var(--muted); font-size: 13px; }
+.review-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.review-panel { padding: clamp(22px, 3vw, 34px); border: 1px solid var(--line-strong); background: var(--paper-strong); }
+.review-panel h2, .memory-review-card h2 { margin: 8px 0 22px; font-family: Georgia, "Times New Roman", serif; font-size: clamp(28px, 3.2vw, 42px); font-weight: 500; letter-spacing: -.035em; }
+.review-observation-list { display: grid; }
+.review-observation-list article { display: grid; grid-template-columns: 34px 1fr; gap: 12px; padding: 16px 0; border-top: 1px solid var(--line); }
+.review-observation-list strong { display: block; margin-bottom: 4px; }
+.review-observation-list p, .review-muted { margin: 0; color: var(--muted); line-height: 1.55; font-size: 14px; }
+.review-mark { font-weight: 900; color: var(--action-dark); }
+.memory-review-card { max-width: 820px; padding: clamp(24px, 4vw, 38px); border: 1px solid var(--line-strong); background: #fffdf8; }
+.memory-review-card > p:not(.eyebrow) { color: var(--ink-soft); font-size: 18px; line-height: 1.55; }
+.memory-review-card small { display: block; margin-top: 14px; color: var(--muted); line-height: 1.45; }
+
+@media (max-width: 820px) {
+  .app-nav { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 760px) {
+  .home-path-summary, .progress-next-card, .review-next, .review-hero, .review-grid { grid-template-columns: 1fr; }
+  .home-path-summary > .text-link { justify-self: start; }
+  .mission-path-card { grid-template-columns: 34px minmax(0, 1fr); gap: 12px; }
+  .mission-path-card > .text-link { grid-column: 2; justify-self: start; }
+  .review-character { width: min(300px, 100%); }
+  .progress-next-card > .button { justify-self: start; }
+}

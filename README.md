@@ -50,6 +50,14 @@ Milestone implementation notes:
 
 - [`docs/MILESTONE_01_FOUNDATION.md`](docs/MILESTONE_01_FOUNDATION.md)
 - [`docs/MILESTONE_02_CHARACTER_RUNTIME.md`](docs/MILESTONE_02_CHARACTER_RUNTIME.md)
+- [`docs/MILESTONE_03_LIVE_VOICE.md`](docs/MILESTONE_03_LIVE_VOICE.md)
+- [`docs/MILESTONE_04_CHARACTER_PERFORMANCE.md`](docs/MILESTONE_04_CHARACTER_PERFORMANCE.md)
+- [`docs/MILESTONE_04_5_PRODUCT_EXPERIENCE.md`](docs/MILESTONE_04_5_PRODUCT_EXPERIENCE.md)
+- [`docs/MILESTONE_05_CONVERSATION_TUTOR_RUNTIME.md`](docs/MILESTONE_05_CONVERSATION_TUTOR_RUNTIME.md)
+- [`docs/MILESTONE_06_STAGE_DIRECTOR_BOARD.md`](docs/MILESTONE_06_STAGE_DIRECTOR_BOARD.md)
+- [`docs/MILESTONE_07_FIRST_B1_MISSION.md`](docs/MILESTONE_07_FIRST_B1_MISSION.md)
+- [`docs/MILESTONE_08_MEMORY_LEARNER_MODEL.md`](docs/MILESTONE_08_MEMORY_LEARNER_MODEL.md)
+- [`docs/MILESTONE_09_MVP_CURRICULUM_PRODUCT_SHELL.md`](docs/MILESTONE_09_MVP_CURRICULUM_PRODUCT_SHELL.md)
 
 ## Reference repositories
 
@@ -64,19 +72,21 @@ EnglishLive is a new product and owns its runtime contracts. Existing repositori
   - Curriculum research/reference only: CEFR progression, capability maps and level exit profiles.
   - Do **not** migrate its old lesson delivery model into EnglishLive.
 
-## First complete vertical slice
+## MVP conversation loop
 
-Build one complete vertical slice before expanding the catalog:
+The current product loop is intentionally small:
 
-1. choose one of the initial adult characters;
-2. start one B1 conversation mission;
+1. choose a conversation partner;
+2. follow a six-job B1 MVP speaking path;
 3. hold a real interruptible voice conversation;
-4. drive lip-sync and natural character performance through the renderer contract;
-5. let the Stage Director temporarily reveal a teaching board when needed;
-6. collect structured evidence for the mission capability;
-7. finish with a short useful review;
-8. persist learner + relationship memory;
-9. resume naturally in a second session;
-10. verify the same flow on web, a real iPhone and a real Android device.
+4. let the Tutor Runtime collect structured evidence while the character stays natural;
+5. use the Stage Director for brief visual support only when useful;
+6. finish with a short evidence-based review instead of a fake fluency score;
+7. persist learner evidence and explicitly approved relationship continuity;
+8. let the planner choose the next fresh mission or recycle opportunity;
+9. inspect the path in Progress;
+10. verify the same flow on real iOS and Android hardware in Milestone 10.
 
-Do not build a large curriculum, payments, streak systems or a large social shell before this slice feels good.
+The six-mission path is an MVP coverage loop, **not** a claim that six conversations equal B1 mastery or full CEFR certification.
+
+Do not add payments, streak systems, B2 expansion, a large social shell, or a large curriculum catalog before the live loop and real-device behavior are validated.

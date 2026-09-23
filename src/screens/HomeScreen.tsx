@@ -2,7 +2,7 @@ import { useState, type CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import { CharacterPortrait } from '../character/CharacterPortrait';
 import { getCharacterDefinition } from '../character/registry';
-import { FIRST_B1_MISSION_ID, resolveConversationMission } from '../curriculum/catalog';
+import { buildMissionPath, planNextConversation } from '../curriculum/planner';
 import { readEnglishLiveMemory, removeRelationshipMemory } from '../memory/store';
 import { readLearnerProfile } from '../product/profile';
 
@@ -22,11 +22,11 @@ export function HomeScreen() {
   }
 
   const character = getCharacterDefinition(profile.characterId);
-  const next = resolveConversationMission(FIRST_B1_MISSION_ID, profile.goals[0]);
   const memory = readEnglishLiveMemory();
-  const recentCapabilities = Object.values(memory.capabilities)
-    .sort((left, right) => right.lastPractisedAt.localeCompare(left.lastPractisedAt))
-    .slice(0, 3);
+  const next = planNextConversation(profile.goals[0], memory);
+  const path = buildMissionPath(profile.goals[0], memory);
+  const observedCount = path.filter((item) => item.observedSessions > 0).length;
+  const revisitCount = path.filter((item) => item.status === 'revisit').length;
   const partnerNotes = memory.relationshipNotes
     .filter((note) => note.characterId === character.id)
     .slice(-3);
@@ -42,17 +42,19 @@ export function HomeScreen() {
       <div className="home-heading">
         <p className="eyebrow">Your next conversation</p>
         <h1>{greeting}</h1>
-        <p className="lead">You do not need to prepare. The point is to start talking before the perfect sentence arrives.</p>
+        <p className="lead">You do not need to prepare. EnglishLive picks a speaking job, listens for usable evidence, and brings skills back later in a fresh situation.</p>
       </div>
 
       <article className="next-conversation">
         <div className="next-copy">
-          <span className="session-meta">B1 · connected conversation</span>
-          <h2>{next.title}</h2>
-          <p>{next.purpose}</p>
+          <span className="session-meta">B1 path · {next.reason === 'recycle' ? 'fresh recycle' : `conversation ${next.pathIndex + 1} of ${path.length}`}</span>
+          <h2>{next.mission.title}</h2>
+          <p>{next.mission.purpose}</p>
+          <p className="planner-reason">{next.reasonLabel}</p>
           <div className="actions">
-            <Link className="button primary" to={`/session/${FIRST_B1_MISSION_ID}?character=${character.id}`}>Talk with {character.name}</Link>
-            <Link className="button quiet" to="/characters">Change partner</Link>
+            <Link className="button primary" to={`/session/${next.mission.id}?character=${character.id}`}>Talk with {character.name}</Link>
+            <Link className="button quiet" to="/progress">See my path</Link>
+            <Link className="text-link" to="/characters">Change partner →</Link>
           </div>
         </div>
         <div className="next-character" style={{ '--character-accent': character.accent } as CSSProperties}>
@@ -64,44 +66,53 @@ export function HomeScreen() {
         </div>
       </article>
 
+      <section className="home-path-summary">
+        <div>
+          <p className="eyebrow">B1 conversation path</p>
+          <h2>{observedCount} of {path.length} speaking jobs have session evidence.</h2>
+          <p>That is coverage, not a level percentage. {revisitCount ? `${revisitCount} speaking job${revisitCount === 1 ? '' : 's'} currently deserve another natural observation.` : 'Nothing is currently flagged for an immediate revisit.'}</p>
+        </div>
+        <div className="home-path-dots" aria-label={`${observedCount} of ${path.length} conversation jobs observed`}>
+          {path.map((item) => (
+            <span
+              key={item.mission.id}
+              className={`path-dot status-${item.status}${item.mission.id === next.mission.id ? ' is-next' : ''}`}
+              title={`${item.family}: ${item.status}`}
+            />
+          ))}
+        </div>
+        <Link className="text-link" to="/progress">Open the full path →</Link>
+      </section>
+
       <section className="path-section">
         <div className="path-heading">
-          <p className="eyebrow">What we will practise</p>
-          <h2>Conversation skills, not chapter numbers.</h2>
+          <p className="eyebrow">What this path covers</p>
+          <h2>Different speaking jobs, not chapter numbers.</h2>
         </div>
         <div className="path-list">
           <article>
             <span>01</span>
-            <div><strong>Make the situation easy to follow.</strong><p>Give enough context, then connect what happened without needing a memorized script.</p></div>
+            <div><strong>Connected language.</strong><p>Tell a story, explain something, compare options, and make your reasoning easy to follow.</p></div>
           </article>
           <article>
             <span>02</span>
-            <div><strong>Explain why it mattered.</strong><p>Add a reason, reaction, or consequence instead of only listing events.</p></div>
+            <div><strong>Two-way interaction.</strong><p>React, ask back, clarify, handle follow-ups, and keep shared meaning moving.</p></div>
           </article>
           <article>
             <span>03</span>
-            <div><strong>Handle the question you did not prepare for.</strong><p>Clarify, rephrase, and keep the exchange moving when the conversation changes direction.</p></div>
+            <div><strong>Familiar independence.</strong><p>Handle ordinary work, travel, study, and everyday situations without relying on a memorized script.</p></div>
           </article>
         </div>
       </section>
 
-      {recentCapabilities.length || partnerNotes.length ? (
+      {partnerNotes.length ? (
         <section className="path-section">
           <div className="path-heading">
-            <p className="eyebrow">What carries forward</p>
-            <h2>Memory without a fake score.</h2>
-            <p className="lead">EnglishLive keeps structured practice observations. Optional personal continuity with {character.name} is saved only after you approve it.</p>
+            <p className="eyebrow">Continuity with {character.name}</p>
+            <h2>Only the personal notes you chose to keep.</h2>
+            <p className="lead">These are separate from learning evidence and belong to this conversation partner only.</p>
           </div>
           <div className="path-list">
-            {recentCapabilities.map((capability, index) => (
-              <article key={capability.capabilityId}>
-                <span>{String(index + 1).padStart(2, '0')}</span>
-                <div>
-                  <strong>{capability.recycleSuggested ? 'Worth another natural try' : 'Seen successfully in practice'}</strong>
-                  <p>{capability.successfulSessions} successful session observation{capability.successfulSessions === 1 ? '' : 's'} across {capability.attemptedSessions} attempt{capability.attemptedSessions === 1 ? '' : 's'}. This is evidence, not a mastery score.</p>
-                </div>
-              </article>
-            ))}
             {partnerNotes.map((note) => (
               <article key={note.id}>
                 <span>↗</span>

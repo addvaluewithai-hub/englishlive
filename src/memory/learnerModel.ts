@@ -1,6 +1,11 @@
 import type { ConversationMission, ConversationMissionState } from '../tutor/types';
 import { readEnglishLiveMemory, saveEnglishLiveMemory } from './store';
-import type { CapabilityEvidenceMemory, EnglishLiveMemoryState, SessionMemorySummary } from './types';
+import type {
+  CapabilityEvidenceMemory,
+  EnglishLiveMemoryState,
+  SessionMemorySummary,
+  SessionObservation,
+} from './types';
 
 export interface RecordSessionOutcomeInput {
   sessionId: string;
@@ -17,6 +22,7 @@ export function recordSessionOutcome(input: RecordSessionOutcomeInput): EnglishL
 
   const endedAt = input.endedAt ?? new Date().toISOString();
   const observedCapabilities: string[] = [];
+  const observations: SessionObservation[] = [];
 
   for (const objective of input.mission.objectives) {
     const objectiveState = input.state.objectives[objective.id];
@@ -24,7 +30,15 @@ export function recordSessionOutcome(input: RecordSessionOutcomeInput): EnglishL
     const evidence = objectiveState.evidence;
     if (!evidence.length && objectiveState.status !== 'met') continue;
 
+    const outcome = objectiveState.status === 'met' ? 'met' : 'attempted';
     observedCapabilities.push(objective.capability);
+    observations.push({
+      objectiveId: objective.id,
+      capabilityId: objective.capability,
+      title: objective.title,
+      outcome,
+    });
+
     const existing = memory.capabilities[objective.capability];
     const latestEvidence = evidence.at(-1);
     const recentEvidence: CapabilityEvidenceMemory[] = latestEvidence
@@ -32,8 +46,8 @@ export function recordSessionOutcome(input: RecordSessionOutcomeInput): EnglishL
           id: latestEvidence.id,
           missionId: input.mission.id,
           objectiveId: objective.id,
-          outcome: objectiveState.status === 'met' ? 'met' : 'attempted',
-          summary: objectiveState.status === 'met'
+          outcome,
+          summary: outcome === 'met'
             ? `Met the authored evidence for “${objective.title}” in this session.`
             : `Attempted “${objective.title}”; another natural observation is useful.`,
           recordedAt: latestEvidence.recordedAt,
@@ -43,12 +57,21 @@ export function recordSessionOutcome(input: RecordSessionOutcomeInput): EnglishL
     memory.capabilities[objective.capability] = {
       capabilityId: objective.capability,
       attemptedSessions: (existing?.attemptedSessions ?? 0) + 1,
-      successfulSessions: (existing?.successfulSessions ?? 0) + (objectiveState.status === 'met' ? 1 : 0),
-      recycleSuggested: objectiveState.status !== 'met',
+      successfulSessions: (existing?.successfulSessions ?? 0) + (outcome === 'met' ? 1 : 0),
+      recycleSuggested: outcome !== 'met',
       lastPractisedAt: endedAt,
       recentEvidence: [...(existing?.recentEvidence ?? []), ...recentEvidence].slice(-6),
     };
   }
+
+  const previousMission = memory.missions[input.mission.id];
+  memory.missions[input.mission.id] = {
+    missionId: input.mission.id,
+    attemptedSessions: (previousMission?.attemptedSessions ?? 0) + 1,
+    observedSessions: (previousMission?.observedSessions ?? 0) + (observations.length ? 1 : 0),
+    completedSessions: (previousMission?.completedSessions ?? 0) + (input.state.completedAt ? 1 : 0),
+    lastPractisedAt: endedAt,
+  };
 
   const summary: SessionMemorySummary = {
     sessionId: input.sessionId,
@@ -59,6 +82,7 @@ export function recordSessionOutcome(input: RecordSessionOutcomeInput): EnglishL
     endedAt,
     completed: Boolean(input.state.completedAt),
     observedCapabilities: [...new Set(observedCapabilities)],
+    observations,
   };
 
   memory.recentSessions = [...memory.recentSessions, summary].slice(-12);
