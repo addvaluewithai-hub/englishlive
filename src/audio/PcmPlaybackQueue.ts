@@ -25,6 +25,19 @@ export class PcmPlaybackQueue {
 
   constructor(private readonly callbacks: PlaybackCallbacks = {}) {}
 
+  async unlock() {
+    if (!this.context) this.context = new AudioContext({ latencyHint: 'interactive' });
+    if (this.context.state === 'suspended') await this.context.resume();
+
+    // Start a silent buffer while this method is still inside the user's click.
+    // This keeps delayed Gemini output playable on Safari/iOS autoplay policies.
+    const buffer = this.context.createBuffer(1, 1, this.context.sampleRate);
+    const source = this.context.createBufferSource();
+    source.buffer = buffer;
+    source.connect(this.context.destination);
+    source.start();
+  }
+
   enqueue(base64: string, sampleRate = 24_000) {
     const generation = this.generation;
     const job = this.enqueueChain.then(() => this.enqueueChunk(base64, sampleRate, generation));
@@ -68,7 +81,7 @@ export class PcmPlaybackQueue {
     this.clearStarvationTimer();
     const samples = base64ToInt16(base64);
     if (!samples.length) return;
-    if (!this.context) this.context = new AudioContext({ sampleRate, latencyHint: 'interactive' });
+    if (!this.context) this.context = new AudioContext({ latencyHint: 'interactive' });
     if (this.context.state === 'suspended') await this.context.resume();
     if (generation !== this.generation) return;
 
