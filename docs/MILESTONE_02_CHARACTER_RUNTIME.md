@@ -92,6 +92,10 @@ Engineering exit:
 
 Product/visual exit requires human inspection on desktop and real mobile devices. This remains explicitly open until performed.
 
+## PR flow
+
+Milestone 2 is a stacked PR based on `feat/m1-app-foundation`. After Milestone 1 merges, retarget Milestone 2 to `main` before merge. CI on the stacked PR is the engineering gate for this milestone.
+
 ## Next milestone
 
 Milestone 3: Live Voice Core.
