@@ -2,34 +2,45 @@ import type { CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import { CharacterPortrait } from '../character/CharacterPortrait';
 import { characterRegistry } from '../character/registry';
+import { readLearnerProfile, saveLearnerProfile } from '../product/profile';
 
 export function CharacterSelectScreen() {
+  const profile = readLearnerProfile();
+
+  function rememberPartner(characterId: string) {
+    if (!profile) return;
+    saveLearnerProfile({ ...profile, characterId });
+  }
+
   return (
-    <section className="screen">
-      <p className="eyebrow">Choose your conversation partner</p>
-      <h1>Pick the person you want to talk to.</h1>
-      <p className="lead">
-        The visual renderer is separate from the tutor and curriculum. These four
-        adult characters all use the same SVG character contract today, and we can
-        add other renderers later without changing the learning runtime.
-      </p>
+    <section className="screen partners-screen">
+      <div className="partners-heading">
+        <p className="eyebrow">Conversation partners</p>
+        <h1>Pick the energy you want in the room.</h1>
+        <p className="lead">Your goal stays the same. The person you practise with changes how direct, playful, patient, or challenging the conversation feels.</p>
+      </div>
+
       <div className="character-grid">
-        {characterRegistry.map((character) => (
+        {characterRegistry.map((character, index) => (
           <article
             className="character-card"
             key={character.id}
             style={{ '--character-accent': character.accent } as CSSProperties}
           >
+            <div className="character-card-index">0{index + 1}</div>
             <CharacterPortrait character={character} />
-            <h2>{character.name}</h2>
-            <strong className="character-tagline">{character.tagline}</strong>
-            <p>{character.description}</p>
-            <Link
-              className="text-link"
-              to={`/session/foundation-demo?character=${character.id}`}
-            >
-              Talk with {character.name} →
-            </Link>
+            <div className="character-card-copy">
+              <h2>{character.name}</h2>
+              <strong className="character-tagline">{character.tagline}</strong>
+              <p>{character.description}</p>
+              <Link
+                className="text-link"
+                to={`/session/foundation-demo?character=${character.id}`}
+                onClick={() => rememberPartner(character.id)}
+              >
+                Talk with {character.name} →
+              </Link>
+            </div>
           </article>
         ))}
       </div>

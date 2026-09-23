@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { MicrophonePcmStream } from '../audio/MicrophonePcmStream';
 import { PcmPlaybackQueue } from '../audio/PcmPlaybackQueue';
 import { CharacterHost, type CharacterHostHandle } from '../character/CharacterHost';
@@ -7,6 +7,12 @@ import { CharacterPerformanceController } from '../character/CharacterPerformanc
 import { getCharacterDefinition } from '../character/registry';
 import { GeminiLiveTransport } from '../live/GeminiLiveTransport';
 import type { LiveStatus } from '../live/types';
+import {
+  comfortLabel,
+  goalPrompt,
+  nextConversationForGoal,
+  readLearnerProfile,
+} from '../product/profile';
 
 function pcmSampleRate(mimeType: string) {
   const match = mimeType.match(/rate=(\d+)/i);
@@ -22,10 +28,22 @@ function appendTranscript(previous: string, incoming: string) {
   return `${previous} ${value}`.trim();
 }
 
+const statusCopy: Record<LiveStatus, string> = {
+  idle: 'Ready',
+  connecting: 'Getting ready',
+  listening: 'Listening',
+  speaking: 'Speaking',
+  reconnecting: 'Reconnecting',
+  error: 'Try again',
+};
+
 export function SessionScreen() {
   const { missionId = 'foundation-demo' } = useParams();
   const [params] = useSearchParams();
   const character = getCharacterDefinition(params.get('character'));
+  const profile = readLearnerProfile();
+  const mission = nextConversationForGoal(profile?.goals[0]);
+  const firstConversation = params.get('onboarding') === '1';
   const host = useRef<CharacterHostHandle | null>(null);
   const transport = useRef<GeminiLiveTransport | null>(null);
   const microphone = useRef<MicrophonePcmStream | null>(null);
@@ -36,6 +54,7 @@ export function SessionScreen() {
   const [inputTranscript, setInputTranscript] = useState('');
   const [outputTranscript, setOutputTranscript] = useState('');
   const [performanceLabel, setPerformanceLabel] = useState('audio-driven locally');
+  const [startedOnce, setStartedOnce] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -105,13 +124,22 @@ export function SessionScreen() {
     const mic = new MicrophonePcmStream();
     microphone.current = mic;
 
+    const learnerContext = profile
+      ? `The learner's first name is ${profile.firstName || 'not provided'}. Their main reason for speaking practice is to ${goalPrompt(profile.goals[0] ?? 'everyday')}. Their self-description is: ${comfortLabel(profile.comfort)} Treat these as private context for pacing and topic choice; never recite these labels back to them.`
+      : 'No learner profile is available yet. Start with an easy everyday topic and calibrate from the conversation itself.';
+
     try {
       await queue.unlock();
       await live.connect(
-        `You are ${character.name}, ${character.persona.style}. You are a natural English conversation partner for an adult learner around CEFR B1-B2. Speak only English unless the learner explicitly asks for a brief clarification. Keep replies conversational and usually short enough to invite the learner back in. Do not lecture. Ask natural follow-up questions, allow interruptions, and gently recast important mistakes without correcting every sentence.`,
+        `You are ${character.name}, ${character.persona.style}. You are a natural English conversation partner for an adult learner around CEFR B1-B2. Speak only English unless the learner explicitly asks for a brief clarification. Keep replies conversational and usually short enough to invite the learner back in. Do not lecture. Ask natural follow-up questions, allow interruptions, and gently recast important mistakes without correcting every sentence. ${learnerContext}`,
       );
       await mic.start((chunk) => live.sendAudio(chunk), setMicLevel);
-      live.sendText('Open the conversation naturally with one short, friendly greeting and an easy question.');
+      setStartedOnce(true);
+      live.sendText(
+        firstConversation
+          ? 'This is the learner’s first EnglishLive conversation. Greet them warmly, use their first name if it was provided, and ask one easy question connected to their goal. Do not explain the product or mention assessment.'
+          : `Open naturally with one short question that can lead into this conversation focus: ${mission.title}.`,
+      );
     } catch (reason) {
       const message = reason instanceof Error ? reason.message : 'Could not start the live conversation.';
       setError(message);
@@ -142,52 +170,70 @@ export function SessionScreen() {
   const liveConversation = status === 'listening' || status === 'speaking';
 
   return (
-    <section className="screen session-shell live-session">
-      <div className="character-hero-stage" style={{ '--character-accent': character.accent } as CSSProperties}>
-        <div className="stage-glow" aria-hidden="true" />
+    <section className="session-screen">
+      <div className="session-stage" style={{ '--character-accent': character.accent } as CSSProperties}>
+        <div className="session-stage-meta">
+          <span>{firstConversation ? 'First conversation' : 'Today’s conversation'}</span>
+          <strong>{mission.title}</strong>
+        </div>
+
         <CharacterHost ref={host} character={character} />
-        <div className="character-identity">
-          <strong>{character.name}</strong>
-          <span className={`live-status status-${status}`}>{status}</span>
+
+        <div className="session-stage-footer">
+          <div className="session-partner">
+            <strong>{character.name}</strong>
+            <span className={`live-status status-${status}`} aria-live="polite">{statusCopy[status]}</span>
+          </div>
+
+          <div className="session-control-dock">
+            <div className="mic-meter" aria-label={`Microphone level ${Math.round(micLevel * 100)} percent`}>
+              <span style={{ width: `${Math.max(liveConversation ? 3 : 0, micLevel * 100)}%` }} />
+            </div>
+            <button
+              type="button"
+              className={liveConversation ? 'button stop-conversation' : 'button primary'}
+              onClick={liveConversation ? () => void stopLive() : () => void startLive()}
+              disabled={connecting}
+            >
+              {connecting ? 'Getting ready…' : liveConversation ? 'End conversation' : error ? 'Try again' : 'Start conversation'}
+            </button>
+          </div>
         </div>
       </div>
 
-      <aside className="character-lab-card live-control-card">
-        <p className="eyebrow">Milestone 4 · Character Performance</p>
-        <h2>{character.name}</h2>
-        <p>{character.tagline}</p>
-
-        <div className="mic-meter" aria-label={`Microphone level ${Math.round(micLevel * 100)} percent`}>
-          <span style={{ width: `${Math.max(2, micLevel * 100)}%` }} />
+      <aside className="conversation-sidebar">
+        <div className="conversation-sidebar-heading">
+          <p className="eyebrow">Live conversation</p>
+          <h2>Do not prepare the sentence.</h2>
+          <p>Say the version you have. You can repair it while you speak.</p>
         </div>
-
-        <button
-          type="button"
-          className={liveConversation ? 'button secondary' : 'button primary'}
-          onClick={liveConversation ? () => void stopLive() : () => void startLive()}
-          disabled={connecting}
-        >
-          {connecting ? 'Connecting…' : liveConversation ? 'End conversation' : 'Start live conversation'}
-        </button>
 
         {error ? <div className="live-error" role="alert">{error}</div> : null}
 
-        <div className="transcript-card">
-          <small>Character performance</small>
-          <p>{performanceLabel}</p>
-        </div>
-        <div className="transcript-card">
-          <small>You</small>
-          <p>{inputTranscript || 'Your transcript will appear here.'}</p>
-        </div>
-        <div className="transcript-card">
-          <small>{character.name}</small>
-          <p>{outputTranscript || 'The character transcript will appear here.'}</p>
+        <div className="transcript-stack" aria-live="polite">
+          <article className="transcript-card user-transcript">
+            <small>You</small>
+            <p>{inputTranscript || 'Your words will appear here once the conversation starts.'}</p>
+          </article>
+          <article className="transcript-card partner-transcript">
+            <small>{character.name}</small>
+            <p>{outputTranscript || `${character.name} is ready when you are.`}</p>
+          </article>
         </div>
 
-        <small className="runtime-note">
-          Mission: {missionId}. Mouth shape and speech energy follow audible PCM locally. Gemini may add at most one sparse semantic acting cue per turn.
-        </small>
+        {startedOnce && status === 'idle' ? (
+          <div className="session-next-step">
+            <strong>{firstConversation ? 'First conversation done.' : 'Conversation ended.'}</strong>
+            <p>Keep the momentum. Your next practice starts from the same profile.</p>
+            <Link className="text-link" to="/home">Back to my plan →</Link>
+          </div>
+        ) : null}
+
+        <details className="session-tech-details">
+          <summary>Session details</summary>
+          <span>Mission: {missionId}</span>
+          <span>Performance: {performanceLabel}</span>
+        </details>
       </aside>
     </section>
   );
