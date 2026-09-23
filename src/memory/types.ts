@@ -18,6 +18,21 @@ export interface CapabilityMemory {
   recentEvidence: CapabilityEvidenceMemory[];
 }
 
+export interface MissionMemory {
+  missionId: string;
+  attemptedSessions: number;
+  observedSessions: number;
+  completedSessions: number;
+  lastPractisedAt: string;
+}
+
+export interface SessionObservation {
+  objectiveId: string;
+  capabilityId: string;
+  title: string;
+  outcome: 'met' | 'attempted';
+}
+
 export interface SessionMemorySummary {
   sessionId: string;
   missionId: string;
@@ -27,6 +42,7 @@ export interface SessionMemorySummary {
   endedAt: string;
   completed: boolean;
   observedCapabilities: string[];
+  observations?: SessionObservation[];
 }
 
 export interface RelationshipMemoryNote {
@@ -46,6 +62,7 @@ export interface RelationshipMemoryProposal {
 export interface EnglishLiveMemoryState {
   version: 1;
   capabilities: Record<string, CapabilityMemory>;
+  missions: Record<string, MissionMemory>;
   recentSessions: SessionMemorySummary[];
   relationshipNotes: RelationshipMemoryNote[];
   lastPartnerId?: string;
