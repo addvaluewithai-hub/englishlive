@@ -116,7 +116,8 @@ export function SessionScreen() {
     setStatus('idle');
   }
 
-  const active = status !== 'idle' && status !== 'error';
+  const connecting = status === 'connecting' || status === 'reconnecting';
+  const liveConversation = status === 'listening' || status === 'speaking';
 
   return (
     <section className="screen session-shell live-session">
@@ -138,8 +139,13 @@ export function SessionScreen() {
           <span style={{ width: `${Math.max(2, micLevel * 100)}%` }} />
         </div>
 
-        <button type="button" className={active ? 'button secondary' : 'button primary'} onClick={active ? () => void stopLive() : () => void startLive()} disabled={status === 'connecting' || status === 'reconnecting'}>
-          {active ? 'End conversation' : status === 'connecting' ? 'Connecting…' : 'Start live conversation'}
+        <button
+          type="button"
+          className={liveConversation ? 'button secondary' : 'button primary'}
+          onClick={liveConversation ? () => void stopLive() : () => void startLive()}
+          disabled={connecting}
+        >
+          {connecting ? 'Connecting…' : liveConversation ? 'End conversation' : 'Start live conversation'}
         </button>
 
         {error ? <div className="live-error" role="alert">{error}</div> : null}
