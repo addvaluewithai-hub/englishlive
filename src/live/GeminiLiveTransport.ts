@@ -44,7 +44,6 @@ interface ServerMessage {
 interface FunctionResponse {
   id?: string;
   name: string;
-  scheduling: 'SILENT';
   response: Record<string, unknown>;
 }
 
@@ -63,6 +62,15 @@ function responseObject(value: unknown): Record<string, unknown> {
     return value as Record<string, unknown>;
   }
   return { result: value == null ? 'ok' : String(value) };
+}
+
+function scheduledResponse(
+  value: Record<string, unknown>,
+  behavior: 'BLOCKING' | 'NON_BLOCKING' | undefined,
+) {
+  return behavior === 'NON_BLOCKING'
+    ? { ...value, scheduling: 'SILENT' }
+    : value;
 }
 
 export class GeminiLiveTransport implements LiveTransport {
@@ -320,7 +328,6 @@ export class GeminiLiveTransport implements LiveTransport {
         responses.push({
           id: call.id,
           name: call.name,
-          scheduling: 'SILENT',
           response: { result: 'cancelled' },
         });
         continue;
@@ -331,8 +338,7 @@ export class GeminiLiveTransport implements LiveTransport {
           responses.push({
             id: call.id,
             name: call.name,
-            scheduling: 'SILENT',
-            response: { result: 'ignored: one deliberate performance cue per turn' },
+            response: { result: 'ignored: one deliberate performance cue per turn', scheduling: 'SILENT' },
           });
           continue;
         }
@@ -342,8 +348,7 @@ export class GeminiLiveTransport implements LiveTransport {
           responses.push({
             id: call.id,
             name: call.name,
-            scheduling: 'SILENT',
-            response: { result: 'invalid performance cue' },
+            response: { result: 'invalid performance cue', scheduling: 'SILENT' },
           });
           continue;
         }
@@ -354,8 +359,10 @@ export class GeminiLiveTransport implements LiveTransport {
         responses.push({
           id: call.id,
           name: call.name,
-          scheduling: 'SILENT',
-          response: { result: 'accepted; client will synchronize the cue with audible playback' },
+          response: {
+            result: 'accepted; client will synchronize the cue with audible playback',
+            scheduling: 'SILENT',
+          },
         });
         continue;
       }
@@ -365,7 +372,6 @@ export class GeminiLiveTransport implements LiveTransport {
         responses.push({
           id: call.id,
           name: call.name,
-          scheduling: 'SILENT',
           response: { error: `Unsupported client tool: ${call.name}` },
         });
         continue;
@@ -376,17 +382,15 @@ export class GeminiLiveTransport implements LiveTransport {
         responses.push({
           id: call.id,
           name: call.name,
-          scheduling: 'SILENT',
-          response: responseObject(result),
+          response: scheduledResponse(responseObject(result), tool.declaration.behavior),
         });
       } catch (reason) {
         responses.push({
           id: call.id,
           name: call.name,
-          scheduling: 'SILENT',
-          response: {
+          response: scheduledResponse({
             error: reason instanceof Error ? reason.message : `Client tool ${call.name} failed.`,
-          },
+          }, tool.declaration.behavior),
         });
       }
     }
