@@ -37,14 +37,15 @@ export function ReviewScreen() {
     );
   }
 
-  const character = getCharacterDefinition(session.characterId);
-  const observations = session.observations ?? [];
+  const reviewSession = session;
+  const character = getCharacterDefinition(reviewSession.characterId);
+  const observations = reviewSession.observations ?? [];
   const met = observations.filter((item) => item.outcome === 'met');
   const attempted = observations.filter((item) => item.outcome === 'attempted');
 
   function keepProposal() {
     if (!proposal) return;
-    keepRelationshipMemory(proposal, session.missionId, character.id);
+    keepRelationshipMemory(proposal, reviewSession.missionId, character.id);
     setProposal(null);
     setMemory(readEnglishLiveMemory());
   }
@@ -54,14 +55,14 @@ export function ReviewScreen() {
       <div className="review-hero">
         <div className="review-copy">
           <p className="eyebrow">Conversation review</p>
-          <h1>{session.completed ? 'You finished the conversation.' : 'You gave us something useful to work with.'}</h1>
+          <h1>{reviewSession.completed ? 'You finished the conversation.' : 'You gave us something useful to work with.'}</h1>
           <p className="lead">
             This is a short evidence review, not a level score. One good conversation is one observation; skills earn confidence by showing up again in fresh situations.
           </p>
         </div>
         <div className="review-character" style={{ '--character-accent': character.accent } as CSSProperties}>
           <CharacterPortrait character={character} />
-          <div><strong>{character.name}</strong><span>{session.missionTitle}</span></div>
+          <div><strong>{character.name}</strong><span>{reviewSession.missionTitle}</span></div>
         </div>
       </div>
 
