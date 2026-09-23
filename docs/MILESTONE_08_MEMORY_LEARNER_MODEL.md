@@ -14,17 +14,21 @@ Explicit onboarding state already stored separately: first name, goals, speaking
 
 ### Learning memory
 
-Automatic, structured product state derived only from authoritative mission evidence. It stores capability attempts/successful session observations, whether recycle is suggested, and short semantic evidence summaries.
+Automatic, structured product state derived only from authoritative mission evidence. It stores capability attempts/successful session observations and whether another natural observation is useful.
 
-It does **not** store raw audio or raw transcripts and does not infer a numeric fluency score.
+Persistent learning observations are deliberately **content-minimized**. The runtime may use a semantic evidence summary while the live session is active, but durable learning memory converts it to a deterministic learning observation such as “met the authored evidence for this objective.” It does not persist the personal details of the learner's story through the learning-memory path.
+
+It does **not** store raw audio, raw transcripts, personal story summaries, or a numeric fluency score.
 
 One successful mission observation is still one observation. It is never converted into `mastered`.
 
 ### Relationship memory
 
-Personal continuity is consent-based. Gemini may propose one short non-sensitive future note such as a follow-up or interest. The proposal is not persistent until the learner explicitly presses Keep.
+Personal continuity is consent-based and scoped to the conversation partner. Gemini may propose at most one short non-sensitive future note such as a follow-up or interest. The proposal is not persistent until the learner explicitly presses Keep.
 
-Sensitive categories are forbidden in the tool guidance and screened client-side. The learner can remove saved continuity notes from the product UI.
+A note approved while talking with Reem is available to Reem, not silently injected into Hakim's relationship context.
+
+Sensitive categories are forbidden in the tool guidance and screened client-side. The learner can remove saved continuity notes from the product UI. The consent step remains necessary even when a proposal passes automated screening.
 
 ## Persistence
 
@@ -46,7 +50,7 @@ Raw transcripts are intentionally not persisted.
 Only a compact relevant slice enters a new live session:
 
 - observations for capabilities targeted by the current mission;
-- up to three learner-approved continuity notes.
+- up to three learner-approved continuity notes for the **current character only**.
 
 The character must never recite internal counts, ids, labels, or say that the learner previously failed. A recycle flag simply creates another natural opportunity.
 
@@ -56,15 +60,18 @@ Engineering:
 
 - session recording is idempotent by session id;
 - incomplete sessions may record attempted evidence but cannot invent success;
-- raw transcripts are not persisted;
+- raw transcripts and personal story summaries are not persisted as learning memory;
 - memory context is relevant and bounded;
+- relationship proposals allow at most one queued proposal per live session;
 - relationship proposals require explicit Keep before persistence;
+- relationship notes are scoped to the partner with whom they were approved;
 - saved relationship notes can be removed;
 - TypeScript and production build pass.
 
 Manual/product:
 
 - the second session can feel continuous without becoming creepy;
+- a different partner does not inherit another character's relationship note;
 - the learner understands what optional personal note is being kept;
 - rejecting a proposal leaves no persistent personal note;
 - learning memory changes future practice without exposing rubric mechanics.
