@@ -149,7 +149,7 @@ export function OnboardingScreen() {
           <div className="onboarding-step partner-step">
             <span className="step-number">04</span>
             <h2>Who do you want to talk to first?</h2>
-            <p className="step-lead">You can switch any time. Personality changes the feel of the conversation, not the learning standard underneath.</p>
+            <p className="step-lead">You can switch any time. Personality changes the feel of the conversation, not what you are here to practise.</p>
             <div className="onboarding-character-grid">
               {characterRegistry.map((character) => (
                 <button
