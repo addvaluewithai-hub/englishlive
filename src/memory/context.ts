@@ -1,7 +1,11 @@
 import type { ConversationMission } from '../tutor/types';
 import type { EnglishLiveMemoryState } from './types';
 
-export function buildMemoryPrompt(memory: EnglishLiveMemoryState, mission: ConversationMission): string {
+export function buildMemoryPrompt(
+  memory: EnglishLiveMemoryState,
+  mission: ConversationMission,
+  characterId: string,
+): string {
   const relevant = mission.objectives.flatMap((objective) => {
     const capability = memory.capabilities[objective.capability];
     if (!capability) return [];
@@ -14,9 +18,11 @@ export function buildMemoryPrompt(memory: EnglishLiveMemoryState, mission: Conve
     }];
   });
 
-  const notes = memory.relationshipNotes.slice(-3);
+  const notes = memory.relationshipNotes
+    .filter((note) => note.characterId === characterId)
+    .slice(-3);
   if (!relevant.length && !notes.length) {
-    return 'PRODUCT MEMORY: No prior learning observations or user-approved relationship notes are available yet.';
+    return 'PRODUCT MEMORY: No prior learning observations or learner-approved continuity notes are available for this conversation yet.';
   }
 
   const learning = relevant.length
@@ -24,14 +30,14 @@ export function buildMemoryPrompt(memory: EnglishLiveMemoryState, mission: Conve
     : '- none relevant to this mission yet';
   const relationship = notes.length
     ? notes.map((note) => `- ${note.text}`).join('\n')
-    : '- none';
+    : '- none for this partner';
 
   return `
 PRODUCT MEMORY
 Use this only to make the conversation more continuous and to choose useful practice. Never announce memory records, counts, capability ids, or internal labels to the learner.
 Learning observations relevant to this mission:
 ${learning}
-User-approved continuity notes:
+Learner-approved continuity notes for this conversation partner:
 ${relationship}
 If a capability has only one successful observation, treat it as one observation, not mastery. If recycle=yes, create another natural opportunity without telling the learner they previously failed.
 `.trim();
