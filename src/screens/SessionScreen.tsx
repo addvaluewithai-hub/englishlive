@@ -126,7 +126,10 @@ export function SessionScreen() {
         setStatus((current) => current === 'idle' || current === 'error' ? current : 'listening');
         characterPerformance.speechEnd();
       },
-      onTurnComplete: () => director.turnPlayed(),
+      onTurnComplete: () => {
+        director.turnPlayed();
+        tutorRuntime.markPartnerTurnComplete();
+      },
     });
     playback.current = queue;
 
@@ -177,7 +180,13 @@ export function SessionScreen() {
       await live.connect(
         `${characterPrompt}\n\n${learnerContext}\n\n${tutorRuntime.systemPrompt}`,
       );
-      await mic.start((chunk) => live.sendAudio(chunk), setMicLevel);
+      await mic.start(
+        (chunk) => live.sendAudio(chunk),
+        (level) => {
+          setMicLevel(level);
+          tutorRuntime.recordLearnerAudioLevel(level);
+        },
+      );
       setStartedOnce(true);
       live.sendText(
         `${firstConversation
@@ -287,7 +296,7 @@ export function SessionScreen() {
         {startedOnce && status === 'idle' ? (
           <div className="session-next-step">
             <strong>{missionComplete ? 'Practice complete.' : firstConversation ? 'First conversation done.' : 'Conversation ended.'}</strong>
-            <p>{missionComplete ? 'The runtime captured evidence for every objective in this practice.' : 'You can come back and continue from another conversation.'}</p>
+            <p>{missionComplete ? 'You covered every goal in this practice.' : 'You can come back and continue from another conversation.'}</p>
             <Link className="text-link" to="/home">Back to my plan →</Link>
           </div>
         ) : null}
