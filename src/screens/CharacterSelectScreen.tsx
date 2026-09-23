@@ -1,24 +1,35 @@
+import type { CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
-
-const placeholders = [
-  { id: 'benny', name: 'Benny', note: 'Rive character integration comes in Milestone 2.' },
-  { id: 'kiro', name: 'Kiro', note: 'Character runtime is intentionally not coupled to this screen yet.' },
-  { id: 'dino', name: 'Dino', note: 'The product shell already treats characters as selectable data.' },
-];
+import { CharacterPortrait } from '../character/CharacterPortrait';
+import { characterRegistry } from '../character/registry';
 
 export function CharacterSelectScreen() {
   return (
     <section className="screen">
-      <p className="eyebrow">Character layer</p>
-      <h1>Choose who you want to talk to.</h1>
-      <p className="lead">These are placeholders only. Milestone 2 replaces them with the renderer-abstracted Rive CharacterHost.</p>
+      <p className="eyebrow">Choose your conversation partner</p>
+      <h1>Pick the person you want to talk to.</h1>
+      <p className="lead">
+        The visual renderer is separate from the tutor and curriculum. These four
+        adult characters all use the same SVG character contract today, and we can
+        add other renderers later without changing the learning runtime.
+      </p>
       <div className="character-grid">
-        {placeholders.map((character) => (
-          <article className="character-card" key={character.id}>
-            <div className="character-placeholder" aria-hidden="true">{character.name.slice(0, 1)}</div>
+        {characterRegistry.map((character) => (
+          <article
+            className="character-card"
+            key={character.id}
+            style={{ '--character-accent': character.accent } as CSSProperties}
+          >
+            <CharacterPortrait character={character} />
             <h2>{character.name}</h2>
-            <p>{character.note}</p>
-            <Link className="text-link" to={`/session/foundation-demo?character=${character.id}`}>Continue →</Link>
+            <strong className="character-tagline">{character.tagline}</strong>
+            <p>{character.description}</p>
+            <Link
+              className="text-link"
+              to={`/session/foundation-demo?character=${character.id}`}
+            >
+              Talk with {character.name} →
+            </Link>
           </article>
         ))}
       </div>

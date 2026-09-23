@@ -12,11 +12,11 @@ Initial target: adults around **CEFR B1 → B2** who understand English better t
 
 ## Architecture
 
-The canonical technical/product architecture is in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+The base technical/product architecture is in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). Accepted ADRs supersede conflicting implementation details in that document. The active renderer decision is [`docs/ADR_001_CHARACTER_RENDERER.md`](docs/ADR_001_CHARACTER_RENDERER.md).
 
 The most important boundaries are:
 
-- **Rive-first character layer** — characters are visual/performance implementations, never owners of curriculum state.
+- **Renderer-agnostic, SVG-first character layer** — characters are visual/performance implementations, never owners of curriculum state. Rive remains an optional future renderer behind the same contract.
 - **Gemini Live transport** — low-latency bidirectional audio, interruption and tool calling behind an adapter.
 - **Conversation Tutor Runtime** — the application, not the model, owns mission state, curriculum progression and assessment evidence.
 - **Stage Director** — the character is the visual hero by default; the board appears only when useful, with the character shrinking/moving rather than disappearing.
@@ -46,29 +46,32 @@ npm run cap:sync
 
 Web deployments may use same-origin `/api`. Native builds must set `VITE_API_BASE_URL` to the public HTTPS API origin. Never place provider secrets in `VITE_*` values.
 
-Milestone 1 implementation details and acceptance criteria live in [`docs/MILESTONE_01_FOUNDATION.md`](docs/MILESTONE_01_FOUNDATION.md).
+Milestone implementation notes:
+
+- [`docs/MILESTONE_01_FOUNDATION.md`](docs/MILESTONE_01_FOUNDATION.md)
+- [`docs/MILESTONE_02_CHARACTER_RUNTIME.md`](docs/MILESTONE_02_CHARACTER_RUNTIME.md)
 
 ## Reference repositories
 
 EnglishLive is a new product and owns its runtime contracts. Existing repositories are references/upstreams, not authorities that may leak their product architecture into this app.
 
 - `addvaluewithai-hub/pixilive`
-  - Rive character assets, Rive performance adapters, viseme/lip-sync ideas and character authoring patterns.
-  - The Rive-native implementation is currently visible on `feat/rive-native-character`; `feat/character-engine` currently contains a newer SVG character-engine experiment. Do not assume a branch name implies a renderer.
+  - The initial SVG human runtime is extracted from `feat/character-engine` at pinned commit `d1f0b1ba4c35867878d47b297bffb655f6e84d5c`.
+  - Rive experiments remain useful reference material, but EnglishLive does not require Rive for every character.
 - `addvaluewithai-hub/learn`
   - Reference for Gemini Live lifecycle, interruption, output gating, application-owned lesson state and board/presentation patterns.
 - `addvaluewithai-hub/english-course`
   - Curriculum research/reference only: CEFR progression, capability maps and level exit profiles.
-  - Do **not** migrate its lesson delivery model into EnglishLive.
+  - Do **not** migrate its old lesson delivery model into EnglishLive.
 
-## First build milestone
+## First complete vertical slice
 
 Build one complete vertical slice before expanding the catalog:
 
-1. choose one of the initial characters;
+1. choose one of the initial adult characters;
 2. start one B1 conversation mission;
 3. hold a real interruptible voice conversation;
-4. drive Rive lip-sync and natural character performance;
+4. drive lip-sync and natural character performance through the renderer contract;
 5. let the Stage Director temporarily reveal a teaching board when needed;
 6. collect structured evidence for the mission capability;
 7. finish with a short useful review;
