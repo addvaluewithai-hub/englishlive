@@ -33,6 +33,7 @@ export interface RelationshipMemoryNote {
   id: string;
   kind: RelationshipMemoryKind;
   text: string;
+  characterId: string;
   sourceMissionId: string;
   createdAt: string;
 }
