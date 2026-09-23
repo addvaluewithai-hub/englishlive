@@ -27,6 +27,9 @@ export function HomeScreen() {
   const recentCapabilities = Object.values(memory.capabilities)
     .sort((left, right) => right.lastPractisedAt.localeCompare(left.lastPractisedAt))
     .slice(0, 3);
+  const partnerNotes = memory.relationshipNotes
+    .filter((note) => note.characterId === character.id)
+    .slice(-3);
   const greeting = profile.firstName ? `Ready, ${profile.firstName}?` : 'Ready to speak?';
 
   function forgetNote(noteId: string) {
@@ -82,12 +85,12 @@ export function HomeScreen() {
         </div>
       </section>
 
-      {recentCapabilities.length || memory.relationshipNotes.length ? (
+      {recentCapabilities.length || partnerNotes.length ? (
         <section className="path-section">
           <div className="path-heading">
             <p className="eyebrow">What carries forward</p>
             <h2>Memory without a fake score.</h2>
-            <p className="lead">EnglishLive keeps structured practice observations. Optional personal continuity is saved only after you approve it.</p>
+            <p className="lead">EnglishLive keeps structured practice observations. Optional personal continuity with {character.name} is saved only after you approve it.</p>
           </div>
           <div className="path-list">
             {recentCapabilities.map((capability, index) => (
@@ -99,11 +102,11 @@ export function HomeScreen() {
                 </div>
               </article>
             ))}
-            {memory.relationshipNotes.slice(-3).map((note) => (
+            {partnerNotes.map((note) => (
               <article key={note.id}>
                 <span>↗</span>
                 <div>
-                  <strong>Remembered for conversation</strong>
+                  <strong>{character.name} can follow up on this</strong>
                   <p>{note.text}</p>
                   <button type="button" className="button quiet" onClick={() => forgetNote(note.id)}>Forget this</button>
                 </div>
