@@ -1,6 +1,7 @@
 import type { ProductUnitDefinition } from './course';
 
 const STORAGE_KEY = 'englishlive.product-course.v1';
+const COMPLETION_HANDOFF_KEY = 'englishlive.product-course.pending-completion';
 
 export interface ProductLessonProgress {
   lessonId: string;
@@ -67,7 +68,15 @@ export function markProductLessonCompleted(lessonId: string) {
     updatedAt: new Date().toISOString(),
   };
   save(progress);
+  if (typeof window !== 'undefined') window.sessionStorage.setItem(COMPLETION_HANDOFF_KEY, lessonId);
   return progress;
+}
+
+export function takePendingProductLessonCompletion() {
+  if (typeof window === 'undefined') return null;
+  const lessonId = window.sessionStorage.getItem(COMPLETION_HANDOFF_KEY);
+  if (lessonId) window.sessionStorage.removeItem(COMPLETION_HANDOFF_KEY);
+  return lessonId;
 }
 
 export function productUnitProgress(unit: ProductUnitDefinition, progress = readProductCourseProgress()) {
