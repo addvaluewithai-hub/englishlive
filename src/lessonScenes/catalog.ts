@@ -5,6 +5,7 @@ import type { SceneLessonDefinition } from './types';
 
 export const SCENE_LESSON_PILOT = A1_U1_L01_SCENE_LESSON;
 
+/** First three reviewed A1 Unit 1 briefs, delivered through the experimental scene runtime. */
 export const SCENE_LESSON_PILOTS: readonly SceneLessonDefinition[] = [
   A1_U1_L01_SCENE_LESSON,
   A1_U1_L02_SCENE_LESSON,
