@@ -10,7 +10,7 @@ const profile = {
   firstName: 'ياسر',
   goals: ['everyday'],
   comfort: 'freeze',
-  characterId: 'reem',
+  characterId: 'otti',
   createdAt: '2026-09-26T10:00:00.000Z',
 };
 
@@ -63,15 +63,15 @@ const scenarios = [
   { name: 'learn-levels', path: '/learn', full: true },
   { name: 'level-a1', path: '/learn/level/a1', full: true },
   { name: 'unit-1', path: '/learn/unit/a1-u1-first-contact', full: true },
-  { name: 'lesson-live-idle', path: '/scene-lesson/a1-u1-l02-how-old-are-you?character=reem' },
+  { name: 'lesson-live-idle', path: '/scene-lesson/a1-u1-l02-how-old-are-you?character=otti' },
   {
     name: 'lesson-live-help',
-    path: '/scene-lesson/a1-u1-l02-how-old-are-you?character=reem',
+    path: '/scene-lesson/a1-u1-l02-how-old-are-you?character=otti',
     prepare: async (page) => page.locator('button[aria-label="أدوات الدرس"]').click(),
   },
-  { name: 'lesson-complete', path: '/lesson-complete/a1-u1-l01-hello-im?character=reem', full: true },
+  { name: 'lesson-complete', path: '/lesson-complete/a1-u1-l01-hello-im?character=otti', full: true },
   { name: 'free-speak', path: '/speak', full: true },
-  { name: 'free-speak-session', path: '/speak/just-chat?character=reem' },
+  { name: 'free-speak-session', path: '/speak/just-chat?character=otti' },
   { name: 'progress', path: '/progress', full: true },
   { name: 'teachers', path: '/characters', full: true },
 ];
