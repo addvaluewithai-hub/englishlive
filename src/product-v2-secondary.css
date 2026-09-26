@@ -1,0 +1,154 @@
+.v2-speak-screen,
+.v2-progress-screen {
+  display: grid;
+  gap: 20px;
+}
+
+.v2-speak-hero {
+  min-height: 230px;
+  padding: 24px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 170px;
+  align-items: center;
+  overflow: hidden;
+  border: 1px solid #f3dde3;
+  border-radius: 30px;
+  background: linear-gradient(145deg, #fff 0, #fff5f8 62%, #fde8ef 100%);
+}
+
+.v2-speak-copy h1,
+.v2-progress-heading h1 {
+  margin: 6px 0 8px;
+  font-size: clamp(38px, 8vw, 56px);
+  line-height: 1;
+  letter-spacing: -.04em;
+}
+
+.v2-speak-copy p,
+.v2-progress-heading p {
+  margin: 0;
+  color: var(--v2-muted);
+  line-height: 1.65;
+}
+
+.v2-teacher-inline {
+  margin-top: 14px;
+  display: inline-flex;
+  color: var(--v2-accent-strong);
+  font-size: 13px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.v2-speak-character {
+  height: 200px;
+  align-self: end;
+  display: grid;
+  place-items: end center;
+  overflow: hidden;
+}
+.v2-speak-character .character-portrait { width: 100%; height: 100%; display: grid; place-items: end center; }
+.v2-speak-character svg { width: 120%; height: 120%; }
+
+.v2-speak-mode-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.v2-speak-mode-card {
+  position: relative;
+  min-height: 190px;
+  padding: 18px;
+  display: grid;
+  align-content: start;
+  gap: 9px;
+  border: 1px solid var(--v2-line);
+  border-radius: 22px;
+  background: white;
+  color: inherit;
+  text-decoration: none;
+  box-shadow: var(--v2-shadow);
+}
+.v2-speak-mode-icon { width: 46px; height: 46px; border-radius: 16px; display: grid; place-items: center; background: var(--v2-accent-soft); color: var(--v2-accent); }
+.v2-speak-mode-card strong { margin-top: 4px; font-size: 19px; }
+.v2-speak-mode-card p { margin: 0; color: var(--v2-muted); line-height: 1.55; font-size: 13px; }
+.v2-speak-mode-arrow { position: absolute; left: 14px; bottom: 14px; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; color: var(--v2-accent); background: #fff4f7; transform: scaleX(-1); }
+.v2-speak-boundary { padding: 17px 18px; border-radius: 18px; background: #f7f5f2; color: var(--v2-muted); font-size: 13px; line-height: 1.55; }
+.v2-speak-boundary strong { color: var(--v2-ink); }
+.v2-speak-boundary p { margin: 5px 0 0; }
+
+.v2-progress-heading { padding-bottom: 4px; }
+.v2-progress-overview {
+  padding: 22px;
+  border-radius: 26px;
+  border: 1px solid #f1dde2;
+  background: linear-gradient(145deg, #fff 0, #fff4f7 100%);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+.v2-progress-overview > div:first-child { display: grid; gap: 4px; }
+.v2-progress-overview > div:first-child strong { direction: ltr; font-size: 34px; color: var(--v2-accent-strong); }
+.v2-progress-overview > div:first-child span { color: var(--v2-muted); font-size: 13px; }
+.v2-progress-ring {
+  --progress: 0%;
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: conic-gradient(var(--v2-accent) var(--progress), #ece9e6 0);
+  position: relative;
+}
+.v2-progress-ring::after { content: ''; position: absolute; inset: 9px; border-radius: 50%; background: #fff; }
+.v2-progress-ring span { position: relative; z-index: 2; direction: ltr; font-size: 14px; font-weight: 850; }
+
+.v2-progress-next {
+  min-height: 92px;
+  padding: 16px 18px;
+  border: 1px solid var(--v2-line);
+  border-radius: 20px;
+  background: white;
+  color: inherit;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.v2-progress-next > div { min-width: 0; display: grid; gap: 3px; }
+.v2-progress-next > div > span { color: var(--v2-accent-strong); font-size: 12px; font-weight: 800; }
+.v2-progress-next strong { direction: ltr; text-align: right; font-size: 18px; }
+.v2-progress-next small { color: var(--v2-muted); }
+
+.v2-progress-lessons { display: grid; gap: 9px; }
+.v2-progress-lessons h2 { margin: 6px 0 4px; font-size: 21px; }
+.v2-progress-lesson {
+  min-height: 72px;
+  padding: 10px 12px;
+  border: 1px solid var(--v2-line);
+  border-radius: 17px;
+  background: white;
+  display: grid;
+  grid-template-columns: 44px 1fr auto;
+  gap: 12px;
+  align-items: center;
+}
+.v2-progress-status { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; background: #f0efed; color: #777a80; font-weight: 850; }
+.v2-progress-status.is-started { color: var(--v2-accent-strong); background: var(--v2-accent-soft); box-shadow: inset 0 0 0 1px #ffc3d0; }
+.v2-progress-status.is-complete { color: #fff; background: var(--v2-accent); }
+.v2-progress-lesson > div { min-width: 0; display: grid; gap: 3px; }
+.v2-progress-lesson > div strong { direction: ltr; text-align: right; font-size: 15px; }
+.v2-progress-lesson > div small { color: var(--v2-muted); font-size: 12px; }
+.v2-progress-lesson > a { color: var(--v2-accent-strong); text-decoration: none; font-size: 13px; font-weight: 800; }
+.v2-progress-note { padding: 15px 17px; border-radius: 16px; background: #f7f5f2; color: var(--v2-muted); font-size: 13px; line-height: 1.6; }
+.v2-progress-note strong { color: var(--v2-ink); }
+
+@media (max-width: 520px) {
+  .v2-speak-hero { min-height: 210px; grid-template-columns: minmax(0, 1fr) 120px; padding: 20px; }
+  .v2-speak-character { height: 170px; }
+  .v2-speak-mode-grid { gap: 9px; }
+  .v2-speak-mode-card { min-height: 180px; padding: 15px; }
+}
