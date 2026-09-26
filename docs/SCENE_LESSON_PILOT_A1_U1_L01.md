@@ -52,7 +52,7 @@ Future scenes are hidden from Gemini until the application advances them.
 
 The AI must stay in the current scene until the learner demonstrates every required criterion. It may vary phrasing and respond naturally, but it may not choose lesson order, add curriculum, mutate the board, or skip evidence.
 
-The client separately checks that learner microphone activity exists before accepting `live_audio` evidence. This is only a necessary guard against fabricated evidence; it is not pronunciation scoring or semantic VAD truth.
+The client checks that learner microphone/transcript evidence exists somewhere in the current scene before accepting scene completion. Evidence is cleared only when the scene advances, so a multi-turn repair loop can accumulate genuine scene evidence. This is only a necessary anti-fabrication guard; it is not pronunciation scoring or semantic VAD truth.
 
 ## Delivery shape
 
