@@ -134,11 +134,6 @@ FRESH TRANSFER
     this.persistAndEmit();
   }
 
-  /** Called after an audible teacher turn. It never advances curriculum or erases learner evidence. */
-  markPartnerTurnComplete() {
-    if (this.state.completedAt) return;
-  }
-
   private createInitialState(): SceneLessonState {
     const scenes: Record<string, SceneLessonSceneState> = {};
     this.lesson.scenes.forEach((scene, index) => {
