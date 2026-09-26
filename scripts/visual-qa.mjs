@@ -37,18 +37,42 @@ const viewports = [
   { name: 'desktop', width: 1440, height: 1000 },
 ];
 
+const onboardingToGoals = async (page) => {
+  await page.locator('.v2-onboarding-actions .v2-primary-button').click();
+};
+
+const onboardingToComfort = async (page) => {
+  await onboardingToGoals(page);
+  await page.locator('.v2-goal-card').first().click();
+  await page.locator('.v2-onboarding-actions .v2-primary-button').click();
+};
+
+const onboardingToTeacher = async (page) => {
+  await onboardingToComfort(page);
+  await page.locator('.v2-comfort-card').first().click();
+  await page.locator('.v2-onboarding-actions .v2-primary-button').click();
+};
+
 const scenarios = [
-  { name: 'landing', path: '/', profile: false },
-  { name: 'onboarding', path: '/onboarding', profile: false },
+  { name: 'landing', path: '/', profile: false, full: true },
+  { name: 'onboarding-name', path: '/onboarding', profile: false },
+  { name: 'onboarding-goals', path: '/onboarding', profile: false, prepare: onboardingToGoals },
+  { name: 'onboarding-comfort', path: '/onboarding', profile: false, prepare: onboardingToComfort },
+  { name: 'onboarding-teacher', path: '/onboarding', profile: false, prepare: onboardingToTeacher, full: true },
   { name: 'home', path: '/home' },
-  { name: 'learn-levels', path: '/learn' },
-  { name: 'level-a1', path: '/learn/level/a1' },
-  { name: 'unit-1', path: '/learn/unit/a1-u1-first-contact' },
+  { name: 'learn-levels', path: '/learn', full: true },
+  { name: 'level-a1', path: '/learn/level/a1', full: true },
+  { name: 'unit-1', path: '/learn/unit/a1-u1-first-contact', full: true },
   { name: 'lesson-live-idle', path: '/scene-lesson/a1-u1-l02-how-old-are-you?character=reem' },
-  { name: 'lesson-complete', path: '/lesson-complete/a1-u1-l01-hello-im?character=reem' },
-  { name: 'free-speak', path: '/speak' },
-  { name: 'progress', path: '/progress' },
-  { name: 'teachers', path: '/characters' },
+  {
+    name: 'lesson-live-help',
+    path: '/scene-lesson/a1-u1-l02-how-old-are-you?character=reem',
+    prepare: async (page) => page.locator('button[aria-label="أدوات الدرس"]').click(),
+  },
+  { name: 'lesson-complete', path: '/lesson-complete/a1-u1-l01-hello-im?character=reem', full: true },
+  { name: 'free-speak', path: '/speak', full: true },
+  { name: 'progress', path: '/progress', full: true },
+  { name: 'teachers', path: '/characters', full: true },
 ];
 
 await mkdir(outputDir, { recursive: true });
@@ -86,10 +110,22 @@ try {
 
       await page.goto(`${baseUrl}${scenario.path}`, { waitUntil: 'networkidle' });
       await page.locator('body').waitFor({ state: 'visible' });
+      if (scenario.prepare) {
+        await scenario.prepare(page);
+        await page.waitForTimeout(120);
+      }
+
       await page.screenshot({
         path: path.join(outputDir, `${viewport.name}--${scenario.name}.png`),
-        fullPage: scenario.name !== 'lesson-live-idle',
+        fullPage: false,
       });
+
+      if (scenario.full) {
+        await page.screenshot({
+          path: path.join(outputDir, `${viewport.name}--${scenario.name}--full.png`),
+          fullPage: true,
+        });
+      }
 
       if (errors.length) {
         console.error(`[${viewport.name}/${scenario.name}] ${errors.join(' | ')}`);
