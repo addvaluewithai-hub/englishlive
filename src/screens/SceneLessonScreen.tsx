@@ -10,6 +10,7 @@ import { getRequiredSceneLesson } from '../lessonScenes/catalog';
 import { SceneLessonRuntime } from '../lessonScenes/SceneLessonRuntime';
 import type { SceneLessonState } from '../lessonScenes/types';
 import { GeminiLiveTransport } from '../live/GeminiLiveTransport';
+import type { LiveClientTool } from '../live/tools';
 import type { LiveStatus } from '../live/types';
 import { comfortLabel, goalPrompt, readLearnerProfile } from '../product/profile';
 
@@ -36,6 +37,73 @@ const statusCopy: Record<LiveStatus, string> = {
   error: 'Try again',
 };
 
+type CompactLogRole = 'AI' | 'YOU' | 'TOOL';
+
+interface CompactLogEntry {
+  role: CompactLogRole;
+  text: string;
+}
+
+function compactText(value: unknown, limit = 180) {
+  if (typeof value !== 'string') return '';
+  const compact = value.replace(/\s+/g, ' ').trim();
+  return compact.length > limit ? `${compact.slice(0, limit)}…` : compact;
+}
+
+function readRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+}
+
+function formatToolLog(name: string, args: Record<string, unknown>, result: unknown) {
+  const response = readRecord(result);
+  const state = readRecord(response?.state);
+  const currentScene = readRecord(state?.currentScene);
+  const currentSceneId = compactText(currentScene?.id, 80);
+  const error = compactText(response?.error, 180);
+
+  if (name === 'get_scene_state') {
+    return `get_scene_state → current=${currentSceneId || 'unknown'}`;
+  }
+
+  if (name === 'complete_scene') {
+    const sceneId = compactText(args.sceneId, 80) || 'unknown';
+    const source = compactText(args.evidenceSource, 40);
+    const criteria = Array.isArray(args.metCriteria)
+      ? args.metCriteria.filter((item): item is string => typeof item === 'string').join(', ')
+      : '';
+    const summary = compactText(args.evidenceSummary, 180);
+    const outcome = error
+      ? `REJECTED: ${error}`
+      : state?.readyToFinish
+        ? 'ACCEPTED → all scenes met'
+        : `ACCEPTED → next=${currentSceneId || 'unknown'}`;
+    return `complete_scene scene=${sceneId} source=${source || 'unknown'} criteria=[${criteria}]${summary ? ` summary="${summary}"` : ''} → ${outcome}`;
+  }
+
+  if (name === 'finish_scene_lesson') {
+    return error ? `finish_scene_lesson → REJECTED: ${error}` : 'finish_scene_lesson → ACCEPTED';
+  }
+
+  return `${name} → ${error ? `ERROR: ${error}` : 'ok'}`;
+}
+
+async function copyToClipboard(text: string) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.style.position = 'fixed';
+  textarea.style.opacity = '0';
+  document.body.appendChild(textarea);
+  textarea.select();
+  document.execCommand('copy');
+  textarea.remove();
+}
+
 export function SceneLessonScreen() {
   const { lessonId } = useParams();
   const [params] = useSearchParams();
@@ -50,6 +118,7 @@ export function SceneLessonScreen() {
   const playback = useRef<PcmPlaybackQueue | null>(null);
   const performer = useRef<CharacterPerformanceController | null>(null);
   const runtime = useRef<SceneLessonRuntime | null>(null);
+  const compactLog = useRef<CompactLogEntry[]>([]);
 
   const [status, setStatus] = useState<LiveStatus>('idle');
   const [micLevel, setMicLevel] = useState(0);
@@ -57,7 +126,61 @@ export function SceneLessonScreen() {
   const [outputTranscript, setOutputTranscript] = useState('');
   const [lessonState, setLessonState] = useState<SceneLessonState | null>(null);
   const [performanceLabel, setPerformanceLabel] = useState('audio-driven locally');
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
   const [error, setError] = useState<string | null>(null);
+
+  function appendDialogueLog(role: 'AI' | 'YOU', text: string) {
+    const value = text.trim();
+    if (!value) return;
+    const entries = compactLog.current;
+    const last = entries.at(-1);
+    if (last?.role === role) {
+      last.text = appendTranscript(last.text, value).slice(-2400);
+    } else {
+      entries.push({ role, text: value.slice(-2400) });
+    }
+    if (entries.length > 160) entries.splice(0, entries.length - 160);
+  }
+
+  function appendToolLog(name: string, args: Record<string, unknown>, result: unknown) {
+    compactLog.current.push({ role: 'TOOL', text: formatToolLog(name, args, result) });
+    if (compactLog.current.length > 160) compactLog.current.splice(0, compactLog.current.length - 160);
+  }
+
+  function tracedTools(sceneRuntime: SceneLessonRuntime): readonly LiveClientTool[] {
+    return sceneRuntime.tools.map((tool) => ({
+      declaration: tool.declaration,
+      handle: async (args) => {
+        try {
+          const result = await tool.handle(args);
+          appendToolLog(tool.declaration.name, args, result);
+          return result;
+        } catch (reason) {
+          const result = { error: reason instanceof Error ? reason.message : 'tool failed' };
+          appendToolLog(tool.declaration.name, args, result);
+          throw reason;
+        }
+      },
+    }));
+  }
+
+  async function copyCompactLog() {
+    const body = compactLog.current.map((entry) => `${entry.role}: ${entry.text}`).join('\n\n');
+    const text = [
+      'EnglishLive compact scene log',
+      `Lesson: ${lesson.source.sourceLessonId} — ${lesson.title}`,
+      `Teacher: ${character.name}`,
+      '',
+      body || '(No conversation captured yet.)',
+    ].join('\n');
+    try {
+      await copyToClipboard(text);
+      setCopyStatus('copied');
+      window.setTimeout(() => setCopyStatus('idle'), 1800);
+    } catch {
+      setCopyStatus('error');
+    }
+  }
 
   async function closeLive() {
     transport.current?.endAudioStream();
@@ -92,9 +215,11 @@ export function SceneLessonScreen() {
   async function startLive() {
     if (status !== 'idle' && status !== 'error') return;
     setError(null);
+    setCopyStatus('idle');
     setInputTranscript('');
     setOutputTranscript('');
     setPerformanceLabel('audio-driven locally');
+    compactLog.current = [];
 
     const sceneRuntime = new SceneLessonRuntime(lesson, {
       onStateChange: setLessonState,
@@ -124,9 +249,11 @@ export function SceneLessonScreen() {
         onStatus: setStatus,
         onInputTranscript: (text) => {
           sceneRuntime.recordAutomaticTranscript(text);
+          appendDialogueLog('YOU', text);
           setInputTranscript((current) => appendTranscript(current, text));
         },
         onOutputTranscript: (text) => {
+          appendDialogueLog('AI', text);
           queue.pushTranscript(text);
           setOutputTranscript((current) => appendTranscript(current, text));
         },
@@ -147,7 +274,7 @@ export function SceneLessonScreen() {
         onTurnComplete: () => queue.markTurnComplete(),
         onError: setError,
       },
-      [...sceneRuntime.tools],
+      tracedTools(sceneRuntime),
     );
     transport.current = live;
 
@@ -155,7 +282,7 @@ export function SceneLessonScreen() {
     microphone.current = mic;
 
     const learnerContext = profile
-      ? `The learner's private profile says their first name is ${profile.firstName || 'not provided'}, their main reason for English is to ${goalPrompt(profile.goals[0] ?? 'everyday')}, and their speaking comfort is ${comfortLabel(profile.comfort)}. Use this only to pace support. IMPORTANT: this lesson teaches first-contact identity language, so do NOT say the learner's name for them or use it to satisfy any scene evidence.`
+      ? `The learner's private profile says their first name is ${profile.firstName || 'not provided'}, their main reason for English is to ${goalPrompt(profile.goals[0] ?? 'everyday')}, and their speaking comfort is ${comfortLabel(profile.comfort)}. Use this only to pace support. Never use profile facts to satisfy lesson evidence or answer for the learner.`
       : 'No learner profile is available. Keep support very concrete and calibrate only from the live interaction.';
 
     const characterPrompt = `You are ${character.name}, ${character.persona.style}. You are teaching an adult A1 English learner live. Be warm, patient and concise without sounding childish. In THIS lesson, explanations should be mostly simple Egyptian Arabic while target phrases, models and roleplay remain in English. Use Arabic to make the idea clear, then get the learner speaking English quickly. Allow interruption and react naturally.`;
@@ -200,7 +327,7 @@ export function SceneLessonScreen() {
     <section className="session-screen lesson-session-screen">
       <div className="session-stage" style={{ '--character-accent': character.accent } as CSSProperties}>
         <div className="session-stage-meta lesson-stage-meta">
-          <span>A1 · Unit 1 · Lesson 1 · Scene pilot</span>
+          <span>A1 · Unit 1 · Lesson {lesson.order} · Scene pilot</span>
           <strong>{lesson.title}</strong>
         </div>
 
@@ -267,6 +394,13 @@ export function SceneLessonScreen() {
 
         {error ? <div className="live-error" role="alert">{error}</div> : null}
 
+        <div>
+          <button type="button" className="button quiet" onClick={() => void copyCompactLog()}>
+            {copyStatus === 'copied' ? 'Copied log' : 'Copy log'}
+          </button>
+          {copyStatus === 'error' ? <small>Could not copy. Try again in a secure browser context.</small> : null}
+        </div>
+
         <div className="transcript-stack" aria-live="polite">
           <article className="transcript-card user-transcript">
             <small>You</small>
@@ -285,6 +419,7 @@ export function SceneLessonScreen() {
           <span>Interaction: {currentScene.interaction.kind}</span>
           <span>Performance: {performanceLabel}</span>
           <span>Curriculum source: english-course · {lesson.source.branch}</span>
+          <span>Copy log contains dialogue + scene tool calls only.</span>
         </details>
       </aside>
     </section>
