@@ -14,14 +14,14 @@ export function LevelScreen() {
       <div className="v3-page-topline">
         <Link className="v3-back-link" to="/learn" aria-label="العودة للمستويات">
           <ProductIcon name="chevron" size={20} />
-          <span>المستويات</span>
+          <span>كل المستويات</span>
         </Link>
       </div>
 
       <header className="v3-level-hero">
         <span className="v3-level-orb">{level.title}</span>
         <div>
-          <span className="v3-kicker">المستوى الحالي</span>
+          <span className="v3-kicker">مستواك الحالي</span>
           <h1>{level.arabicTitle}</h1>
           <p>{level.description}</p>
         </div>
@@ -29,8 +29,8 @@ export function LevelScreen() {
 
       <div className="v3-level-stats" aria-label="A1 course structure">
         <div><strong>{level.unitCount}</strong><span>وحدات</span></div>
-        <div><strong>{level.lessonSlotCount}</strong><span>خانة درس في المنهج</span></div>
-        <div><strong>{unitOneProgress.completedCount}/{unitOneProgress.totalCount}</strong><span>دروس موصلة حاليًا</span></div>
+        <div><strong>{level.lessonSlotCount}</strong><span>دروس في الخطة</span></div>
+        <div><strong>{unitOneProgress.completedCount}/{unitOneProgress.totalCount}</strong><span>من الدروس المتاحة</span></div>
       </div>
 
       <section className="v3-unit-browser">
@@ -39,7 +39,7 @@ export function LevelScreen() {
             <span className="v3-kicker">خريطة A1</span>
             <h2>الوحدات</h2>
           </div>
-          <small>المحتوى غير الموصل يظهر كقريبًا</small>
+          <small>الوحدات التالية هتفتح تدريجيًا.</small>
         </div>
 
         <div className="v3-unit-list">
@@ -48,7 +48,7 @@ export function LevelScreen() {
               <>
                 <span className={`v3-unit-number${unit.connected ? ' is-live' : ''}`}>{unit.order}</span>
                 <span className="v3-unit-copy">
-                  <small>Unit {unit.order} · {unit.lessonCount} lessons</small>
+                  <small>الوحدة {unit.order} · {unit.lessonCount} دروس</small>
                   <strong>{unit.arabicTitle}</strong>
                   <span>{unit.title}</span>
                 </span>
