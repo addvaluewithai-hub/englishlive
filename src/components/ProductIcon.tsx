@@ -1,4 +1,4 @@
-type ProductIconName = 'home' | 'learn' | 'speak' | 'profile' | 'chevron' | 'bell' | 'check' | 'lock' | 'play';
+type ProductIconName = 'home' | 'learn' | 'speak' | 'profile' | 'chevron' | 'bell' | 'check' | 'lock' | 'play' | 'refresh';
 
 export function ProductIcon({ name, size = 24 }: { name: ProductIconName; size?: number }) {
   const common = {
@@ -21,5 +21,6 @@ export function ProductIcon({ name, size = 24 }: { name: ProductIconName; size?:
   if (name === 'bell') return <svg {...common}><path d="M6.5 9a5.5 5.5 0 0 1 11 0c0 6 2.5 6.5 2.5 6.5h-16S6.5 15 6.5 9"/><path d="M10 19h4"/></svg>;
   if (name === 'check') return <svg {...common}><path d="m5 12 4.2 4.2L19 6.5"/></svg>;
   if (name === 'lock') return <svg {...common}><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>;
+  if (name === 'refresh') return <svg {...common}><path d="M20 7v5h-5"/><path d="M4 17v-5h5"/><path d="M6.1 8.2A7 7 0 0 1 18.6 7L20 9"/><path d="M17.9 15.8A7 7 0 0 1 5.4 17L4 15"/></svg>;
   return <svg {...common}><path d="m9 6 9 6-9 6z"/></svg>;
 }
