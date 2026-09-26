@@ -34,30 +34,31 @@ export function App() {
   const isApp = !isLanding && !isOnboarding && !isSession && !isReview;
   const usesProductV2 = isApp || isOnboarding || isSceneLesson;
   const showProductHeader = isApp && !isCompletion;
+  const hideGlobalHeader = isLanding || isOnboarding || isCompletion || isSceneLesson;
+  const showBottomNav = isApp && !isCompletion;
 
   return (
-    <div className={`app-shell${isSession ? ' is-session' : ''}${isSceneLesson ? ' is-scene-lesson' : ''}${isCompletion ? ' is-completion' : ''}${isLanding ? ' is-landing' : ''}${usesProductV2 ? ' is-product-v2' : ''}`}>
-      {showProductHeader ? (
+    <div className={`app-shell${isSession ? ' is-session' : ''}${isSceneLesson ? ' is-scene-lesson' : ''}${isFreeSpeakSession ? ' is-free-speak-session' : ''}${isCompletion ? ' is-completion' : ''}${isLanding ? ' is-landing' : ''}${usesProductV2 ? ' is-product-v2' : ''}`}>
+      {hideGlobalHeader ? null : showProductHeader ? (
         <header className="v2-app-header">
           <Link to="/home" className="v2-brand" aria-label="Englotti home">
             <span className="v2-brand-mark" aria-hidden="true">🐙</span>
             <span>Englotti</span>
           </Link>
-          <button type="button" className="v2-icon-button" aria-label="Notifications">
-            <ProductIcon name="bell" size={25} />
-            <span className="v2-notification-dot" />
-          </button>
+          <Link className="v2-icon-button" to="/characters" aria-label="اختيار المدرس">
+            <ProductIcon name="profile" size={24} />
+          </Link>
         </header>
-      ) : isOnboarding || isCompletion || isSceneLesson ? null : (
+      ) : (
         <header className="app-header">
-          <Link to={isLanding ? '/' : '/home'} className="brand" aria-label="Englotti home">
+          <Link to="/home" className="brand" aria-label="Englotti home">
             <span className="brand-mark" aria-hidden="true">🐙</span>
             <span>Englotti</span>
           </Link>
-          {isLanding ? (
-            <Link className="header-action" to="/onboarding">Start learning</Link>
-          ) : isSession ? (
-            <Link className="header-action quiet-link" to={isFreeSpeakSession ? '/speak' : '/learn'}>Leave session</Link>
+          {isSession ? (
+            <Link className="header-action quiet-link" to={isFreeSpeakSession ? '/speak' : '/learn'}>
+              {isFreeSpeakSession ? 'الرجوع للمحادثة' : 'Leave session'}
+            </Link>
           ) : isReview ? (
             <Link className="header-action quiet-link" to="/learn">Back to Learn</Link>
           ) : null}
@@ -86,7 +87,7 @@ export function App() {
         </Routes>
       </main>
 
-      {isApp ? (
+      {showBottomNav ? (
         <nav className="v2-bottom-nav" aria-label="Primary navigation" dir="rtl">
           <NavLink end to="/home" className={navClass}><ProductIcon name="home" /><span>الرئيسية</span></NavLink>
           <NavLink to="/learn" className={navClass}><ProductIcon name="learn" /><span>التعلم</span></NavLink>

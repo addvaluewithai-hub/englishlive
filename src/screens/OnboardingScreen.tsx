@@ -65,7 +65,7 @@ export function OnboardingScreen() {
   return (
     <section className="v2-onboarding" dir="rtl">
       <header className="v2-onboarding-header">
-        <div className="v2-onboarding-brand"><span>E</span><strong>English<i>Live</i></strong></div>
+        <div className="v2-onboarding-brand"><span>🐙</span><strong>Englotti</strong></div>
         <div className="v2-onboarding-progress" aria-label={`Step ${step + 1} of 4`}>
           {[0, 1, 2, 3].map((value) => <span key={value} className={value <= step ? 'is-active' : ''} />)}
         </div>
@@ -146,7 +146,7 @@ export function OnboardingScreen() {
                 </button>
               ))}
             </div>
-            <div className="v2-onboarding-note">أول درس هيبدأ مع <strong>{selectedCharacter.name}</strong>. الميكروفون مش هيفتح إلا لما تضغط Start lesson.</div>
+            <div className="v2-onboarding-note">أول درس هيبدأ مع <strong>{selectedCharacter.name}</strong>. الميكروفون مش هيفتح إلا لما تضغط ابدأ.</div>
           </div>
         ) : null}
 

@@ -33,20 +33,20 @@ export function UnitScreen() {
 
       <div className="v3-unit-progress-panel">
         <div>
-          <small>تقدمك في المحتوى الموصل</small>
-          <strong>{summary.completedCount} من {summary.totalCount} دروس</strong>
-          <span>{summary.unitComplete ? 'أكملت الدروس المتاحة حاليًا.' : `التالي: ${lessonProductTitle(summary.nextLesson)}`}</span>
+          <small>تقدمك في الوحدة</small>
+          <strong>{summary.completedCount} من {summary.totalCount} دروس متاحة</strong>
+          <span>{summary.unitComplete ? 'خلصت كل الدروس المتاحة دلوقتي.' : `الدرس التالي: ${lessonProductTitle(summary.nextLesson)}`}</span>
         </div>
         <Link className="v3-primary-cta" to={`/scene-lesson/${summary.nextLesson.id}?character=${character.id}`}>
           <ProductIcon name="play" size={21} />
-          <span>{summary.unitComplete ? 'إعادة آخر درس' : progress.lessons[summary.nextLesson.id]?.startedAt ? 'متابعة الدرس' : 'ابدأ الدرس'}</span>
+          <span>{summary.unitComplete ? 'راجع آخر درس' : progress.lessons[summary.nextLesson.id]?.startedAt ? 'كمّل الدرس' : 'ابدأ الدرس'}</span>
         </Link>
       </div>
 
       <section className="v3-lessons-section">
         <div className="v3-section-heading">
-          <div><span className="v3-kicker">7 دروس في تصميم الوحدة</span><h2>الدروس</h2></div>
-          <small>أول 3 موصلة بالـLive runtime حاليًا</small>
+          <div><span className="v3-kicker">7 دروس في الوحدة</span><h2>الدروس</h2></div>
+          <small>3 دروس متاحة الآن، والباقي هيفتح تدريجيًا.</small>
         </div>
 
         <div className="v3-lesson-list">
@@ -56,7 +56,7 @@ export function UnitScreen() {
               return (
                 <div key={slot.sourceLessonId} className="v3-lesson-row is-coming" aria-disabled="true">
                   <span className="v3-lesson-number">{slot.order}</span>
-                  <span className="v3-lesson-copy"><small>{slot.sourceLessonId}</small><strong>{slot.title}</strong><span>{slot.arabicTitle}</span></span>
+                  <span className="v3-lesson-copy"><small>الدرس {slot.order}</small><strong>{slot.title}</strong><span>{slot.arabicTitle}</span></span>
                   <span className="v3-lesson-status"><ProductIcon name="lock" size={18} /><small>قريبًا</small></span>
                 </div>
               );
@@ -72,7 +72,7 @@ export function UnitScreen() {
                   {completed ? <ProductIcon name="check" size={21} /> : slot.order}
                 </span>
                 <span className="v3-lesson-copy">
-                  <small>{slot.sourceLessonId}</small>
+                  <small>الدرس {slot.order}</small>
                   <strong>{lessonProductTitle(connectedLesson)}</strong>
                   <span>{lessonArabicTitle(connectedLesson)}</span>
                 </span>
