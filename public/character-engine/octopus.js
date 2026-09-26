@@ -1,4 +1,3 @@
-/* Vendored from addvaluewithai-hub/pixilive feat/character-engine @ c0fa7ca. */
 /* Octo art: one continuous skin silhouette, eight soft tentacles and a deformable
    mantle. Driven exclusively by octopus-motion.js. */
 (function(host){
