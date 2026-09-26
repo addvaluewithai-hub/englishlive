@@ -1,4 +1,3 @@
-/* Vendored from addvaluewithai-hub/pixilive feat/character-engine @ c0fa7ca. */
 /* Octo has its own soft-body performance rig. Live audio/tools still use the
    common CharacterPort contract; only mouth geometry is shared with other rigs. */
 (function(host){
