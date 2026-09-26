@@ -12,6 +12,7 @@ const base64ToInt16 = (base64: string) => {
 export interface PlaybackCallbacks {
   onSpeechStart?: () => void;
   onSpeechEnd?: () => void;
+  /** Fires only after a model turn with actual audible PCM has finished playing. */
   onTurnComplete?: () => void;
   onMouthPose?: (pose: MouthPose | null) => void;
 }
@@ -57,8 +58,9 @@ export class PcmPlaybackQueue {
     void this.enqueueChain.then(() => {
       if (generation !== this.generation) return;
       if (!this.turnHasAudio) {
+        // Tool-only / text-only server turns are not audible partner turns and must never
+        // advance authored teaching or lesson-opening gates.
         this.visemes.resetTranscript();
-        this.callbacks.onTurnComplete?.();
         return;
       }
       this.turnCompletePending = true;

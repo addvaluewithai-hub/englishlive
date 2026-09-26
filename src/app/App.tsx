@@ -10,6 +10,7 @@ import { LessonScreen } from '../screens/LessonScreen';
 import { OnboardingScreen } from '../screens/OnboardingScreen';
 import { ProgressScreen } from '../screens/ProgressScreen';
 import { ReviewScreen } from '../screens/ReviewScreen';
+import { SceneLessonScreen } from '../screens/SceneLessonScreen';
 import { SessionScreen } from '../screens/SessionScreen';
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
@@ -21,8 +22,9 @@ export function App() {
   const isOnboarding = location.pathname.startsWith('/onboarding');
   const isLegacySession = location.pathname.startsWith('/session/');
   const isLesson = location.pathname.startsWith('/lesson/');
+  const isSceneLesson = location.pathname.startsWith('/scene-lesson/');
   const isFreeSpeakSession = /^\/speak\/[^/]+/.test(location.pathname);
-  const isSession = isLegacySession || isLesson || isFreeSpeakSession;
+  const isSession = isLegacySession || isLesson || isSceneLesson || isFreeSpeakSession;
   const isReview = location.pathname.startsWith('/review/') || location.pathname.startsWith('/lesson-review/');
   const isApp = !isLanding && !isOnboarding && !isSession && !isReview;
 
@@ -59,6 +61,7 @@ export function App() {
           <Route path="/home" element={<HomeScreen />} />
           <Route path="/learn" element={<LearnScreen />} />
           <Route path="/lesson/:lessonId" element={<LessonScreen />} />
+          <Route path="/scene-lesson/:lessonId" element={<SceneLessonScreen />} />
           <Route path="/lesson-review/:runId" element={<LessonReviewScreen />} />
           <Route path="/speak" element={<FreeSpeakScreen />} />
           <Route path="/speak/:modeId" element={<FreeSpeakSessionScreen />} />

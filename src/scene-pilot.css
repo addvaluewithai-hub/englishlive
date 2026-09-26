@@ -1,0 +1,163 @@
+.scene-session-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.scene-session-actions small {
+  color: #9f988d;
+  line-height: 1.4;
+}
+
+.lesson-quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 2px 0;
+}
+
+.lesson-quick-actions button {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid #4a4740;
+  border-radius: 10px;
+  background: #191816;
+  color: #e9e3d8;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 720;
+}
+
+.lesson-quick-actions button:hover:not(:disabled) {
+  border-color: #726c62;
+  background: #23211d;
+}
+
+.lesson-quick-actions button:focus-visible {
+  outline: 2px solid #d47a5f;
+  outline-offset: 2px;
+}
+
+.lesson-quick-actions button:disabled {
+  opacity: .42;
+  cursor: not-allowed;
+}
+
+.lesson-chat-composer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  padding-top: 14px;
+  border-top: 1px solid #34322d;
+}
+
+.lesson-chat-composer input {
+  min-width: 0;
+  min-height: 44px;
+  border: 1px solid #4a4740;
+  border-radius: 10px;
+  background: #191816;
+  color: #f7f2e8;
+  padding: 10px 12px;
+  font: inherit;
+}
+
+.lesson-chat-composer input::placeholder {
+  color: #8f897f;
+}
+
+.lesson-chat-composer input:focus-visible {
+  outline: 2px solid #d47a5f;
+  outline-offset: 2px;
+}
+
+.lesson-chat-composer input:disabled {
+  opacity: .55;
+}
+
+.lesson-chat-composer .button {
+  min-height: 44px;
+  align-self: stretch;
+}
+
+.lesson-chat-composer > small {
+  grid-column: 1 / -1;
+  color: #8f897f;
+  line-height: 1.45;
+}
+
+.scene-lesson-screen .transcript-card p {
+  overflow-wrap: anywhere;
+}
+
+.scene-lesson-screen .board-compare-grid.is-partial {
+  grid-template-columns: 1fr;
+}
+
+.scene-lesson-screen .board-reveal-item {
+  animation: scene-board-reveal 220ms ease-out both;
+}
+
+@keyframes scene-board-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (min-width: 821px) {
+  .scene-lesson-screen {
+    height: calc(100dvh - 72px);
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .scene-lesson-screen .session-stage {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .scene-lesson-screen .conversation-sidebar {
+    height: 100%;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+  }
+
+  .scene-lesson-screen .transcript-card p {
+    max-height: 10.5rem;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+}
+
+@media (max-width: 520px) {
+  .lesson-chat-composer {
+    grid-template-columns: 1fr;
+  }
+
+  .lesson-chat-composer > small {
+    grid-column: 1;
+  }
+
+  .lesson-quick-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .lesson-quick-actions button:last-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scene-lesson-screen .board-reveal-item {
+    animation: none;
+  }
+}
