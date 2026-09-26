@@ -12,8 +12,10 @@ export interface LiveCallbacks {
   onInputTranscript(text: string): void;
   onOutputTranscript(text: string): void;
   onAudio(data: string, mimeType: string): void;
-  onPerformanceCue(cue: CharacterPerformanceCue): void;
-  onPerformanceCancelled(): void;
+  /** @deprecated GeminiLiveTransport no longer requests or emits semantic performance cues. */
+  onPerformanceCue?(cue: CharacterPerformanceCue): void;
+  /** @deprecated GeminiLiveTransport no longer requests or emits semantic performance cues. */
+  onPerformanceCancelled?(): void;
   onInterrupted(): void;
   onTurnComplete(): void;
   onError(message: string): void;
