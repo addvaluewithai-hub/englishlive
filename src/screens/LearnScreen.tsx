@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { getCharacterDefinition } from '../character/registry';
 import { B1_UNIT_1, B1_UNIT_1_LESSONS } from '../course/b1/unit1';
 import { getNextCourseLessonId, readCourseProgress } from '../course/store';
-import { SCENE_LESSON_PILOT } from '../lessonScenes/catalog';
+import { SCENE_LESSON_PILOTS } from '../lessonScenes/catalog';
 import { readLearnerProfile } from '../product/profile';
 
 export function LearnScreen() {
@@ -30,19 +30,43 @@ export function LearnScreen() {
 
   return (
     <section className="screen learn-screen">
-      <section className="course-unit-complete">
-        <p className="eyebrow">A1 scene delivery pilot · curriculum source of truth</p>
-        <h2>{SCENE_LESSON_PILOT.title}</h2>
-        <p>
-          Try the first authored lesson from <strong>english-course</strong> using the new scene runtime:
-          short Arabic teaching, an authored board, guided speaking, then a fresh first-contact conversation.
-        </p>
-        <Link
-          className="button primary"
-          to={`/scene-lesson/${SCENE_LESSON_PILOT.id}?character=${character.id}`}
-        >
-          Try Lesson 1 with {character.name}
-        </Link>
+      <section className="course-unit-card">
+        <div className="course-unit-intro">
+          <span className="course-unit-number">A1</span>
+          <div>
+            <p className="eyebrow">Scene delivery pilot · curriculum source of truth</p>
+            <h2>First Contact: Me and You</h2>
+            <p>
+              Three authored lessons from <strong>english-course</strong>: concise Arabic teaching,
+              authored boards, spoken practice, guided conversation, then fresh transfer.
+            </p>
+          </div>
+        </div>
+
+        <div className="course-lesson-list">
+          {SCENE_LESSON_PILOTS.map((sceneLesson) => (
+            <article className="course-lesson-row" key={sceneLesson.id}>
+              <div className="course-lesson-index">{String(sceneLesson.order).padStart(2, '0')}</div>
+              <div className="course-lesson-copy">
+                <div className="course-lesson-meta">
+                  <span>{sceneLesson.source.sourceLessonId}</span>
+                  <strong>Scene pilot</strong>
+                </div>
+                <h3>{sceneLesson.title}</h3>
+                <p>{sceneLesson.subtitle}</p>
+                <div className="course-focus-tags">
+                  {sceneLesson.coreLanguage.slice(0, 3).map((focus) => <span key={focus}>{focus}</span>)}
+                </div>
+              </div>
+              <Link
+                className="button primary"
+                to={`/scene-lesson/${sceneLesson.id}?character=${character.id}`}
+              >
+                Try Lesson {sceneLesson.order}
+              </Link>
+            </article>
+          ))}
+        </div>
       </section>
 
       <header className="course-heading">
