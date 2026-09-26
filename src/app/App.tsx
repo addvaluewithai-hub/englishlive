@@ -23,6 +23,7 @@ export function App() {
   const location = useLocation();
   const isLanding = location.pathname === '/';
   const isOnboarding = location.pathname.startsWith('/onboarding');
+  const isCompletion = location.pathname.startsWith('/lesson-complete/');
   const isLegacySession = location.pathname.startsWith('/session/');
   const isLesson = location.pathname.startsWith('/lesson/');
   const isSceneLesson = location.pathname.startsWith('/scene-lesson/');
@@ -31,10 +32,11 @@ export function App() {
   const isReview = location.pathname.startsWith('/review/') || location.pathname.startsWith('/lesson-review/');
   const isApp = !isLanding && !isOnboarding && !isSession && !isReview;
   const usesProductV2 = isApp || isOnboarding || isSceneLesson;
+  const showProductHeader = isApp && !isCompletion;
 
   return (
-    <div className={`app-shell${isSession ? ' is-session' : ''}${isSceneLesson ? ' is-scene-lesson' : ''}${isLanding ? ' is-landing' : ''}${usesProductV2 ? ' is-product-v2' : ''}`}>
-      {isApp ? (
+    <div className={`app-shell${isSession ? ' is-session' : ''}${isSceneLesson ? ' is-scene-lesson' : ''}${isCompletion ? ' is-completion' : ''}${isLanding ? ' is-landing' : ''}${usesProductV2 ? ' is-product-v2' : ''}`}>
+      {showProductHeader ? (
         <header className="v2-app-header">
           <Link to="/home" className="v2-brand" aria-label="EnglishLive home">
             <span className="v2-brand-mark" aria-hidden="true">E</span>
@@ -45,7 +47,7 @@ export function App() {
             <span className="v2-notification-dot" />
           </button>
         </header>
-      ) : isOnboarding ? null : (
+      ) : isOnboarding || isCompletion ? null : (
         <header className="app-header">
           <Link to={isLanding ? '/' : '/home'} className="brand" aria-label="EnglishLive home">
             <span className="brand-mark" aria-hidden="true">E</span>
