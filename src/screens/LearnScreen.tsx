@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { getCharacterDefinition } from '../character/registry';
 import { B1_UNIT_1, B1_UNIT_1_LESSONS } from '../course/b1/unit1';
 import { getNextCourseLessonId, readCourseProgress } from '../course/store';
+import { SCENE_LESSON_PILOT } from '../lessonScenes/catalog';
 import { readLearnerProfile } from '../product/profile';
 
 export function LearnScreen() {
@@ -29,6 +30,21 @@ export function LearnScreen() {
 
   return (
     <section className="screen learn-screen">
+      <section className="course-unit-complete">
+        <p className="eyebrow">A1 scene delivery pilot · curriculum source of truth</p>
+        <h2>{SCENE_LESSON_PILOT.title}</h2>
+        <p>
+          Try the first authored lesson from <strong>english-course</strong> using the new scene runtime:
+          short Arabic teaching, an authored board, guided speaking, then a fresh first-contact conversation.
+        </p>
+        <Link
+          className="button primary"
+          to={`/scene-lesson/${SCENE_LESSON_PILOT.id}?character=${character.id}`}
+        >
+          Try Lesson 1 with {character.name}
+        </Link>
+      </section>
+
       <header className="course-heading">
         <div>
           <p className="eyebrow">B1 · Unit 1</p>
