@@ -44,7 +44,7 @@ export function App() {
             <span className="v2-notification-dot" />
           </button>
         </header>
-      ) : isOnboarding || isSceneLesson ? null : (
+      ) : isOnboarding ? null : (
         <header className="app-header">
           <Link to={isLanding ? '/' : '/home'} className="brand" aria-label="EnglishLive home">
             <span className="brand-mark" aria-hidden="true">E</span>
