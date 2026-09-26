@@ -71,6 +71,7 @@ const scenarios = [
   },
   { name: 'lesson-complete', path: '/lesson-complete/a1-u1-l01-hello-im?character=reem', full: true },
   { name: 'free-speak', path: '/speak', full: true },
+  { name: 'free-speak-session', path: '/speak/just-chat?character=reem' },
   { name: 'progress', path: '/progress', full: true },
   { name: 'teachers', path: '/characters', full: true },
 ];
