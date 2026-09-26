@@ -1,87 +1,78 @@
-import type { CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import { CharacterPortrait } from '../character/CharacterPortrait';
 import { getCharacterDefinition } from '../character/registry';
+import { ProductIcon } from '../components/ProductIcon';
 import { readLearnerProfile } from '../product/profile';
 
 export function LandingScreen() {
   const profile = readLearnerProfile();
   const featured = getCharacterDefinition('reem');
+  const primaryHref = profile ? '/home' : '/onboarding';
 
   return (
-    <div className="landing-page">
-      <section className="landing-hero">
-        <div className="landing-copy">
-          <p className="eyebrow">🐙 Englotti · A structured English course, taught live</p>
-          <h1>Learn English by actually speaking it.</h1>
-          <p className="landing-lead">
-            Follow Levels, Units and Lessons with a real-time AI teacher on screen. The teacher explains, uses a board when useful,
-            asks you questions, listens to your answer, and turns each lesson into live spoken practice.
-          </p>
-          <div className="actions">
-            <Link className="button primary" to={profile ? '/home' : '/onboarding'}>
-              {profile ? 'Continue my course' : 'Start A1'}
-            </Link>
-            <a className="button quiet" href="#how-it-works">See how it works</a>
-          </div>
-          <p className="hero-note">Starting from A1 with small live lessons: explain one thing, use it immediately, then build it into conversation.</p>
-        </div>
-
-        <div className="landing-character" style={{ '--character-accent': featured.accent } as CSSProperties}>
-          <div className="landing-character-frame">
-            <CharacterPortrait character={featured} />
-          </div>
-          <div className="landing-quote">
-            <span className="quote-speaker">{featured.name}</span>
-            <strong>“هنمشي خطوة خطوة، وبعدها هتستخدمها بنفسك.”</strong>
-            <span>Live teaching. Then you speak.</span>
-          </div>
-        </div>
-      </section>
-
-      <section className="landing-band" aria-label="Product promise">
-        <p>Levels and Units you can follow.</p>
-        <p>A teacher you can interrupt.</p>
-        <p>Free Speak when you just want to talk.</p>
-      </section>
-
-      <section className="landing-section" id="how-it-works">
-        <div className="section-kicker">The course happens through conversation</div>
-        <div className="landing-section-grid">
-          <h2>Structure like a course. Delivery like a private live teacher.</h2>
-          <div className="process-list">
-            <article>
-              <span>01</span>
-              <div>
-                <h3>Follow Levels, Units and Lessons.</h3>
-                <p>Your path is authored by the product. The model does not randomly decide what you should learn next.</p>
-              </div>
-            </article>
-            <article>
-              <span>02</span>
-              <div>
-                <h3>Learn one small thing, then use it.</h3>
-                <p>Your teacher explains a tiny scene, shows visual support, and gets you speaking instead of reading a page of theory.</p>
-              </div>
-            </article>
-            <article>
-              <span>03</span>
-              <div>
-                <h3>Build the pieces into real conversation.</h3>
-                <p>Later scenes combine what you just learned inside a fresh exchange, with help only when you need it.</p>
-              </div>
-            </article>
-          </div>
-        </div>
-      </section>
-
-      <section className="landing-statement">
-        <p className="eyebrow">Learn when you want structure. Speak when you want freedom.</p>
-        <h2>Your course moves forward through authored live lessons. Free Speak stays open beside it whenever you just need a real conversation.</h2>
-        <Link className="text-link" to={profile ? '/home' : '/onboarding'}>
-          {profile ? 'Open Englotti' : 'Meet your live teacher'} →
+    <div className="qa-landing" dir="rtl">
+      <header className="qa-landing-header">
+        <Link className="qa-landing-brand" to="/" aria-label="Englotti">
+          <span aria-hidden="true">🐙</span>
+          <strong>Englotti</strong>
         </Link>
-      </section>
+        <Link className="qa-landing-header-cta" to={primaryHref}>{profile ? 'كمّل تعلمك' : 'ابدأ الآن'}</Link>
+      </header>
+
+      <main>
+        <section className="qa-landing-hero">
+          <div className="qa-landing-copy">
+            <span className="qa-landing-kicker">منهج منظم · مدرس Live · كلام من أول درس</span>
+            <h1>اتعلم الإنجليزي<br />وأنت <em>بتتكلم فعلًا.</em></h1>
+            <p>امشِ في Levels وUnits ودروس مرتبة. مدرسك يشرح بالعربي لما تحتاج، يستخدم السبورة، يسمع إجابتك، وبعدها يحوّل اللي اتعلمته لمحادثة حقيقية.</p>
+            <div className="qa-landing-actions">
+              <Link className="qa-landing-primary" to={primaryHref}>
+                <ProductIcon name="play" size={21} />
+                <span>{profile ? 'كمّل من مكانك' : 'ابدأ A1'}</span>
+              </Link>
+              <a className="qa-landing-secondary" href="#how">شوف التجربة</a>
+            </div>
+            <div className="qa-landing-proof">
+              <span><ProductIcon name="check" size={17} /> شرح صغير</span>
+              <span><ProductIcon name="check" size={17} /> تطبيق بصوتك</span>
+              <span><ProductIcon name="check" size={17} /> محادثة Live</span>
+            </div>
+          </div>
+
+          <div className="qa-landing-teacher-card">
+            <div className="qa-landing-teacher-art"><CharacterPortrait character={featured} /></div>
+            <div className="qa-landing-teacher-copy">
+              <small>مدرستك ممكن تبدأ معاك كده</small>
+              <strong>“ناخد حاجة صغيرة، نجربها سوا، وبعدها تستخدمها في الكلام.”</strong>
+              <span>{featured.name} · مدرسة Englotti</span>
+            </div>
+          </div>
+        </section>
+
+        <section className="qa-landing-flow" id="how">
+          <div className="qa-landing-section-heading">
+            <span>شكل الدرس</span>
+            <h2>مش فيديو وبعده شات.<br />الشرح والممارسة نفس التجربة.</h2>
+          </div>
+          <div className="qa-landing-flow-grid">
+            <article><b>01</b><strong>افهم</strong><p>شرح قصير وواضح بالعربي، والإنجليزي المستهدف ظاهر قدامك.</p></article>
+            <article><b>02</b><strong>جرّب</strong><p>المدرس يسألك أو يعمل معاك موقف صغير، ويستنى إجابتك بصوتك.</p></article>
+            <article><b>03</b><strong>اتكلم</strong><p>نجمع اللي اتعلمته في حوار طبيعي، مع تصحيح ومساعدة وقت الحاجة.</p></article>
+          </div>
+        </section>
+
+        <section className="qa-landing-split">
+          <div><span>Learn</span><h2>عارف دايمًا إيه الخطوة الجاية.</h2><p>مستوى، وحدة، درس. المنهج هو اللي يحدد المسار، والمدرس يقدمه بشكل حي.</p></div>
+          <div><span>Free Speak</span><h2>ولما تحب تتكلم بس… اتكلم.</h2><p>محادثة حرة جنب المنهج، من غير ما نزوّر تقدم درس ماخدتوش.</p></div>
+        </section>
+
+        <section className="qa-landing-final">
+          <span aria-hidden="true">🐙</span>
+          <h2>جاهز تبدأ أول محادثة تعليمية؟</h2>
+          <p>A1 بيبدأ بخطوات صغيرة جدًا، وكل خطوة بتستخدمها فورًا بصوتك.</p>
+          <Link className="qa-landing-primary" to={primaryHref}>{profile ? 'افتح Englotti' : 'ابدأ أول درس'}</Link>
+        </section>
+      </main>
     </div>
   );
 }
