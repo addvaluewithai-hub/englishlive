@@ -14,9 +14,10 @@ import './product-v2-scene.css';
 import './product-v2-turn-taking.css';
 import './product-v2-completion.css';
 import './product-v3-premium.css';
+import './product-v4-visual-qa.css';
 
 const root = document.getElementById('root');
-if (!root) throw new Error('EnglishLive root element was not found.');
+if (!root) throw new Error('Englotti root element was not found.');
 
 createRoot(root).render(
   <StrictMode>
