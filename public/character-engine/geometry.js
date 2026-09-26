@@ -1,4 +1,3 @@
-/* Vendored from addvaluewithai-hub/pixilive feat/character-engine @ d1f0b1ba4c35867878d47b297bffb655f6e84d5c. */
 /* Shared pure geometry: one continuous arm silhouette and one mouth topology. */
 (function(root,factory){if(typeof module==='object'&&module.exports)module.exports=factory();else root.CharacterGeometry=factory();})(typeof window!=='undefined'?window:this,function(){
  'use strict';
@@ -38,6 +37,8 @@
   const sign=side==='l'?-1:1,s=[302+sign*52*body,367];
   const rawDistance=Math.hypot(x-s[0],y-s[1]),reach=104;
   if(rawDistance>reach){x=s[0]+(x-s[0])*reach/rawDistance;y=s[1]+(y-s[1])*reach/rawDistance;}
+  // A single bowed centerline. Its curvature is bounded relative to reach,
+  // so short/cross-body poses cannot produce a folded elbow silhouette.
   const dx=x-s[0],dy=y-s[1],distance=Math.max(1,Math.hypot(dx,dy)),normal=[-dy/distance,dx/distance];
   const bow=clamp(sign*24*normal[0]+25*normal[1],-distance*.24,distance*.24);
   const control=[(s[0]+x)/2+normal[0]*bow,(s[1]+y)/2+normal[1]*bow];
@@ -54,14 +55,15 @@
   }
   const n=[-tangent[1],tangent[0]],tip=[x+tangent[0]*radius,y+tangent[1]*radius],a=left.at(-1),b=right.at(-1),k=.5522848;
   function outline(start){
-   let d=`M${f(left[start][0])} ${f(left[start][1])}`+curveThrough(left.slice(start));
-   d+=` C${f(a[0]+tangent[0]*radius*k)} ${f(a[1]+tangent[1]*radius*k)} ${f(tip[0]+n[0]*radius*k)} ${f(tip[1]+n[1]*radius*k)} ${f(tip[0])} ${f(tip[1])}`;
-   d+=` C${f(tip[0]-n[0]*radius*k)} ${f(tip[1]-n[1]*radius*k)} ${f(b[0]+tangent[0]*radius*k)} ${f(b[1]+tangent[1]*radius*k)} ${f(b[0])} ${f(b[1])}`;
-   d+=curveThrough(right.slice(start).reverse());
-   const startTangent=[(c1[0]-s[0]),(c1[1]-s[1])],len=Math.max(.001,Math.hypot(...startTangent)),u=startTangent.map(v=>v/len),rr=15;
-   const r=right[0],l=left[0],back=[s[0]-u[0]*rr,s[1]-u[1]*rr],normal=[-u[1],u[0]];
-   d+=` C${f(r[0]-u[0]*rr*k)} ${f(r[1]-u[1]*rr*k)} ${f(back[0]-normal[0]*rr*k)} ${f(back[1]-normal[1]*rr*k)} ${f(back[0])} ${f(back[1])}`;
-   d+=` C${f(back[0]+normal[0]*rr*k)} ${f(back[1]+normal[1]*rr*k)} ${f(l[0]-u[0]*rr*k)} ${f(l[1]-u[1]*rr*k)} ${f(l[0])} ${f(l[1])} Z`;return d;
+  let d=`M${f(left[start][0])} ${f(left[start][1])}`+curveThrough(left.slice(start));
+  d+=` C${f(a[0]+tangent[0]*radius*k)} ${f(a[1]+tangent[1]*radius*k)} ${f(tip[0]+n[0]*radius*k)} ${f(tip[1]+n[1]*radius*k)} ${f(tip[0])} ${f(tip[1])}`;
+  d+=` C${f(tip[0]-n[0]*radius*k)} ${f(tip[1]-n[1]*radius*k)} ${f(b[0]+tangent[0]*radius*k)} ${f(b[1]+tangent[1]*radius*k)} ${f(b[0])} ${f(b[1])}`;
+  d+=curveThrough(right.slice(start).reverse());
+  // Opaque rounded shoulder: the whole limb stays visible in every pose.
+  const startTangent=[(c1[0]-s[0]),(c1[1]-s[1])],len=Math.max(.001,Math.hypot(...startTangent)),u=startTangent.map(v=>v/len),rr=15;
+  const r=right[0],l=left[0],back=[s[0]-u[0]*rr,s[1]-u[1]*rr],normal=[-u[1],u[0]];
+  d+=` C${f(r[0]-u[0]*rr*k)} ${f(r[1]-u[1]*rr*k)} ${f(back[0]-normal[0]*rr*k)} ${f(back[1]-normal[1]*rr*k)} ${f(back[0])} ${f(back[1])}`;
+  d+=` C${f(back[0]+normal[0]*rr*k)} ${f(back[1]+normal[1]*rr*k)} ${f(l[0]-u[0]*rr*k)} ${f(l[1]-u[1]*rr*k)} ${f(l[0])} ${f(l[1])} Z`;return d;
   }
   const d=outline(0);
   return {d,x:f(x),y:f(y),angle:f(angle),length:rawDistance,centerline:[s,c1,c2,end],attributes:{
