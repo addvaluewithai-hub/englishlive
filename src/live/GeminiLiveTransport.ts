@@ -1,9 +1,3 @@
-import {
-  normalizePerformanceCue,
-  PERFORMANCE_GUIDANCE,
-  PERFORMANCE_TOOL_NAME,
-  performanceToolDeclaration,
-} from '../character/performance';
 import { apiUrl } from '../config/api';
 import { DEFAULT_LIVE_MODEL, isLiveModel, type LiveModel } from './models';
 import type { LiveClientTool } from './tools';
@@ -36,7 +30,6 @@ interface ServerMessage {
     };
   };
   toolCall?: { functionCalls?: FunctionCall[] };
-  toolCallCancellation?: { ids?: string[] };
   sessionResumptionUpdate?: { newHandle?: string; resumable?: boolean };
   goAway?: { timeLeft?: string };
 }
@@ -82,9 +75,7 @@ export class GeminiLiveTransport implements LiveTransport {
   private systemInstruction = '';
   private resumptionHandle: string | null = null;
   private reconnecting = false;
-  private performanceCueUsedThisTurn = false;
   private readonly acknowledgedCallIds = new Set<string>();
-  private readonly activePerformanceCallIds = new Set<string>();
 
   constructor(
     private readonly callbacks: LiveCallbacks,
@@ -139,20 +130,14 @@ export class GeminiLiveTransport implements LiveTransport {
     this.connectGeneration += 1;
     this.reconnecting = false;
     this.setupComplete = false;
-    this.performanceCueUsedThisTurn = false;
-    this.activePerformanceCallIds.clear();
     this.acknowledgedCallIds.clear();
-    this.callbacks.onPerformanceCancelled();
     this.socket?.close(1000, 'client close');
     this.socket = null;
     this.callbacks.onStatus('idle');
   }
 
   private toolDeclarations() {
-    const custom = this.customTools
-      .filter((tool) => tool.declaration.name !== PERFORMANCE_TOOL_NAME)
-      .map((tool) => tool.declaration);
-    return [performanceToolDeclaration, ...custom];
+    return this.customTools.map((tool) => tool.declaration);
   }
 
   private async openSocket(token: string) {
@@ -193,33 +178,36 @@ export class GeminiLiveTransport implements LiveTransport {
           socket.close(1000, 'setup timeout');
         }, SETUP_TIMEOUT_MS);
 
-        this.send({
-          setup: {
-            model: `models/${this.model}`,
-            generationConfig: { responseModalities: ['AUDIO'] },
-            systemInstruction: {
-              parts: [{
-                text: `${this.systemInstruction || 'You are a warm English conversation partner. Keep the conversation natural and concise.'}\n\n${PERFORMANCE_GUIDANCE}`,
-              }],
-            },
-            tools: [{ functionDeclarations: this.toolDeclarations() }],
-            realtimeInputConfig: {
-              activityHandling: 'START_OF_ACTIVITY_INTERRUPTS',
-              automaticActivityDetection: {
-                disabled: false,
-                startOfSpeechSensitivity: 'START_SENSITIVITY_HIGH',
-                endOfSpeechSensitivity: 'END_SENSITIVITY_HIGH',
-                prefixPaddingMs: 120,
-                silenceDurationMs: 760,
-              },
-              turnCoverage: 'TURN_INCLUDES_ONLY_ACTIVITY',
-            },
-            inputAudioTranscription: { languageCodes: ['en-US', 'ar-EG'] },
-            outputAudioTranscription: {},
-            contextWindowCompression: { slidingWindow: {} },
-            sessionResumption: this.resumptionHandle ? { handle: this.resumptionHandle } : {},
+        const functionDeclarations = this.toolDeclarations();
+        const setup: Record<string, unknown> = {
+          model: `models/${this.model}`,
+          generationConfig: { responseModalities: ['AUDIO'] },
+          systemInstruction: {
+            parts: [{
+              text: this.systemInstruction || 'You are a warm English conversation partner. Keep the conversation natural and concise.',
+            }],
           },
-        });
+          realtimeInputConfig: {
+            activityHandling: 'START_OF_ACTIVITY_INTERRUPTS',
+            automaticActivityDetection: {
+              disabled: false,
+              startOfSpeechSensitivity: 'START_SENSITIVITY_HIGH',
+              endOfSpeechSensitivity: 'END_SENSITIVITY_HIGH',
+              prefixPaddingMs: 120,
+              silenceDurationMs: 760,
+            },
+            turnCoverage: 'TURN_INCLUDES_ONLY_ACTIVITY',
+          },
+          inputAudioTranscription: { languageCodes: ['en-US', 'ar-EG'] },
+          outputAudioTranscription: {},
+          contextWindowCompression: { slidingWindow: {} },
+          sessionResumption: this.resumptionHandle ? { handle: this.resumptionHandle } : {},
+        };
+        if (functionDeclarations.length) {
+          setup.tools = [{ functionDeclarations }];
+        }
+
+        this.send({ setup });
       });
 
       socket.addEventListener('message', (event) => {
@@ -237,22 +225,8 @@ export class GeminiLiveTransport implements LiveTransport {
 
             const content = message.serverContent;
             if (content?.interrupted) {
-              this.performanceCueUsedThisTurn = false;
-              this.activePerformanceCallIds.clear();
               this.callbacks.onInterrupted();
-              this.callbacks.onPerformanceCancelled();
               this.callbacks.onStatus('listening');
-            }
-
-            if (message.toolCallCancellation?.ids?.length) {
-              const cancelledPerformance = message.toolCallCancellation.ids.some((id) =>
-                this.activePerformanceCallIds.has(id),
-              );
-              for (const id of message.toolCallCancellation.ids) this.activePerformanceCallIds.delete(id);
-              if (cancelledPerformance) {
-                this.performanceCueUsedThisTurn = false;
-                this.callbacks.onPerformanceCancelled();
-              }
             }
 
             if (message.toolCall?.functionCalls?.length) {
@@ -273,8 +247,6 @@ export class GeminiLiveTransport implements LiveTransport {
             }
 
             if (content?.turnComplete) {
-              this.performanceCueUsedThisTurn = false;
-              this.activePerformanceCallIds.clear();
               this.callbacks.onTurnComplete();
             }
 
@@ -329,40 +301,6 @@ export class GeminiLiveTransport implements LiveTransport {
           id: call.id,
           name: call.name,
           response: { result: 'cancelled' },
-        });
-        continue;
-      }
-
-      if (call.name === PERFORMANCE_TOOL_NAME) {
-        if (this.performanceCueUsedThisTurn) {
-          responses.push({
-            id: call.id,
-            name: call.name,
-            response: { result: 'ignored: one deliberate performance cue per turn', scheduling: 'SILENT' },
-          });
-          continue;
-        }
-
-        const cue = normalizePerformanceCue(call.args ?? {});
-        if (!cue) {
-          responses.push({
-            id: call.id,
-            name: call.name,
-            response: { result: 'invalid performance cue', scheduling: 'SILENT' },
-          });
-          continue;
-        }
-
-        this.performanceCueUsedThisTurn = true;
-        if (call.id) this.activePerformanceCallIds.add(call.id);
-        this.callbacks.onPerformanceCue(cue);
-        responses.push({
-          id: call.id,
-          name: call.name,
-          response: {
-            result: 'accepted; client will synchronize the cue with audible playback',
-            scheduling: 'SILENT',
-          },
         });
         continue;
       }
