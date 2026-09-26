@@ -6,6 +6,7 @@ import { FreeSpeakSessionScreen } from '../screens/FreeSpeakSessionScreen';
 import { HomeScreen } from '../screens/HomeScreen';
 import { LandingScreen } from '../screens/LandingScreen';
 import { LearnScreen } from '../screens/LearnScreen';
+import { LevelScreen } from '../screens/LevelScreen';
 import { LessonReviewScreen } from '../screens/LessonReviewScreen';
 import { LessonScreen } from '../screens/LessonScreen';
 import { OnboardingScreen } from '../screens/OnboardingScreen';
@@ -47,7 +48,7 @@ export function App() {
             <span className="v2-notification-dot" />
           </button>
         </header>
-      ) : isOnboarding || isCompletion ? null : (
+      ) : isOnboarding || isCompletion || isSceneLesson ? null : (
         <header className="app-header">
           <Link to={isLanding ? '/' : '/home'} className="brand" aria-label="EnglishLive home">
             <span className="brand-mark" aria-hidden="true">E</span>
@@ -69,6 +70,7 @@ export function App() {
           <Route path="/onboarding" element={<OnboardingScreen />} />
           <Route path="/home" element={<HomeScreen />} />
           <Route path="/learn" element={<LearnScreen />} />
+          <Route path="/learn/level/:levelId" element={<LevelScreen />} />
           <Route path="/learn/unit/:unitId" element={<UnitScreen />} />
           <Route path="/lesson/:lessonId" element={<LessonScreen />} />
           <Route path="/scene-lesson/:lessonId" element={<SceneLessonScreen />} />
