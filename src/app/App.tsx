@@ -37,7 +37,7 @@ export function App() {
   const hideGlobalHeader = isLanding || isOnboarding || isCompletion || isSceneLesson;
 
   return (
-    <div className={`app-shell${isSession ? ' is-session' : ''}${isSceneLesson ? ' is-scene-lesson' : ''}${isCompletion ? ' is-completion' : ''}${isLanding ? ' is-landing' : ''}${usesProductV2 ? ' is-product-v2' : ''}`}>
+    <div className={`app-shell${isSession ? ' is-session' : ''}${isSceneLesson ? ' is-scene-lesson' : ''}${isFreeSpeakSession ? ' is-free-speak-session' : ''}${isCompletion ? ' is-completion' : ''}${isLanding ? ' is-landing' : ''}${usesProductV2 ? ' is-product-v2' : ''}`}>
       {hideGlobalHeader ? null : showProductHeader ? (
         <header className="v2-app-header">
           <Link to="/home" className="v2-brand" aria-label="Englotti home">
@@ -55,7 +55,9 @@ export function App() {
             <span>Englotti</span>
           </Link>
           {isSession ? (
-            <Link className="header-action quiet-link" to={isFreeSpeakSession ? '/speak' : '/learn'}>Leave session</Link>
+            <Link className="header-action quiet-link" to={isFreeSpeakSession ? '/speak' : '/learn'}>
+              {isFreeSpeakSession ? 'الرجوع للمحادثة' : 'Leave session'}
+            </Link>
           ) : isReview ? (
             <Link className="header-action quiet-link" to="/learn">Back to Learn</Link>
           ) : null}
