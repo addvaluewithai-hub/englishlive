@@ -23,11 +23,14 @@ export function SceneLessonCompleteScreen() {
   const lessonIndex = A1_UNIT_1_PRODUCT.lessons.findIndex((item) => item.id === lesson.id);
   const nextLesson = A1_UNIT_1_PRODUCT.lessons[lessonIndex + 1];
   const wins = lessonCompletionWins(lesson);
+  const isOtti = character.id === 'otti';
 
   return (
-    <section className="v2-complete-screen" dir="rtl">
+    <section className={`v2-complete-screen${isOtti ? ' has-otti-celebration' : ''}`} dir="rtl">
       <div className="v2-complete-celebration">
-        <div className="v2-complete-character"><CharacterPortrait character={character} /></div>
+        <div className="v2-complete-character">
+          <CharacterPortrait character={character} pose={isOtti ? 'celebrate' : 'idle'} />
+        </div>
         <div className="v2-complete-burst" aria-hidden="true">
           <span /><span /><span /><span /><span />
         </div>
@@ -36,7 +39,7 @@ export function SceneLessonCompleteScreen() {
       <header className="v2-complete-heading">
         <span className="v2-kicker">الدرس {lesson.order} اكتمل</span>
         <h1>أحسنت!</h1>
-        <p>خلصت <strong>{lessonProductTitle(lesson)}</strong> بنجاح.</p>
+        <p>{isOtti ? 'Otti فرحان بيك — ' : ''}خلصت <strong>{lessonProductTitle(lesson)}</strong> بنجاح.</p>
       </header>
 
       <section className="v2-complete-wins">
