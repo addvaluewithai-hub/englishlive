@@ -127,12 +127,16 @@ export function CharacterPortrait({
     );
   }
 
-  return (
-    <RecipePortrait
-      character={character}
-      config={character.renderer}
-      className={className}
-      prefix={`portrait-${character.id}-${instanceId}-`}
-    />
-  );
+  if (character.renderer.kind === 'svg-recipe') {
+    return (
+      <RecipePortrait
+        character={character}
+        config={character.renderer}
+        className={className}
+        prefix={`portrait-${character.id}-${instanceId}-`}
+      />
+    );
+  }
+
+  return null;
 }
