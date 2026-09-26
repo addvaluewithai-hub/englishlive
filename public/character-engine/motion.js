@@ -41,6 +41,7 @@
   excited: {...base,openL:.91,openR:.91,browLY:-7,browRY:-7,
    headY:-5,earL:5,earR:-5,handLX:165,handLY:294,handRX:442,handRY:292,blush:1.2}
  };
+ // All expressions share the same mouth parameters and path topology.
  Object.assign(base,Geometry.expressionMouth.happy);
  for(const [name,pose] of Object.entries(emotions))Object.assign(pose,Geometry.expressionMouth[name]);
  Object.assign(emotions.excited,{handLX:196,handLY:317,handRX:409,handRY:315});
@@ -84,6 +85,7 @@
   const index=speechQueue.findIndex(e=>t>=e.at&&t<e.at+e.duration);
   if(index!==speechIndex){speechIndex=index;speech=index<0?{name:'REST',weight:1}:{name:speechQueue[index].name,weight:1};syncSpeech();}
  }
+ // Endpoint velocities remain continuous even when a gesture is interrupted.
  function moveArm(side,x,y,dt,snap=false){
   const q=tracks[side];
   if(snap){Object.assign(q,{x,y,vx:0,vy:0,sx:x,sy:y,svx:0,svy:0,bulge:0,gx:x,gy:y,t:1,duration:1});return;}
@@ -104,6 +106,8 @@
  }
  const listenerController = new AbortController();
  const on = (el, event, fn) => {if(el)el.addEventListener(event, fn, {signal:listenerController.signal});};
+
+ // Exact critically damped update, stable across refresh rates and long frames.
  function smooth(key, target, dt, omega=12) {
   const x=rig[key]-target, v=velocity[key], exp=Math.exp(-omega*dt);
   rig[key]=target+(x+(v+omega*x)*dt)*exp;
@@ -169,6 +173,7 @@
   }
   result.walk=reduced?0:Math.max(settings.walkSpeed,moveDirection?.55:0);
   result.energy=settings.energy;
+  // Audio-clock mouth samples drive small physical accents, never inferred emotions.
   const speechLevel=options.externalControl&&externalMouth&&externalMouth.viseme!=='REST'?clamp((externalMouth.energy-.018)*3.2,0,1):0;
   const restraint=['sad','crying','sleepy','angry'].includes(settings.emotion)?.25:settings.emotion==='thinking'?.45:1;
   const scale=options.speechMotionScale===undefined?1:clamp(options.speechMotionScale,0,1);
@@ -249,11 +254,14 @@
   opacity('tears',rig.tears);
   transform('tear-l',`translate(0 ${fmt(motion*(Math.sin(time*4)+1)*3)})`);
   transform('tear-r',`translate(0 ${fmt(motion*(Math.sin(time*4+1.6)+1)*3)})`);
+  // Raised paws follow the moving head instead of sliding across the cheeks.
   const followHead=(x,y)=>{
    const weight=clamp((352-y)/44,0,1), a=headR*Math.PI/180;
    const hx=(x-302)*shape.head,hy=(y-327)*shape.head;
    return [lerp(302+(x-302)*shape.body,302+hx*Math.cos(a)-hy*Math.sin(a),weight),lerp(y,327+hx*Math.sin(a)+hy*Math.cos(a)+headY,weight)];
   };
+  // Add tiny smooth offsets after arm trajectory evaluation; continuously retargeting
+  // the quintic arm trajectory would restart its easing every frame.
   const speechHands=motion*rig.speechHands;
   const leftAccent=.5+.5*Math.sin(time*2.4),rightAccent=.5+.5*Math.sin(time*2.4+1.8);
   let [lx,ly]=followHead(tracks.l.x-speechHands*5*leftAccent,tracks.l.y-speechHands*(5+10*leftAccent));
