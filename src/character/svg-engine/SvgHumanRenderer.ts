@@ -31,7 +31,7 @@ export class SvgHumanRenderer implements CharacterRenderer {
     container.dataset.renderer = 'svg-human';
     this.rig = window.HumanMotion.createRig(container, {
       preset: this.config.preset,
-      speechMotionScale: 0.42,
+      speechMotionScale: this.config.motionScale ?? 0.4,
     });
     this.setMode('idle');
     this.setEmotion('neutral', 0.65);
@@ -48,7 +48,7 @@ export class SvgHumanRenderer implements CharacterRenderer {
   }
 
   setMode(mode: CharacterMode) {
-    this.rig?.setEnergy(modeEnergy[mode]);
+    this.rig?.setEnergy(modeEnergy[mode] * (this.config.motionScale ?? 0.4));
   }
 
   setEmotion(emotion: CharacterEmotion, intensity = 0.7) {
