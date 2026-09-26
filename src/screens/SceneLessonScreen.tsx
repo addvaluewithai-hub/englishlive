@@ -32,7 +32,7 @@ function appendTranscript(previous: string, incoming: string) {
 const statusCopy: Record<LiveStatus, string> = {
   idle: 'Ready',
   connecting: 'Getting ready',
-  listening: 'Listening',
+  listening: 'Your turn',
   speaking: 'Teaching',
   reconnecting: 'Reconnecting',
   error: 'Try again',
@@ -158,9 +158,12 @@ export function SceneLessonScreen() {
   const runtime = useRef<SceneLessonRuntime | null>(null);
   const compactLog = useRef<CompactLogEntry[]>([]);
   const welcomePlayed = useRef(false);
+  const manualInterrupt = useRef(false);
+  const holdMicForTeacherContinuation = useRef(false);
 
   const [status, setStatus] = useState<LiveStatus>('idle');
   const [micLevel, setMicLevel] = useState(0);
+  const [micOpen, setMicOpen] = useState(false);
   const [inputTranscript, setInputTranscript] = useState('');
   const [outputTranscript, setOutputTranscript] = useState('');
   const [lessonState, setLessonState] = useState<SceneLessonState | null>(null);
@@ -169,6 +172,12 @@ export function SceneLessonScreen() {
   const [chatMessage, setChatMessage] = useState('');
   const [welcomeComplete, setWelcomeComplete] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  function setLearnerMicEnabled(enabled: boolean) {
+    microphone.current?.setEnabled(enabled);
+    setMicOpen(enabled);
+    if (!enabled) setMicLevel(0);
+  }
 
   function appendDialogueLog(role: 'AI' | 'YOU', text: string, typed = false) {
     const value = text.trim();
@@ -233,7 +242,7 @@ export function SceneLessonScreen() {
     event.preventDefault();
     const value = chatMessage.trim();
     const live = transport.current;
-    if (!value || !live?.connected) return;
+    if (!value || !live?.connected || !micOpen || status !== 'listening') return;
     appendDialogueLog('YOU', value, true);
     setInputTranscript((current) => appendTranscript(current, `[typed] ${value}`));
     live.sendText(`[LEARNER TEXT CHAT] ${value}\nThis typed text is help/context only and is NOT spoken evidence. If it answers the speaking task, acknowledge it briefly and ask the learner to say it aloud before completing the scene.`);
@@ -243,10 +252,22 @@ export function SceneLessonScreen() {
   function sendQuickAction(actionId: QuickActionId) {
     const action = quickActions.find((item) => item.id === actionId);
     const live = transport.current;
-    if (!action || !welcomeComplete || !live?.connected) return;
+    if (!action || !welcomeComplete || !live?.connected || !micOpen || status !== 'listening') return;
     appendQuickActionLog(action.label);
     setInputTranscript((current) => appendTranscript(current, `[quick] ${action.label}`));
     live.sendText(`[LEARNER QUICK ACTION: ${action.token}] ${action.instruction}\nThis quick action is NOT lesson evidence. Do not call complete_scene because of this action.`);
+  }
+
+  function interruptTeacher() {
+    const live = transport.current;
+    if (status !== 'speaking' || !live?.connected) return;
+    manualInterrupt.current = true;
+    appendQuickActionLog('مقاطعة');
+    playback.current?.interrupt();
+    performer.current?.interrupt();
+    setPerformanceLabel('audio-driven locally');
+    setLearnerMicEnabled(true);
+    setStatus('listening');
   }
 
   async function closeLive() {
@@ -260,7 +281,10 @@ export function SceneLessonScreen() {
     performer.current?.close();
     performer.current = null;
     runtime.current = null;
+    manualInterrupt.current = false;
+    holdMicForTeacherContinuation.current = false;
     setMicLevel(0);
+    setMicOpen(false);
     setStatus('idle');
   }
 
@@ -288,7 +312,10 @@ export function SceneLessonScreen() {
     setOutputTranscript('');
     setPerformanceLabel('audio-driven locally');
     setWelcomeComplete(false);
+    setMicOpen(false);
     welcomePlayed.current = false;
+    manualInterrupt.current = false;
+    holdMicForTeacherContinuation.current = false;
     compactLog.current = [];
 
     const sceneRuntime = new SceneLessonRuntime(lesson, {
@@ -303,10 +330,14 @@ export function SceneLessonScreen() {
     const queue = new PcmPlaybackQueue({
       onMouthPose: (pose) => characterPerformance.setMouth(pose),
       onSpeechStart: () => {
+        holdMicForTeacherContinuation.current = false;
+        setLearnerMicEnabled(false);
         setStatus('speaking');
         characterPerformance.speechStart();
       },
       onSpeechEnd: () => {
+        const shouldHold = holdMicForTeacherContinuation.current;
+        setLearnerMicEnabled(!shouldHold);
         setStatus((current) => current === 'idle' || current === 'error' ? current : 'listening');
         characterPerformance.speechEnd();
       },
@@ -314,6 +345,7 @@ export function SceneLessonScreen() {
         sceneRuntime.markPartnerTurnComplete();
         if (!welcomePlayed.current) {
           welcomePlayed.current = true;
+          holdMicForTeacherContinuation.current = true;
           sceneRuntime.markLessonOpeningComplete();
           setWelcomeComplete(true);
           live.sendText('The spoken welcome is now finished. Call get_scene_state now, then begin only the current authored scene. If it has a board, reveal the first board chunk with reveal_board_next immediately before explaining that chunk. Teach slowly, one small idea at a time. Do not repeat the lesson overview.');
@@ -331,11 +363,16 @@ export function SceneLessonScreen() {
           setInputTranscript((current) => appendTranscript(current, text));
         },
         onOutputTranscript: (text) => {
+          if (manualInterrupt.current) return;
           appendDialogueLog('AI', text);
           queue.pushTranscript(text);
           setOutputTranscript((current) => appendTranscript(current, text));
         },
-        onAudio: (data, mimeType) => void queue.enqueue(data, pcmSampleRate(mimeType)),
+        onAudio: (data, mimeType) => {
+          if (manualInterrupt.current) return;
+          setLearnerMicEnabled(false);
+          void queue.enqueue(data, pcmSampleRate(mimeType));
+        },
         onPerformanceCue: (cue) => {
           characterPerformance.applyCue(cue);
           setPerformanceLabel(`${cue.emotion} · ${cue.gesture}`);
@@ -345,11 +382,17 @@ export function SceneLessonScreen() {
           setPerformanceLabel('audio-driven locally');
         },
         onInterrupted: () => {
+          manualInterrupt.current = false;
           queue.interrupt();
           characterPerformance.interrupt();
+          setLearnerMicEnabled(true);
+          setStatus('listening');
           setPerformanceLabel('audio-driven locally');
         },
-        onTurnComplete: () => queue.markTurnComplete(),
+        onTurnComplete: () => {
+          manualInterrupt.current = false;
+          queue.markTurnComplete();
+        },
         onError: setError,
       },
       tracedTools(sceneRuntime),
@@ -357,13 +400,14 @@ export function SceneLessonScreen() {
     transport.current = live;
 
     const mic = new MicrophonePcmStream();
+    mic.setEnabled(false);
     microphone.current = mic;
 
     const learnerContext = profile
       ? `The learner's private profile says their first name is ${profile.firstName || 'not provided'}, their main reason for English is to ${goalPrompt(profile.goals[0] ?? 'everyday')}, and their speaking comfort is ${comfortLabel(profile.comfort)}. Use this only to pace support. Never use profile facts to satisfy lesson evidence or answer for the learner.`
       : 'No learner profile is available. Keep support very concrete and calibrate only from the live interaction.';
 
-    const characterPrompt = `You are ${character.name}, ${character.persona.style}. You are teaching an adult A1 English learner live. Be warm, patient and concise without sounding childish. Speak at a calm teacher pace: short Arabic sentences, clear pauses, and unhurried target English. In THIS lesson, explanations should be mostly simple Egyptian Arabic while target phrases, models and roleplay remain in English. Use Arabic to make one small idea clear, then get the learner speaking English quickly. Allow interruption and react naturally.`;
+    const characterPrompt = `You are ${character.name}, ${character.persona.style}. You are teaching one adult A1 English learner live. Be warm, patient and concise without sounding childish. Address the learner in singular Egyptian Arabic (for example أهلاً بيك), not plural language and not formal يا فندم. Speak at a calm teacher pace: short Arabic sentences, clear pauses, and unhurried target English. In THIS lesson, explanations should be mostly simple Egyptian Arabic while target phrases, models and roleplay remain in English. Use Arabic to make one small idea clear, then get the learner speaking English quickly. Never call yourself another teacher name even if an authored example contains one; when referring to yourself, always use ${character.name}. The learner microphone is intentionally closed while you are audibly teaching. They can explicitly interrupt you with the app control; otherwise finish the current concise teaching turn and then give them space.`;
 
     try {
       await queue.unlock();
@@ -386,11 +430,14 @@ export function SceneLessonScreen() {
       await mic.stop();
       await queue.close();
       characterPerformance.close();
+      setMicOpen(false);
     }
   }
 
   const connecting = status === 'connecting' || status === 'reconnecting';
   const liveLesson = status === 'listening' || status === 'speaking';
+  const teacherSpeaking = status === 'speaking';
+  const learnerTurn = status === 'listening' && micOpen;
   const currentScene = lessonState
     ? lesson.scenes.find((scene) => scene.id === lessonState.currentSceneId) ?? lesson.scenes[0]
     : lesson.scenes[0];
@@ -403,7 +450,7 @@ export function SceneLessonScreen() {
   const boardRevealCount = currentSceneState?.boardRevealCount ?? 0;
   const boardTotal = boardRevealTotal(currentScene.board);
   const board = welcomeComplete && boardRevealCount > 0 ? currentScene.board ?? null : null;
-  const quickActionsEnabled = welcomeComplete && liveLesson && Boolean(transport.current?.connected);
+  const quickActionsEnabled = welcomeComplete && learnerTurn && Boolean(transport.current?.connected);
 
   return (
     <section className="session-screen lesson-session-screen scene-lesson-screen">
@@ -416,7 +463,7 @@ export function SceneLessonScreen() {
         <div className={`session-stage-body stage-mode-${board ? 'board' : 'hero'}`}>
           {board ? (
             <div className="session-board-surface" aria-live="polite">
-              <ConversationBoard board={board} visibleCount={boardRevealCount} />
+              <ConversationBoard board={board} visibleCount={boardRevealCount} revealMode="focus" />
             </div>
           ) : null}
           <CharacterHost ref={host} character={character} className="session-character-host" />
@@ -434,11 +481,13 @@ export function SceneLessonScreen() {
         <div className="session-stage-footer">
           <div className="session-partner">
             <strong>{character.name}</strong>
-            <span className={`live-status status-${status}`} aria-live="polite">{lessonComplete ? 'Lesson complete' : statusCopy[status]}</span>
+            <span className={`live-status status-${status}`} aria-live="polite">
+              {lessonComplete ? 'Lesson complete' : learnerTurn ? 'Your turn · mic on' : statusCopy[status]}
+            </span>
           </div>
           <div className="session-control-dock">
             <div className="mic-meter" aria-label={`Microphone level ${Math.round(micLevel * 100)} percent`}>
-              <span style={{ width: `${Math.max(liveLesson ? 3 : 0, micLevel * 100)}%` }} />
+              <span style={{ width: `${Math.max(learnerTurn ? 3 : 0, micLevel * 100)}%` }} />
             </div>
             {lessonComplete ? (
               <button
@@ -448,14 +497,32 @@ export function SceneLessonScreen() {
               >
                 Finish lesson
               </button>
+            ) : teacherSpeaking ? (
+              <button
+                type="button"
+                className="button interrupt-teacher"
+                onClick={interruptTeacher}
+                aria-label="Interrupt teacher and open microphone"
+              >
+                مقاطعة
+              </button>
+            ) : liveLesson ? (
+              <button
+                type="button"
+                className="button learner-mic-open"
+                disabled
+                aria-label={learnerTurn ? 'Your turn. Microphone is open.' : 'Wait for your turn.'}
+              >
+                {learnerTurn ? 'دورك' : 'استنى'}
+              </button>
             ) : (
               <button
                 type="button"
-                className={liveLesson ? 'button stop-conversation' : 'button primary'}
-                onClick={liveLesson ? () => void closeLive().then(() => navigate('/learn')) : () => void startLive()}
+                className="button primary"
+                onClick={() => void startLive()}
                 disabled={connecting}
               >
-                {connecting ? 'Getting ready…' : liveLesson ? 'End lesson' : error ? 'Try again' : 'Start lesson'}
+                {connecting ? 'Getting ready…' : error ? 'Try again' : 'Start lesson'}
               </button>
             )}
           </div>
@@ -493,6 +560,7 @@ export function SceneLessonScreen() {
                 type="button"
                 onClick={() => sendQuickAction(action.id)}
                 disabled={!quickActionsEnabled}
+                title={teacherSpeaking ? 'اضغط مقاطعة الأول لو عايز توقف المدرس' : undefined}
               >
                 {action.label}
               </button>
@@ -515,11 +583,11 @@ export function SceneLessonScreen() {
           <input
             value={chatMessage}
             onChange={(event) => setChatMessage(event.target.value)}
-            placeholder="Type a question or message…"
+            placeholder={teacherSpeaking ? 'اضغط مقاطعة الأول لو محتاج تتكلم…' : 'Type a question or message…'}
             aria-label="Type a message to your teacher"
-            disabled={!liveLesson || !transport.current?.connected}
+            disabled={!learnerTurn || !transport.current?.connected}
           />
-          <button type="submit" className="button quiet" disabled={!chatMessage.trim() || !liveLesson || !transport.current?.connected}>Send</button>
+          <button type="submit" className="button quiet" disabled={!chatMessage.trim() || !learnerTurn || !transport.current?.connected}>Send</button>
           <small>Text can ask for help, but speaking tasks still need a spoken answer.</small>
         </form>
 
@@ -528,7 +596,8 @@ export function SceneLessonScreen() {
           <span>Lesson: {lesson.source.sourceLessonId}</span>
           <span>Scene progress: {completedScenes}/{lesson.scenes.length}</span>
           <span>Interaction: {welcomeComplete ? currentScene.interaction.kind : 'teacher welcome'}</span>
-          <span>Board reveal: {welcomeComplete ? `${boardRevealCount}/${boardTotal}` : 'not started'}</span>
+          <span>Board reveal: {welcomeComplete ? `${boardRevealCount}/${boardTotal} · focus mode` : 'not started'}</span>
+          <span>Microphone: {micOpen ? 'learner turn open' : 'closed while teacher speaks'}</span>
           <span>Performance: {performanceLabel}</span>
           <span>Curriculum source: english-course · {lesson.source.branch}</span>
           <span>Copy log contains dialogue + scene tool calls only.</span>
