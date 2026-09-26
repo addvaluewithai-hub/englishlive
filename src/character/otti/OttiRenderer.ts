@@ -4,7 +4,7 @@ import type {
   CharacterMode,
   CharacterRenderer,
   MouthPose,
-  SvgHumanRendererConfig,
+  OttiSvgRendererConfig,
 } from '../types';
 
 const modeEnergy: Record<CharacterMode, number> = {
@@ -14,27 +14,26 @@ const modeEnergy: Record<CharacterMode, number> = {
   speaking: 0.55,
 };
 
-export class SvgHumanRenderer implements CharacterRenderer {
+export class OttiRenderer implements CharacterRenderer {
   private host: HTMLElement | null = null;
-  private rig: ReturnType<typeof window.HumanMotion.createRig> | null = null;
+  private rig: ReturnType<typeof window.OctopusMotion.createRig> | null = null;
 
-  constructor(private readonly config: SvgHumanRendererConfig) {}
+  constructor(private readonly config: OttiSvgRendererConfig) {}
 
   mount(container: HTMLElement) {
-    if (!window.CharacterGeometry || !window.HumanArt || !window.HumanMotion) {
-      throw new Error('Bundled SVG character engine did not load.');
+    if (!window.CharacterGeometry || !window.OctopusAnatomy || !window.OctopusMotion) {
+      throw new Error('Bundled PixiLive Octo engine did not load.');
     }
 
     this.unmount();
     this.host = container;
-    container.innerHTML = window.HumanArt.render(this.config.preset);
-    container.dataset.renderer = 'svg-human';
-    this.rig = window.HumanMotion.createRig(container, {
-      preset: this.config.preset,
-      speechMotionScale: this.config.motionScale ?? 0.4,
+    container.innerHTML = window.OctopusAnatomy.render({ name: 'Otti' }, false);
+    container.dataset.renderer = 'otti-svg';
+    this.rig = window.OctopusMotion.createRig(container, {
+      speechMotionScale: this.config.motionScale ?? 0.5,
     });
     this.setMode('idle');
-    this.setEmotion('neutral', 0.65);
+    this.setEmotion('neutral', 0.7);
   }
 
   unmount() {
@@ -48,7 +47,7 @@ export class SvgHumanRenderer implements CharacterRenderer {
   }
 
   setMode(mode: CharacterMode) {
-    this.rig?.setEnergy(modeEnergy[mode] * (this.config.motionScale ?? 0.4));
+    this.rig?.setEnergy(modeEnergy[mode] * (this.config.motionScale ?? 0.5));
   }
 
   setEmotion(emotion: CharacterEmotion, intensity = 0.7) {

@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import { CharacterPortrait } from '../character/CharacterPortrait';
+import { OttiMark } from '../character/otti/OttiMark';
 import { getCharacterDefinition } from '../character/registry';
 import { ProductIcon } from '../components/ProductIcon';
 import { A1_UNIT_1_PRODUCT, lessonArabicTitle, lessonProductTitle } from '../productV2/course';
@@ -13,9 +14,9 @@ export function HomeScreen() {
   if (!profile) {
     return (
       <section className="v2-empty-screen" dir="rtl">
-        <div className="v2-empty-mark">🐙</div>
+        <div className="v2-empty-mark"><OttiMark /></div>
         <h1>ابدأ رحلتك في Englotti</h1>
-        <p>اختار هدفك ومدرسك، وبعدها هنبدأ معاك من أول درس مناسب.</p>
+        <p>اختار هدفك، اتعرف على Otti، وبعدها هنبدأ معاك من أول درس مناسب.</p>
         <Link className="v2-primary-button" to="/onboarding">ابدأ الإعداد</Link>
       </section>
     );
@@ -29,14 +30,14 @@ export function HomeScreen() {
 
   return (
     <section className="v2-home-screen" dir="rtl">
-      <div className="v2-welcome-panel">
+      <div className={`v2-welcome-panel${character.id === 'otti' ? ' has-otti' : ''}`}>
         <div className="v2-welcome-copy">
-          <span className="v2-kicker">جاهز نكمل؟</span>
+          <span className="v2-kicker">{character.id === 'otti' ? 'Otti مستنيك' : 'جاهز نكمل؟'}</span>
           <h1>{greeting}</h1>
           <p>خطوة صغيرة كل مرة، ومع كل درس هتتكلم أكتر بثقة.</p>
         </div>
         <div className="v2-home-character" style={{ '--character-accent': character.accent } as CSSProperties}>
-          <CharacterPortrait character={character} />
+          <CharacterPortrait character={character} pose={character.id === 'otti' ? 'wave' : 'idle'} />
         </div>
       </div>
 

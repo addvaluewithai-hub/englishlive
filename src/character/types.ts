@@ -52,9 +52,46 @@ export interface MouthPose {
 export interface SvgHumanRendererConfig {
   kind: 'svg-human';
   preset: 'hakim' | 'reem' | 'marwan' | 'amal';
+  motionScale?: number;
 }
 
-export type CharacterRendererConfig = SvgHumanRendererConfig;
+export interface OttiSvgRendererConfig {
+  kind: 'otti-svg';
+  preset: 'otti';
+  motionScale?: number;
+}
+
+export interface SvgMascotRendererConfig {
+  kind: 'svg-mascot';
+  preset: 'fustuq';
+  motionScale: number;
+}
+
+export type RecipeSpecies = 'fox' | 'cat' | 'rabbit' | 'bear' | 'sprite';
+
+export interface RecipeCharacterRendererConfig {
+  kind: 'svg-recipe';
+  species: RecipeSpecies;
+  motionScale: number;
+  canFly?: boolean;
+  recipe?: {
+    fur?: string;
+    cream?: string;
+    accent?: string;
+    eyes?: string;
+    head?: number;
+    body?: number;
+    ears?: number;
+    eyeSize?: number;
+    accessory?: 'scarf' | 'bow' | 'none';
+  };
+}
+
+export type CharacterRendererConfig =
+  | SvgHumanRendererConfig
+  | OttiSvgRendererConfig
+  | SvgMascotRendererConfig
+  | RecipeCharacterRendererConfig;
 
 export interface CharacterDefinition {
   id: string;

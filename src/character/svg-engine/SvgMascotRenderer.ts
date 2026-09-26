@@ -4,7 +4,7 @@ import type {
   CharacterMode,
   CharacterRenderer,
   MouthPose,
-  SvgHumanRendererConfig,
+  SvgMascotRendererConfig,
 } from '../types';
 
 const modeEnergy: Record<CharacterMode, number> = {
@@ -14,27 +14,28 @@ const modeEnergy: Record<CharacterMode, number> = {
   speaking: 0.55,
 };
 
-export class SvgHumanRenderer implements CharacterRenderer {
+export class SvgMascotRenderer implements CharacterRenderer {
   private host: HTMLElement | null = null;
-  private rig: ReturnType<typeof window.HumanMotion.createRig> | null = null;
+  private rig: ReturnType<typeof window.MascotMotion.createRig> | null = null;
 
-  constructor(private readonly config: SvgHumanRendererConfig) {}
+  constructor(private readonly config: SvgMascotRendererConfig) {}
 
   mount(container: HTMLElement) {
-    if (!window.CharacterGeometry || !window.HumanArt || !window.HumanMotion) {
-      throw new Error('Bundled SVG character engine did not load.');
+    if (!window.CharacterGeometry || !window.MascotArt || !window.MascotMotion) {
+      throw new Error('Bundled PixiLive mascot engine did not load.');
     }
 
     this.unmount();
     this.host = container;
-    container.innerHTML = window.HumanArt.render(this.config.preset);
-    container.dataset.renderer = 'svg-human';
-    this.rig = window.HumanMotion.createRig(container, {
+    container.innerHTML = window.MascotArt.render(this.config.preset);
+    container.dataset.renderer = 'svg-mascot';
+    container.dataset.character = this.config.preset;
+    this.rig = window.MascotMotion.createRig(container, {
       preset: this.config.preset,
-      speechMotionScale: this.config.motionScale ?? 0.4,
+      speechMotionScale: this.config.motionScale,
     });
     this.setMode('idle');
-    this.setEmotion('neutral', 0.65);
+    this.setEmotion('neutral', 0.7);
   }
 
   unmount() {
@@ -43,12 +44,13 @@ export class SvgHumanRenderer implements CharacterRenderer {
     if (this.host) {
       this.host.replaceChildren();
       delete this.host.dataset.renderer;
+      delete this.host.dataset.character;
     }
     this.host = null;
   }
 
   setMode(mode: CharacterMode) {
-    this.rig?.setEnergy(modeEnergy[mode] * (this.config.motionScale ?? 0.4));
+    this.rig?.setEnergy(modeEnergy[mode] * this.config.motionScale);
   }
 
   setEmotion(emotion: CharacterEmotion, intensity = 0.7) {

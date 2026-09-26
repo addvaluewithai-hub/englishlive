@@ -35,7 +35,16 @@ export const CharacterHost = forwardRef<
 
     const renderer = createCharacterRenderer(character);
     rendererRef.current = renderer;
-    renderer.mount(container);
+    delete container.dataset.rendererError;
+
+    const mounted = renderer.mount(container);
+    if (mounted instanceof Promise) {
+      mounted.catch((error) => {
+        if (rendererRef.current !== renderer) return;
+        container.dataset.rendererError = 'true';
+        console.error(`Character renderer failed for ${character.id}`, error);
+      });
+    }
 
     return () => {
       renderer.unmount();
