@@ -33,7 +33,7 @@ export function HomeScreen() {
         <div className="v2-welcome-copy">
           <span className="v2-kicker">جاهز نكمل؟</span>
           <h1>{greeting}</h1>
-          <p>خطوة صغيرة كل يوم، ومع كل درس هتتكلم أكتر بثقة.</p>
+          <p>خطوة صغيرة كل مرة، ومع كل درس هتتكلم أكتر بثقة.</p>
         </div>
         <div className="v2-home-character" style={{ '--character-accent': character.accent } as CSSProperties}>
           <CharacterPortrait character={character} />
@@ -59,15 +59,18 @@ export function HomeScreen() {
 
       <section className="v2-streak-card">
         <div>
-          <strong>سلسلة التعلم</strong>
-          <span>ابدأ النهاردة وحافظ على الاستمرارية.</span>
+          <strong>تقدمك في الوحدة</strong>
+          <span>{summary.completedCount} من {summary.totalCount} دروس متاحة مكتملة.</span>
         </div>
-        <div className="v2-streak-days" aria-label="Weekly learning streak">
-          {[0, 1, 2, 3, 4, 5, 6].map((day) => (
-            <span key={day} className={day < Math.min(summary.completedCount, 7) ? 'is-done' : ''}>
-              {day < Math.min(summary.completedCount, 7) ? <ProductIcon name="check" size={18} /> : null}
-            </span>
-          ))}
+        <div className="v2-streak-days" aria-label={`${summary.completedCount} of ${summary.totalCount} available lessons complete`}>
+          {A1_UNIT_1_PRODUCT.lessons.map((lesson, index) => {
+            const completed = Boolean(progress.lessons[lesson.id]?.completedAt);
+            return (
+              <span key={lesson.id} className={completed ? 'is-done' : ''} aria-label={`Lesson ${index + 1}${completed ? ' complete' : ' not complete'}`}>
+                {completed ? <ProductIcon name="check" size={18} /> : index + 1}
+              </span>
+            );
+          })}
         </div>
       </section>
 
