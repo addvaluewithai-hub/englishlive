@@ -11,6 +11,8 @@ export const SCENE_LESSON_PILOTS: readonly SceneLessonDefinition[] = [
   A1_U1_L03_SCENE_LESSON,
 ];
 
+export const SCENE_LESSON_PILOT_IDS = SCENE_LESSON_PILOTS.map((lesson) => lesson.id);
+
 export function getSceneLesson(lessonId: string | null | undefined): SceneLessonDefinition | undefined {
   if (!lessonId) return undefined;
   return SCENE_LESSON_PILOTS.find((lesson) => lesson.id === lessonId);
