@@ -134,6 +134,11 @@ FRESH TRANSFER
     this.persistAndEmit();
   }
 
+  /** Playback completion is presentation timing only; scene evidence stays valid until the scene is completed. */
+  markPartnerTurnComplete() {
+    // Intentionally no curriculum transition and no evidence reset.
+  }
+
   private createInitialState(): SceneLessonState {
     const scenes: Record<string, SceneLessonSceneState> = {};
     this.lesson.scenes.forEach((scene, index) => {
