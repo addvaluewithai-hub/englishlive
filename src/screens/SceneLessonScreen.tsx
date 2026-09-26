@@ -13,7 +13,7 @@ import type { SceneLessonState } from '../lessonScenes/types';
 import { GeminiLiveTransport } from '../live/GeminiLiveTransport';
 import type { LiveClientTool } from '../live/tools';
 import type { LiveStatus } from '../live/types';
-import { boardRevealTotal } from '../presentation/boardReveal';
+import type { SupportBoard } from '../presentation/types';
 import { comfortLabel, goalPrompt, readLearnerProfile } from '../product/profile';
 
 function pcmSampleRate(mimeType: string) {
@@ -87,40 +87,29 @@ function readRecord(value: unknown): Record<string, unknown> | null {
 
 function formatToolLog(name: string, args: Record<string, unknown>, result: unknown) {
   const response = readRecord(result);
-  const state = readRecord(response?.state);
-  const currentScene = readRecord(state?.currentScene);
-  const currentSceneId = compactText(currentScene?.id, 80);
   const error = compactText(response?.error, 180);
 
-  if (name === 'get_scene_state') return `get_scene_state → current=${currentSceneId || 'unknown'}`;
-
-  if (name === 'reveal_board_next') {
-    const sceneId = compactText(args.sceneId, 80) || 'unknown';
-    const reveal = readRecord(currentScene?.boardReveal);
-    const visible = typeof reveal?.visibleCount === 'number' ? reveal.visibleCount : '?';
-    const total = typeof reveal?.totalCount === 'number' ? reveal.totalCount : '?';
-    return error
-      ? `reveal_board_next scene=${sceneId} → REJECTED: ${error}`
-      : `reveal_board_next scene=${sceneId} → ${visible}/${total}`;
-  }
-
   if (name === 'complete_scene') {
-    const sceneId = compactText(args.sceneId, 80) || 'unknown';
-    const source = compactText(args.evidenceSource, 40);
-    const criteria = Array.isArray(args.metCriteria)
-      ? args.metCriteria.filter((item): item is string => typeof item === 'string').join(', ')
-      : '';
-    const summary = compactText(args.evidenceSummary, 180);
+    const summary = compactText(args.summary, 180);
+    const nextScene = readRecord(response?.nextScene);
+    const nextId = compactText(nextScene?.id, 80);
     const outcome = error
       ? `REJECTED: ${error}`
-      : state?.readyToFinish
-        ? 'ACCEPTED → all scenes met'
-        : `ACCEPTED → next=${currentSceneId || 'unknown'}`;
-    return `complete_scene scene=${sceneId} source=${source || 'unknown'} criteria=[${criteria}]${summary ? ` summary="${summary}"` : ''} → ${outcome}`;
+      : response?.lessonComplete === true
+        ? 'ACCEPTED → lesson complete'
+        : `ACCEPTED → next=${nextId || 'next scene'}`;
+    return `complete_scene${summary ? ` summary="${summary}"` : ''} → ${outcome}`;
   }
 
-  if (name === 'finish_scene_lesson') {
-    return error ? `finish_scene_lesson → REJECTED: ${error}` : 'finish_scene_lesson → ACCEPTED';
+  if (name === 'show_board') {
+    const mode = compactText(args.mode, 30);
+    const title = compactText(args.title, 80);
+    const items = Array.isArray(args.items)
+      ? args.items.filter((item): item is string => typeof item === 'string').map((item) => compactText(item, 80)).join(' | ')
+      : '';
+    return error
+      ? `show_board → REJECTED: ${error}`
+      : `show_board mode=${mode || 'unknown'} title="${title}"${items ? ` items=[${items}]` : ''} → shown`;
   }
 
   return `${name} → ${error ? `ERROR: ${error}` : 'ok'}`;
@@ -159,6 +148,9 @@ export function SceneLessonScreen() {
   const welcomePlayed = useRef(false);
   const manualInterrupt = useRef(false);
   const holdMicForTeacherContinuation = useRef(false);
+  const lastTeacherText = useRef('');
+  const learnerSceneAfterSpeech = useRef<string | null>(null);
+  const decisionNudgeTimer = useRef<number | null>(null);
 
   const [status, setStatus] = useState<LiveStatus>('idle');
   const [micLevel, setMicLevel] = useState(0);
@@ -166,12 +158,18 @@ export function SceneLessonScreen() {
   const [inputTranscript, setInputTranscript] = useState('');
   const [outputTranscript, setOutputTranscript] = useState('');
   const [lessonState, setLessonState] = useState<SceneLessonState | null>(null);
+  const [activeBoard, setActiveBoard] = useState<SupportBoard | null>(null);
   const [performanceLabel, setPerformanceLabel] = useState('audio-driven locally');
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
   const [chatMessage, setChatMessage] = useState('');
   const [welcomeComplete, setWelcomeComplete] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  function clearDecisionNudge() {
+    if (decisionNudgeTimer.current !== null) window.clearTimeout(decisionNudgeTimer.current);
+    decisionNudgeTimer.current = null;
+  }
 
   function setLearnerMicEnabled(enabled: boolean) {
     microphone.current?.setEnabled(enabled);
@@ -207,6 +205,13 @@ export function SceneLessonScreen() {
         try {
           const result = await tool.handle(args);
           appendToolLog(tool.declaration.name, args, result);
+          if (tool.declaration.name === 'complete_scene') {
+            const response = readRecord(result);
+            if (!response?.error) {
+              learnerSceneAfterSpeech.current = null;
+              clearDecisionNudge();
+            }
+          }
           return result;
         } catch (reason) {
           const result = { error: reason instanceof Error ? reason.message : 'tool failed' };
@@ -220,7 +225,7 @@ export function SceneLessonScreen() {
   async function copyCompactLog() {
     const body = compactLog.current.map((entry) => `${entry.role}: ${entry.text}`).join('\n\n');
     const text = [
-      'EnglishLive compact scene log',
+      'Englotti compact scene log',
       `Lesson: ${lesson.source.sourceLessonId} — ${lesson.title}`,
       `Teacher: ${character.name}`,
       '',
@@ -242,7 +247,7 @@ export function SceneLessonScreen() {
     if (!value || !live?.connected || !micOpen || status !== 'listening') return;
     appendDialogueLog('YOU', value, true);
     setInputTranscript((current) => appendTranscript(current, `[typed] ${value}`));
-    live.sendText(`[LEARNER TEXT CHAT] ${value}\nThis typed text is help/context only and is NOT spoken evidence. If it answers the speaking task, acknowledge it briefly and ask the learner to say it aloud before completing the scene.`);
+    live.sendText(`[LEARNER TEXT CHAT] ${value}\nTyped text is help/context only, not spoken evidence. If it answers the speaking task, ask the learner to say it aloud before completing the scene.`);
     setChatMessage('');
     setToolsOpen(false);
   }
@@ -253,7 +258,7 @@ export function SceneLessonScreen() {
     if (!action || !welcomeComplete || !live?.connected || !micOpen || status !== 'listening') return;
     appendQuickActionLog(action.label);
     setInputTranscript((current) => appendTranscript(current, `[quick] ${action.label}`));
-    live.sendText(`[LEARNER QUICK ACTION: ${action.token}] ${action.instruction}\nThis quick action is NOT lesson evidence. Do not call complete_scene because of this action.`);
+    live.sendText(`[LEARNER QUICK ACTION: ${action.token}] ${action.instruction}\nThis is help/context, not lesson evidence.`);
     setToolsOpen(false);
   }
 
@@ -270,6 +275,7 @@ export function SceneLessonScreen() {
   }
 
   async function closeLive() {
+    clearDecisionNudge();
     transport.current?.endAudioStream();
     transport.current?.close();
     transport.current = null;
@@ -282,6 +288,7 @@ export function SceneLessonScreen() {
     runtime.current = null;
     manualInterrupt.current = false;
     holdMicForTeacherContinuation.current = false;
+    learnerSceneAfterSpeech.current = null;
     setMicLevel(0);
     setMicOpen(false);
     setStatus('idle');
@@ -295,6 +302,7 @@ export function SceneLessonScreen() {
 
   useEffect(() => {
     return () => {
+      clearDecisionNudge();
       transport.current?.close();
       void microphone.current?.stop();
       void playback.current?.close();
@@ -315,6 +323,7 @@ export function SceneLessonScreen() {
     setChatMessage('');
     setInputTranscript('');
     setOutputTranscript('');
+    setActiveBoard(null);
     setPerformanceLabel('audio-driven locally');
     setWelcomeComplete(false);
     setMicOpen(false);
@@ -322,18 +331,26 @@ export function SceneLessonScreen() {
     welcomePlayed.current = false;
     manualInterrupt.current = false;
     holdMicForTeacherContinuation.current = false;
+    learnerSceneAfterSpeech.current = null;
+    lastTeacherText.current = '';
+    clearDecisionNudge();
     compactLog.current = [];
 
-    const sceneRuntime = new SceneLessonRuntime(lesson, { onStateChange: setLessonState });
+    const sceneRuntime = new SceneLessonRuntime(lesson, {
+      onStateChange: setLessonState,
+      onBoardChange: setActiveBoard,
+    });
     runtime.current = sceneRuntime;
     setLessonState(sceneRuntime.snapshot);
 
     const characterPerformance = new CharacterPerformanceController(() => host.current);
     performer.current = characterPerformance;
 
+    let live: GeminiLiveTransport;
     const queue = new PcmPlaybackQueue({
       onMouthPose: (pose) => characterPerformance.setMouth(pose),
       onSpeechStart: () => {
+        clearDecisionNudge();
         holdMicForTeacherContinuation.current = false;
         setLearnerMicEnabled(false);
         setStatus('speaking');
@@ -352,22 +369,39 @@ export function SceneLessonScreen() {
           holdMicForTeacherContinuation.current = true;
           sceneRuntime.markLessonOpeningComplete();
           setWelcomeComplete(true);
-          live.sendText('The spoken welcome is now finished. Call get_scene_state now, then begin only the current authored scene. If it has a board, reveal the first board chunk with reveal_board_next immediately before explaining that chunk. Teach slowly, one small idea at a time. Do not repeat the lesson overview.');
+          live.sendText('The spoken welcome is finished. Begin the CURRENT SCENE already provided in your system instruction. Its authored board is already visible if it has one. Teach the small target, interact naturally, and use complete_scene only when the learner can use it successfully enough.');
+          return;
+        }
+
+        const sceneId = sceneRuntime.currentScene.id;
+        const teacherText = lastTeacherText.current.trim();
+        const looksLikeWaitingForLearner = /[?؟]\s*$/.test(teacherText)
+          || /\b(try|say|tell|ask|repeat)\b/i.test(teacherText)
+          || /(جرب|قول|اسأل|كرر|جاوب|رد)/.test(teacherText);
+        if (learnerSceneAfterSpeech.current === sceneId && !looksLikeWaitingForLearner) {
+          clearDecisionNudge();
+          decisionNudgeTimer.current = window.setTimeout(() => {
+            if (!live.connected || sceneRuntime.currentScene.id !== sceneId) return;
+            live.sendText('[INTERNAL TEACHING NUDGE] The learner has already spoken in this scene and your last turn did not clearly ask for another attempt. Decide now: if they can use the target successfully enough, call complete_scene. If not, make ONE clear next teaching/practice move. Do not mention this nudge.');
+          }, 3000);
         }
       },
     });
     playback.current = queue;
 
-    const live = new GeminiLiveTransport(
+    live = new GeminiLiveTransport(
       {
         onStatus: setStatus,
         onInputTranscript: (text) => {
+          clearDecisionNudge();
           sceneRuntime.recordAutomaticTranscript(text);
+          learnerSceneAfterSpeech.current = sceneRuntime.currentScene.id;
           appendDialogueLog('YOU', text);
           setInputTranscript((current) => appendTranscript(current, text));
         },
         onOutputTranscript: (text) => {
           if (manualInterrupt.current) return;
+          lastTeacherText.current = appendTranscript(lastTeacherText.current, text).slice(-1200);
           appendDialogueLog('AI', text);
           queue.pushTranscript(text);
           setOutputTranscript((current) => appendTranscript(current, text));
@@ -395,6 +429,7 @@ export function SceneLessonScreen() {
         },
         onTurnComplete: () => {
           manualInterrupt.current = false;
+          lastTeacherText.current = '';
           queue.markTurnComplete();
         },
         onError: setError,
@@ -408,10 +443,10 @@ export function SceneLessonScreen() {
     microphone.current = mic;
 
     const learnerContext = profile
-      ? `The learner's private profile says their first name is ${profile.firstName || 'not provided'}, their main reason for English is to ${goalPrompt(profile.goals[0] ?? 'everyday')}, and their speaking comfort is ${comfortLabel(profile.comfort)}. Use this only to pace support. Never use profile facts to satisfy lesson evidence or answer for the learner.`
+      ? `The learner's private profile says their first name is ${profile.firstName || 'not provided'}, their main reason for English is to ${goalPrompt(profile.goals[0] ?? 'everyday')}, and their speaking comfort is ${comfortLabel(profile.comfort)}. Use this only to pace support. Never use profile facts to answer for the learner.`
       : 'No learner profile is available. Keep support very concrete and calibrate only from the live interaction.';
 
-    const characterPrompt = `You are ${character.name}, ${character.persona.style}. You are teaching one adult A1 English learner live. Be warm, patient and concise without sounding childish. Address the learner in singular Egyptian Arabic (for example أهلاً بيك), not plural language and not formal يا فندم. Speak at a calm teacher pace: short Arabic sentences, clear pauses, and unhurried target English. In THIS lesson, explanations should be mostly simple Egyptian Arabic while target phrases, models and roleplay remain in English. Use Arabic to make one small idea clear, then get the learner speaking English quickly. Never call yourself another teacher name even if an authored example contains one; when referring to yourself, always use ${character.name}. The learner microphone is intentionally closed while you are audibly teaching. They can explicitly interrupt you with the app control; otherwise finish the current concise teaching turn and then give them space.`;
+    const characterPrompt = `You are ${character.name}, ${character.persona.style}, teaching one adult A1 learner in Englotti. Be warm, patient and concise without sounding childish. Address the learner in singular Egyptian Arabic, not plural language and not formal يا فندم. Speak at a calm teacher pace: short Arabic sentences and unhurried target English. Explanations are mostly simple Egyptian Arabic; target phrases and roleplay stay in English. Never call yourself another teacher name; when referring to yourself, always use ${character.name}. The learner microphone is intentionally closed while you are audibly teaching. They can explicitly interrupt you with the app control; otherwise finish one concise teaching turn and give them space.`;
 
     try {
       await queue.unlock();
@@ -423,9 +458,9 @@ export function SceneLessonScreen() {
           sceneRuntime.recordLearnerAudioLevel(level);
         },
       );
-      live.sendText('Start the authored lesson now by calling get_scene_state. Because openingRequired is true, deliver ONLY the short human teacher welcome described there. Do not begin Scene 1 in the same turn. Speak calmly and stop after the welcome.');
+      live.sendText('Start the Englotti lesson with ONLY the short human welcome described in your instructions. Do not begin the first scene in the same turn. Speak calmly and stop after the welcome.');
     } catch (reason) {
-      const message = reason instanceof Error ? reason.message : 'Could not start the scene lesson.';
+      const message = reason instanceof Error ? reason.message : 'Could not start the lesson.';
       setError(message);
       setStatus('error');
       live.close();
@@ -448,11 +483,8 @@ export function SceneLessonScreen() {
     ? lesson.scenes.filter((scene) => lessonState.scenes[scene.id]?.status === 'met').length
     : 0;
   const lessonComplete = Boolean(lessonState?.completedAt);
-  const currentSceneState = lessonState?.scenes[currentScene.id];
-  const boardRevealCount = currentSceneState?.boardRevealCount ?? 0;
-  const boardTotal = boardRevealTotal(currentScene.board);
-  const board = welcomeComplete && boardRevealCount > 0 ? currentScene.board ?? null : null;
   const quickActionsEnabled = welcomeComplete && learnerTurn && Boolean(transport.current?.connected);
+  const board = welcomeComplete ? activeBoard : null;
 
   return (
     <section className="premium-scene-lesson" dir="rtl" style={{ '--character-accent': character.accent } as CSSProperties}>
@@ -488,7 +520,7 @@ export function SceneLessonScreen() {
 
         {board ? (
           <div className="premium-board-layer" aria-live="polite">
-            <ConversationBoard board={board} visibleCount={boardRevealCount} revealMode="focus" />
+            <ConversationBoard board={board} />
           </div>
         ) : null}
 
@@ -591,7 +623,8 @@ export function SceneLessonScreen() {
               <summary>تفاصيل تقنية</summary>
               <span>Scene: {sceneIndex + 1}/{lesson.scenes.length}</span>
               <span>Interaction: {welcomeComplete ? currentScene.interaction.kind : 'teacher welcome'}</span>
-              <span>Board: {welcomeComplete ? `${boardRevealCount}/${boardTotal} · focus` : 'not started'}</span>
+              <span>Board: {board ? 'visible' : 'hidden'}</span>
+              <span>Tools: complete_scene + show_board</span>
               <span>Mic: {micOpen ? 'open' : 'closed'}</span>
               <span>Performance: {performanceLabel}</span>
             </details>
