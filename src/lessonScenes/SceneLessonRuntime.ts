@@ -134,15 +134,9 @@ FRESH TRANSFER
     this.persistAndEmit();
   }
 
-  /** Called after an audible teacher turn. It never advances curriculum. */
+  /** Called after an audible teacher turn. It never advances curriculum or erases learner evidence. */
   markPartnerTurnComplete() {
-    this.learnerAudioObserved = false;
     if (this.state.completedAt) return;
-    const current = this.state.scenes[this.currentScene.id];
-    if (current.automaticTranscript) {
-      current.automaticTranscript = '';
-      this.persistAndEmit();
-    }
   }
 
   private createInitialState(): SceneLessonState {
@@ -290,7 +284,7 @@ FRESH TRANSFER
         }
         if (source === 'live_audio' && !this.learnerAudioObserved) {
           return {
-            error: 'No learner microphone activity was observed for this turn. Do not invent live-audio evidence.',
+            error: 'No learner microphone activity was observed in the current scene. Do not invent live-audio evidence.',
             state: this.compactState(),
           };
         }
