@@ -11,6 +11,7 @@ import './product-v2.css';
 import './product-v2-onboarding.css';
 import './product-v2-secondary.css';
 import './product-v2-scene.css';
+import './product-v2-turn-taking.css';
 import './product-v2-completion.css';
 
 const root = document.getElementById('root');
