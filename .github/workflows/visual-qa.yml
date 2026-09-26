@@ -1,0 +1,44 @@
+name: Visual QA
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feat/visual-qa-premium-pass
+
+jobs:
+  screenshots:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.18.0
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Install Playwright Chromium for QA only
+        run: |
+          npm install --no-save --ignore-scripts playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Start preview server
+        run: |
+          npm run preview -- --host 127.0.0.1 --port 4173 > /tmp/englotti-vite.log 2>&1 &
+          echo $! > /tmp/englotti-vite.pid
+          for i in {1..40}; do
+            if curl -fsS http://127.0.0.1:4173 >/dev/null; then exit 0; fi
+            sleep 0.5
+          done
+          cat /tmp/englotti-vite.log
+          exit 1
+      - name: Capture product screens
+        run: node scripts/visual-qa.mjs
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: englotti-visual-qa
+          path: artifacts/visual-qa
+          if-no-files-found: error
+          retention-days: 7
