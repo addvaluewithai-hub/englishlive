@@ -18,7 +18,7 @@ export function FreeSpeakScreen() {
   if (!profile) {
     return (
       <section className="v2-empty-screen" dir="rtl">
-        <h1>جهز EnglishLive الأول</h1>
+        <h1>جهز Englotti الأول</h1>
         <p>اختار مدرسك وهدفك، وبعدها تقدر تدخل محادثة حرة في أي وقت.</p>
         <Link className="v2-primary-button" to="/onboarding">ابدأ الإعداد</Link>
       </section>
@@ -33,7 +33,7 @@ export function FreeSpeakScreen() {
         <div className="v2-speak-copy">
           <span className="v2-kicker">Free Speak</span>
           <h1>اتكلم براحتك</h1>
-          <p>محادثة حرة مع {character.name} بعيد عن ترتيب الدروس. اتكلم في اللي تحتاجه النهاردة.</p>
+          <p>محادثة حرة مع {character.name} بعيد عن ترتيب الدروس. اختار نوع الكلام اللي محتاجه النهاردة.</p>
           <Link className="v2-teacher-inline" to="/characters">تغيير المدرس</Link>
         </div>
         <div className="v2-speak-character"><CharacterPortrait character={character} /></div>
@@ -54,8 +54,8 @@ export function FreeSpeakScreen() {
       </div>
 
       <div className="v2-speak-boundary">
-        <strong>المحادثة الحرة ممارسة، مش إكمال درس.</strong>
-        <p>الـFree Speak مش هيفتح Lesson أو يغير ترتيب المنهج. تقدمك الدراسي يفضل مرتبط بالدروس المؤلفة.</p>
+        <strong>المحادثة الحرة للممارسة، مش لإكمال الدروس.</strong>
+        <p>تقدر تتكلم براحتك هنا، بينما تقدم المنهج يفضل مرتبط بالدروس نفسها.</p>
       </div>
     </section>
   );
