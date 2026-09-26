@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { MicrophonePcmStream } from '../audio/MicrophonePcmStream';
 import { PcmPlaybackQueue } from '../audio/PcmPlaybackQueue';
@@ -37,7 +37,7 @@ const statusCopy: Record<LiveStatus, string> = {
   error: 'Try again',
 };
 
-type CompactLogRole = 'AI' | 'YOU' | 'TOOL';
+type CompactLogRole = 'AI' | 'YOU' | 'YOU [text]' | 'TOOL';
 
 interface CompactLogEntry {
   role: CompactLogRole;
@@ -64,7 +64,8 @@ function formatToolLog(name: string, args: Record<string, unknown>, result: unkn
   const error = compactText(response?.error, 180);
 
   if (name === 'get_scene_state') {
-    return `get_scene_state → current=${currentSceneId || 'unknown'}`;
+    const openingRequired = state?.openingRequired === true ? ' opening=required' : '';
+    return `get_scene_state → current=${currentSceneId || 'unknown'}${openingRequired}`;
   }
 
   if (name === 'complete_scene') {
@@ -119,6 +120,7 @@ export function SceneLessonScreen() {
   const performer = useRef<CharacterPerformanceController | null>(null);
   const runtime = useRef<SceneLessonRuntime | null>(null);
   const compactLog = useRef<CompactLogEntry[]>([]);
+  const openingPending = useRef(true);
 
   const [status, setStatus] = useState<LiveStatus>('idle');
   const [micLevel, setMicLevel] = useState(0);
@@ -127,6 +129,8 @@ export function SceneLessonScreen() {
   const [lessonState, setLessonState] = useState<SceneLessonState | null>(null);
   const [performanceLabel, setPerformanceLabel] = useState('audio-driven locally');
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
+  const [openingComplete, setOpeningComplete] = useState(false);
+  const [chatText, setChatText] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   function appendDialogueLog(role: 'AI' | 'YOU', text: string) {
@@ -140,6 +144,11 @@ export function SceneLessonScreen() {
       entries.push({ role, text: value.slice(-2400) });
     }
     if (entries.length > 160) entries.splice(0, entries.length - 160);
+  }
+
+  function appendTypedLog(text: string) {
+    compactLog.current.push({ role: 'YOU [text]', text: text.slice(-2400) });
+    if (compactLog.current.length > 160) compactLog.current.splice(0, compactLog.current.length - 160);
   }
 
   function appendToolLog(name: string, args: Record<string, unknown>, result: unknown) {
@@ -182,6 +191,20 @@ export function SceneLessonScreen() {
     }
   }
 
+  function sendTypedChat(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const value = chatText.trim();
+    const live = transport.current;
+    if (!value || !live?.connected) return;
+
+    appendTypedLog(value);
+    setInputTranscript((current) => appendTranscript(current, `[typed] ${value}`));
+    live.sendText(
+      `[LEARNER TEXT CHAT]\n${value}\n[END LEARNER TEXT CHAT]\nThis was typed, not spoken. Respond naturally, but do not count it as speaking evidence.`,
+    );
+    setChatText('');
+  }
+
   async function closeLive() {
     transport.current?.endAudioStream();
     transport.current?.close();
@@ -194,6 +217,7 @@ export function SceneLessonScreen() {
     performer.current = null;
     runtime.current = null;
     setMicLevel(0);
+    setChatText('');
     setStatus('idle');
   }
 
@@ -219,6 +243,9 @@ export function SceneLessonScreen() {
     setInputTranscript('');
     setOutputTranscript('');
     setPerformanceLabel('audio-driven locally');
+    setChatText('');
+    setOpeningComplete(false);
+    openingPending.current = true;
     compactLog.current = [];
 
     const sceneRuntime = new SceneLessonRuntime(lesson, {
@@ -240,7 +267,16 @@ export function SceneLessonScreen() {
         setStatus((current) => current === 'idle' || current === 'error' ? current : 'listening');
         characterPerformance.speechEnd();
       },
-      onTurnComplete: () => sceneRuntime.markPartnerTurnComplete(),
+      onTurnComplete: () => {
+        sceneRuntime.markPartnerTurnComplete();
+        if (!openingPending.current) return;
+        openingPending.current = false;
+        sceneRuntime.markLessonOpeningComplete();
+        setOpeningComplete(true);
+        transport.current?.sendText(
+          'The short teacher welcome was audibly completed. Call get_scene_state again. Now begin teaching ONLY currentScene and follow its authored teaching, board, interaction and success criteria.',
+        );
+      },
     });
     playback.current = queue;
 
@@ -282,7 +318,7 @@ export function SceneLessonScreen() {
     microphone.current = mic;
 
     const learnerContext = profile
-      ? `The learner's private profile says their first name is ${profile.firstName || 'not provided'}, their main reason for English is to ${goalPrompt(profile.goals[0] ?? 'everyday')}, and their speaking comfort is ${comfortLabel(profile.comfort)}. Use this only to pace support. Never use profile facts to satisfy lesson evidence or answer for the learner.`
+      ? `The learner's private profile says their first name is ${profile.firstName || 'not provided'}, their main reason for English is to ${goalPrompt(profile.goals[0] ?? 'everyday')}, and their speaking comfort is ${comfortLabel(profile.comfort)}. Use this only to pace support. Never use profile facts to satisfy lesson evidence or answer for the learner. Do not use the stored first name in the lesson opening.`
       : 'No learner profile is available. Keep support very concrete and calibrate only from the live interaction.';
 
     const characterPrompt = `You are ${character.name}, ${character.persona.style}. You are teaching an adult A1 English learner live. Be warm, patient and concise without sounding childish. In THIS lesson, explanations should be mostly simple Egyptian Arabic while target phrases, models and roleplay remain in English. Use Arabic to make the idea clear, then get the learner speaking English quickly. Allow interruption and react naturally.`;
@@ -299,7 +335,7 @@ export function SceneLessonScreen() {
           sceneRuntime.recordLearnerAudioLevel(level);
         },
       );
-      live.sendText('Start the authored scene lesson now. Call get_scene_state before speaking. Follow only currentScene, teach mostly in concise Egyptian Arabic, and never advance without a successful complete_scene tool call.');
+      live.sendText('Start the authored lesson now. Call get_scene_state before speaking. Because openingRequired is true, give ONLY the short human lesson welcome first and stop. Do not teach Scene 1 until the application tells you the welcome finished audibly.');
     } catch (reason) {
       const message = reason instanceof Error ? reason.message : 'Could not start the scene lesson.';
       setError(message);
@@ -321,7 +357,11 @@ export function SceneLessonScreen() {
     ? lesson.scenes.filter((scene) => lessonState.scenes[scene.id]?.status === 'met').length
     : 0;
   const lessonComplete = Boolean(lessonState?.completedAt);
-  const board = currentScene.board ?? null;
+  const board = openingComplete ? currentScene.board ?? null : null;
+  const sidebarTitle = openingComplete ? currentScene.title : lesson.title;
+  const sidebarDescription = openingComplete
+    ? currentScene.interaction.learnerTask
+    : `${character.name} will welcome you, explain what today’s lesson is about, then start the first small teaching scene.`;
 
   return (
     <section className="session-screen lesson-session-screen">
@@ -344,7 +384,7 @@ export function SceneLessonScreen() {
           {lesson.scenes.map((scene, index) => (
             <span
               key={scene.id}
-              className={`${lessonState?.scenes[scene.id]?.status === 'met' ? 'is-complete' : ''}${index === sceneIndex && !lessonComplete ? ' is-current' : ''}`}
+              className={`${lessonState?.scenes[scene.id]?.status === 'met' ? 'is-complete' : ''}${openingComplete && index === sceneIndex && !lessonComplete ? ' is-current' : ''}`}
             />
           ))}
         </div>
@@ -382,19 +422,21 @@ export function SceneLessonScreen() {
 
       <aside className="conversation-sidebar lesson-sidebar">
         <div className="conversation-sidebar-heading">
-          <p className="eyebrow">Scene {sceneIndex + 1} of {lesson.scenes.length}</p>
-          <h2>{currentScene.title}</h2>
-          <p>{currentScene.goal}</p>
+          <p className="eyebrow">{openingComplete ? `Scene ${sceneIndex + 1} of ${lesson.scenes.length}` : 'Welcome'}</p>
+          <h2>{sidebarTitle}</h2>
+          <p>{sidebarDescription}</p>
         </div>
 
-        <div className="lesson-language-focus">
-          <small>Target English</small>
-          {currentScene.teaching.englishTargets.slice(0, 5).map((target) => <span key={target}>{target}</span>)}
-        </div>
+        {openingComplete ? (
+          <div className="lesson-language-focus">
+            <small>Target English</small>
+            {currentScene.teaching.englishTargets.slice(0, 5).map((target) => <span key={target}>{target}</span>)}
+          </div>
+        ) : null}
 
         {error ? <div className="live-error" role="alert">{error}</div> : null}
 
-        <div>
+        <div className="scene-session-actions">
           <button type="button" className="button quiet" onClick={() => void copyCompactLog()}>
             {copyStatus === 'copied' ? 'Copied log' : 'Copy log'}
           </button>
@@ -404,19 +446,38 @@ export function SceneLessonScreen() {
         <div className="transcript-stack" aria-live="polite">
           <article className="transcript-card user-transcript">
             <small>You</small>
-            <p>{inputTranscript || 'Your spoken English will appear here once the lesson starts.'}</p>
+            <p>{inputTranscript || 'Your voice or typed message will appear here once the lesson starts.'}</p>
           </article>
           <article className="transcript-card partner-transcript">
             <small>{character.name}</small>
-            <p>{outputTranscript || `${character.name} will explain briefly, then get you speaking.`}</p>
+            <p>{outputTranscript || `${character.name} will welcome you before the teaching starts.`}</p>
           </article>
         </div>
+
+        <form className="lesson-chat-composer" onSubmit={sendTypedChat}>
+          <input
+            type="text"
+            value={chatText}
+            onChange={(event) => setChatText(event.target.value)}
+            placeholder="Type a question or message…"
+            aria-label={`Type a message to ${character.name}`}
+            disabled={!liveLesson || lessonComplete}
+          />
+          <button
+            type="submit"
+            className="button quiet"
+            disabled={!liveLesson || lessonComplete || !chatText.trim()}
+          >
+            Send
+          </button>
+          <small>Typing is for questions and support. Speaking is still required to complete speaking practice.</small>
+        </form>
 
         <details className="session-tech-details">
           <summary>Scene details</summary>
           <span>Lesson: {lesson.source.sourceLessonId}</span>
           <span>Scene progress: {completedScenes}/{lesson.scenes.length}</span>
-          <span>Interaction: {currentScene.interaction.kind}</span>
+          <span>Interaction: {openingComplete ? currentScene.interaction.kind : 'lesson opening'}</span>
           <span>Performance: {performanceLabel}</span>
           <span>Curriculum source: english-course · {lesson.source.branch}</span>
           <span>Copy log contains dialogue + scene tool calls only.</span>
