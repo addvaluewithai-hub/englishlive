@@ -1,4 +1,4 @@
-type ProductIconName = 'home' | 'learn' | 'speak' | 'profile' | 'chevron' | 'bell' | 'check' | 'lock' | 'play' | 'refresh';
+type ProductIconName = 'home' | 'learn' | 'speak' | 'profile' | 'chevron' | 'bell' | 'check' | 'lock' | 'play' | 'refresh' | 'close' | 'more' | 'chat' | 'keyboard';
 
 export function ProductIcon({ name, size = 24 }: { name: ProductIconName; size?: number }) {
   const common = {
@@ -22,5 +22,9 @@ export function ProductIcon({ name, size = 24 }: { name: ProductIconName; size?:
   if (name === 'check') return <svg {...common}><path d="m5 12 4.2 4.2L19 6.5"/></svg>;
   if (name === 'lock') return <svg {...common}><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>;
   if (name === 'refresh') return <svg {...common}><path d="M20 7v5h-5"/><path d="M4 17v-5h5"/><path d="M6.1 8.2A7 7 0 0 1 18.6 7L20 9"/><path d="M17.9 15.8A7 7 0 0 1 5.4 17L4 15"/></svg>;
+  if (name === 'close') return <svg {...common}><path d="m5 5 14 14M19 5 5 19"/></svg>;
+  if (name === 'more') return <svg {...common}><circle cx="5" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1" fill="currentColor" stroke="none"/></svg>;
+  if (name === 'chat') return <svg {...common}><path d="M5 5h14v10H9l-4 4z"/></svg>;
+  if (name === 'keyboard') return <svg {...common}><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M6 9h.01M9 9h.01M12 9h.01M15 9h.01M18 9h.01M7 12h.01M10 12h.01M13 12h.01M16 12h.01M8 15h8"/></svg>;
   return <svg {...common}><path d="m9 6 9 6-9 6z"/></svg>;
 }
