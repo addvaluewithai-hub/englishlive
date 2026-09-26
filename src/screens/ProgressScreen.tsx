@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import { getCharacterDefinition } from '../character/registry';
 import { ProductIcon } from '../components/ProductIcon';
@@ -35,7 +36,7 @@ export function ProgressScreen() {
           <strong>{summary.completedCount}/{summary.totalCount}</strong>
           <span>دروس متاحة مكتملة</span>
         </div>
-        <div className="v2-progress-ring" style={{ '--progress': `${Math.round((summary.completedCount / summary.totalCount) * 100)}%` } as React.CSSProperties}>
+        <div className="v2-progress-ring" style={{ '--progress': `${Math.round((summary.completedCount / summary.totalCount) * 100)}%` } as CSSProperties}>
           <span>{Math.round((summary.completedCount / summary.totalCount) * 100)}%</span>
         </div>
       </section>
