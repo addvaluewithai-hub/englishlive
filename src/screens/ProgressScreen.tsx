@@ -22,6 +22,7 @@ export function ProgressScreen() {
   const character = getCharacterDefinition(profile.characterId);
   const progress = readProductCourseProgress();
   const summary = productUnitProgress(A1_UNIT_1_PRODUCT, progress);
+  const completionPercent = Math.round((summary.completedCount / summary.totalCount) * 100);
 
   return (
     <section className="v2-progress-screen" dir="rtl">
@@ -36,8 +37,8 @@ export function ProgressScreen() {
           <strong>{summary.completedCount}/{summary.totalCount}</strong>
           <span>دروس متاحة مكتملة</span>
         </div>
-        <div className="v2-progress-ring" style={{ '--progress': `${Math.round((summary.completedCount / summary.totalCount) * 100)}%` } as CSSProperties}>
-          <span>{Math.round((summary.completedCount / summary.totalCount) * 100)}%</span>
+        <div className="v2-progress-ring" style={{ '--progress': `${completionPercent}%` } as CSSProperties} aria-label={`${summary.completedCount} of ${summary.totalCount} available lessons completed`}>
+          <span>{summary.completedCount}/{summary.totalCount}</span>
         </div>
       </section>
 
