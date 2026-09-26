@@ -11,6 +11,7 @@ import { LessonScreen } from '../screens/LessonScreen';
 import { OnboardingScreen } from '../screens/OnboardingScreen';
 import { ProgressScreen } from '../screens/ProgressScreen';
 import { ReviewScreen } from '../screens/ReviewScreen';
+import { SceneLessonCompleteScreen } from '../screens/SceneLessonCompleteScreen';
 import { SceneLessonScreen } from '../screens/SceneLessonScreen';
 import { SessionScreen } from '../screens/SessionScreen';
 import { UnitScreen } from '../screens/UnitScreen';
@@ -69,6 +70,7 @@ export function App() {
           <Route path="/learn/unit/:unitId" element={<UnitScreen />} />
           <Route path="/lesson/:lessonId" element={<LessonScreen />} />
           <Route path="/scene-lesson/:lessonId" element={<SceneLessonScreen />} />
+          <Route path="/lesson-complete/:lessonId" element={<SceneLessonCompleteScreen />} />
           <Route path="/lesson-review/:runId" element={<LessonReviewScreen />} />
           <Route path="/speak" element={<FreeSpeakScreen />} />
           <Route path="/speak/:modeId" element={<FreeSpeakSessionScreen />} />
