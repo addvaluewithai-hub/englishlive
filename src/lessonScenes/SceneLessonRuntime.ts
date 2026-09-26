@@ -35,6 +35,7 @@ export class SceneLessonRuntime {
   readonly tools: readonly LiveClientTool[];
   private state: SceneLessonState;
   private learnerAudioObserved = false;
+  private lessonOpeningComplete = false;
   private readonly listeners = new Set<(state: SceneLessonState) => void>();
 
   constructor(
@@ -74,6 +75,16 @@ AUTHORITY
 - Before your first spoken turn, call get_scene_state.
 - After a scene is completed, use only the new currentScene returned by the tool.
 
+SESSION OPENING — FIRST AUDIBLE TURN ONLY
+- If get_scene_state returns openingRequired=true, do NOT teach or test currentScene yet.
+- Give a short, human teacher welcome in Egyptian Arabic using this fixed four-move shape:
+  1. Welcome the learner warmly in one short sentence. Do not use a stored profile name in the welcome.
+  2. Say: "النهارده عندنا درس اسمه ${this.lesson.title}." Then explain the practical lesson outcome in ONE simple Arabic sentence using only the Primary learner performance above; do not add curriculum.
+  3. Say that you will take it step by step: a small explanation, then speaking practice together.
+  4. Give ONE short reassurance about mistakes, such as that mistakes are normal and you will help.
+- Keep the whole opening around 15–25 seconds. No motivational speech, no unrelated small talk, and no learner test yet.
+- Stop after the opening. Do not start currentScene in the same turn. The application will confirm that the welcome was heard and then tell you to begin the scene.
+
 LANGUAGE AND TEACHING STYLE
 - For this A1 delivery pilot, explain concepts MOSTLY in concise Egyptian Arabic.
 - Keep target English expressions, examples, pronunciation models and roleplay language in English.
@@ -82,6 +93,12 @@ LANGUAGE AND TEACHING STYLE
 - The authored board is application-owned. Refer to it naturally, but never invent or mutate board content.
 - Do not expand into grammar tables, vocabulary dumps, or extra curriculum outside the current scene.
 - Never reveal scene IDs, tool names, criteria IDs, evidence fields, or lesson mechanics.
+
+TEXT CHAT
+- Messages prefixed with [LEARNER TEXT CHAT] are typed by the learner, not spoken.
+- Answer typed questions naturally and use them to clarify or support learning.
+- Typed text is NEVER valid speaking evidence for complete_scene.
+- If the learner types a correct target answer, acknowledge it briefly, then ask them to SAY the answer aloud before you consider the speaking criterion demonstrated.
 
 SCENE LOOP
 1. Read currentScene carefully.
@@ -95,7 +112,7 @@ SCENE LOOP
 9. If complete_scene succeeds, continue only from the returned next currentScene. If all scenes are complete, call finish_scene_lesson.
 
 EVIDENCE RULES
-- Never complete a scene from your own example, silence, filler, room noise, or a help request.
+- Never complete a scene from your own example, typed chat, silence, filler, room noise, or a help request.
 - Prefer evidenceSource=live_audio when you clearly heard the learner. The application separately requires observed microphone activity.
 - Automatic transcription is only an approximate fallback hint and may be wrong.
 - metCriteria must contain ONLY criteria genuinely demonstrated during this scene.
@@ -132,6 +149,11 @@ FRESH TRANSFER
     current.automaticTranscript = appendTranscript(current.automaticTranscript ?? '', text);
     this.learnerAudioObserved = true;
     this.persistAndEmit();
+  }
+
+  /** The UI calls this only after the short lesson welcome was audibly played. */
+  markLessonOpeningComplete() {
+    this.lessonOpeningComplete = true;
   }
 
   /** Playback completion is presentation timing only; scene evidence stays valid until the scene is completed. */
@@ -192,6 +214,7 @@ FRESH TRANSFER
       lessonTitle: this.lesson.title,
       primaryPerformance: this.lesson.performance,
       boundaries: this.lesson.boundaries,
+      openingRequired: !this.lessonOpeningComplete,
       currentScene: {
         id: scene.id,
         title: scene.title,
@@ -212,14 +235,16 @@ FRESH TRANSFER
     return {
       declaration: {
         name: 'get_scene_state',
-        description: 'Get the authoritative current teaching scene. Call before speaking at lesson start and whenever you lose your place.',
+        description: 'Get the authoritative current teaching scene and whether the short lesson opening is still required. Call before speaking at lesson start and whenever you lose your place.',
         behavior: 'BLOCKING',
         parameters: { type: 'OBJECT', properties: {} },
       },
       handle: () => ({
         result: this.state.completedAt
           ? 'The scene lesson is already finished.'
-          : 'Teach and practise only the currentScene below. Future scenes are hidden and application-owned.',
+          : !this.lessonOpeningComplete
+            ? 'Deliver ONLY the short authored lesson opening first. Do not teach or assess currentScene yet. The application will notify you after the welcome was audibly completed.'
+            : 'Teach and practise only the currentScene below. Future scenes are hidden and application-owned.',
         state: this.compactState(),
       }),
     };
@@ -249,6 +274,12 @@ FRESH TRANSFER
       },
       handle: (args) => {
         if (this.state.completedAt) return { finished: true, state: this.compactState() };
+        if (!this.lessonOpeningComplete) {
+          return {
+            error: 'The lesson opening has not audibly completed yet. Do not assess or advance the first scene.',
+            state: this.compactState(),
+          };
+        }
         const scene = this.currentScene;
         if (args.sceneId !== scene.id) {
           return {
