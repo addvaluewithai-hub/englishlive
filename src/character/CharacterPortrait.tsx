@@ -1,6 +1,53 @@
-import { useEffect, useId, useRef } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { renderOttiSvg, type OttiPortraitPose } from './otti/OttiArt';
-import type { CharacterDefinition } from './types';
+import { loadCharacterEngine, recipeForCharacter } from './svg-engine/CharacterEngineLoader';
+import type { CharacterDefinition, RecipeCharacterRendererConfig } from './types';
+
+function RecipePortrait({
+  character,
+  config,
+  className,
+  prefix,
+}: {
+  character: CharacterDefinition;
+  config: RecipeCharacterRendererConfig;
+  className: string;
+  prefix: string;
+}) {
+  const [svg, setSvg] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+
+    loadCharacterEngine()
+      .then((engine) => {
+        if (cancelled) return;
+        setSvg(
+          engine.render(recipeForCharacter(character.name, config), {
+            portrait: true,
+            prefix,
+          }),
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setSvg('');
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [character.name, config, prefix]);
+
+  return (
+    <div
+      className={`character-portrait recipe-character-portrait ${className}`.trim()}
+      aria-hidden="true"
+      data-character={character.id}
+      data-species={config.species}
+      dangerouslySetInnerHTML={{ __html: svg }}
+    />
+  );
+}
 
 export function CharacterPortrait({
   character,
@@ -21,14 +68,14 @@ export function CharacterPortrait({
     if (!window.OctopusMotion || !window.OctopusAnatomy || !window.CharacterGeometry) return;
 
     const rig = window.OctopusMotion.createRig(hostRef.current, {
-      speechMotionScale: 0.42,
+      speechMotionScale: character.renderer.kind === 'otti-svg' ? character.renderer.motionScale ?? 0.5 : 0.5,
     });
     rig.setEmotion('excited');
     rig.setIntensity(0.95);
     rig.setGesture('celebrate', 6);
 
     return () => rig.destroy();
-  }, [animateCelebration]);
+  }, [animateCelebration, character.renderer]);
 
   if (isOtti) {
     const svg = renderOttiSvg({
@@ -48,18 +95,44 @@ export function CharacterPortrait({
     );
   }
 
-  const svg = window.HumanArt.render(character.renderer.preset, {
-    portrait: true,
-    prefix: `portrait-${character.id}-${instanceId}-`,
-  });
+  if (character.renderer.kind === 'svg-human') {
+    const svg = window.HumanArt.render(character.renderer.preset, {
+      portrait: true,
+      prefix: `portrait-${character.id}-${instanceId}-`,
+    });
+
+    return (
+      <div
+        ref={hostRef}
+        className={`character-portrait ${className}`.trim()}
+        aria-hidden="true"
+        dangerouslySetInnerHTML={{ __html: svg }}
+      />
+    );
+  }
+
+  if (character.renderer.kind === 'svg-mascot') {
+    const svg = window.MascotArt.render(character.renderer.preset, {
+      portrait: true,
+      prefix: `portrait-${character.id}-${instanceId}-`,
+    });
+
+    return (
+      <div
+        ref={hostRef}
+        className={`character-portrait mascot-character-portrait ${className}`.trim()}
+        aria-hidden="true"
+        dangerouslySetInnerHTML={{ __html: svg }}
+      />
+    );
+  }
 
   return (
-    <div
-      ref={hostRef}
-      className={`character-portrait ${className}`.trim()}
-      aria-hidden="true"
-      // The markup comes only from the bundled, pinned character engine.
-      dangerouslySetInnerHTML={{ __html: svg }}
+    <RecipePortrait
+      character={character}
+      config={character.renderer}
+      className={className}
+      prefix={`portrait-${character.id}-${instanceId}-`}
     />
   );
 }
