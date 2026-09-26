@@ -1,8 +1,8 @@
 import { Link, Navigate } from 'react-router-dom';
 import { getCharacterDefinition } from '../character/registry';
 import { ProductIcon } from '../components/ProductIcon';
-import { A1_UNIT_1_PRODUCT, lessonArabicTitle, lessonProductTitle } from '../productV2/course';
-import { isProductLessonUnlocked, productUnitProgress, readProductCourseProgress, takePendingProductLessonCompletion } from '../productV2/progress';
+import { A1_LEVEL_PRODUCT, A1_UNIT_1_PRODUCT } from '../productV2/course';
+import { productUnitProgress, readProductCourseProgress, takePendingProductLessonCompletion } from '../productV2/progress';
 import { readLearnerProfile } from '../product/profile';
 
 export function LearnScreen() {
@@ -28,59 +28,38 @@ export function LearnScreen() {
   const summary = productUnitProgress(A1_UNIT_1_PRODUCT, progress);
 
   return (
-    <section className="v2-learn-screen" dir="rtl">
-      <header className="v2-learn-heading">
-        <div>
-          <span className="v2-kicker">A1</span>
-          <h1>الوحدة 1</h1>
-          <p>{A1_UNIT_1_PRODUCT.arabicTitle}</p>
-        </div>
-        <Link className="v2-unit-button" to={`/learn/unit/${A1_UNIT_1_PRODUCT.id}`}>تفاصيل الوحدة</Link>
+    <section className="v3-learn-levels" dir="rtl">
+      <header className="v3-learn-hero">
+        <span className="v3-kicker">مسار التعلم</span>
+        <h1>اختار مستواك</h1>
+        <p>كل مستوى متقسم لوحدات ودروس مترتبة. هنفتح المحتوى تدريجيًا من المنهج المعتمد.</p>
       </header>
 
-      <div className="v2-roadmap" aria-label="Unit 1 lesson path">
-        <div className="v2-roadmap-line" aria-hidden="true" />
-        {A1_UNIT_1_PRODUCT.lessons.map((lesson, index) => {
-          const saved = progress.lessons[lesson.id];
-          const completed = Boolean(saved?.completedAt);
-          const current = lesson.id === summary.nextLesson.id && !summary.unitComplete;
-          const unlocked = isProductLessonUnlocked(A1_UNIT_1_PRODUCT, lesson.id, progress);
-          const node = (
-            <>
-              <span className={`v2-roadmap-node${completed ? ' is-complete' : current ? ' is-current' : ''}${!unlocked ? ' is-locked' : ''}`}>
-                {completed ? <ProductIcon name="check" size={30} /> : !unlocked ? <ProductIcon name="lock" size={24} /> : current ? <ProductIcon name="learn" size={27} /> : index + 1}
-              </span>
-              <span className="v2-roadmap-copy">
-                <small>Lesson {lesson.order}</small>
-                <strong>{lessonProductTitle(lesson)}</strong>
-                <span>{lessonArabicTitle(lesson)}</span>
-              </span>
-            </>
-          );
-
-          return unlocked ? (
-            <Link key={lesson.id} className={`v2-roadmap-item${current ? ' is-current' : ''}`} to={`/scene-lesson/${lesson.id}?character=${character.id}`}>
-              {node}
-            </Link>
-          ) : (
-            <div key={lesson.id} className="v2-roadmap-item is-locked">{node}</div>
-          );
-        })}
-
-        <div className="v2-roadmap-item is-future">
-          <span className="v2-roadmap-node is-locked"><ProductIcon name="lock" size={24} /></span>
-          <span className="v2-roadmap-copy">
-            <small>Unit path</small>
-            <strong>المزيد من الدروس قريبًا</strong>
-            <span>هنوصل بقية دروس الوحدة من مصدر المنهج بعد اعتمادها في التطبيق.</span>
-          </span>
+      <Link className="v3-level-card is-active" to={`/learn/level/${A1_LEVEL_PRODUCT.id}`}>
+        <div className="v3-level-card-main">
+          <span className="v3-level-badge-large">A1</span>
+          <div>
+            <small>المستوى الحالي</small>
+            <h2>{A1_LEVEL_PRODUCT.arabicTitle}</h2>
+            <p>{A1_LEVEL_PRODUCT.description}</p>
+          </div>
         </div>
-      </div>
-
-      <Link className="v2-unit-summary-link" to={`/learn/unit/${A1_UNIT_1_PRODUCT.id}`}>
-        <span><strong>{summary.completedCount}/{summary.totalCount}</strong> دروس مكتملة حاليًا</span>
-        <ProductIcon name="chevron" size={21} />
+        <div className="v3-level-card-footer">
+          <span>{A1_LEVEL_PRODUCT.unitCount} وحدات · {A1_LEVEL_PRODUCT.lessonSlotCount} خانة درس في المنهج</span>
+          <span className="v3-level-progress-copy">الوحدة 1: {summary.completedCount}/{summary.totalCount} موصل حاليًا</span>
+          <ProductIcon name="chevron" size={23} />
+        </div>
       </Link>
+
+      <div className="v3-future-levels" aria-label="Future levels">
+        {['A2', 'B1', 'B2', 'C1', 'C2'].map((level) => (
+          <div key={level} className="v3-future-level-card" aria-disabled="true">
+            <span>{level}</span>
+            <div><strong>قريبًا</strong><small>هيظهر هنا لما محتواه يتوصل بالـdelivery runtime.</small></div>
+            <ProductIcon name="lock" size={19} />
+          </div>
+        ))}
+      </div>
     </section>
   );
 }
