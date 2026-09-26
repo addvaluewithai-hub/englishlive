@@ -30,23 +30,23 @@ export function LearnScreen() {
   return (
     <section className="v3-learn-levels" dir="rtl">
       <header className="v3-learn-hero">
-        <span className="v3-kicker">مسار التعلم</span>
-        <h1>اختار مستواك</h1>
-        <p>كل مستوى متقسم لوحدات ودروس مترتبة. هنفتح المحتوى تدريجيًا من المنهج المعتمد.</p>
+        <span className="v3-kicker">مسار Englotti</span>
+        <h1>ابدأ من مستواك</h1>
+        <p>كل مستوى متقسم لوحدات ودروس مرتبة. هنفتح لك المسار خطوة بخطوة من غير ما تحتار تبدأ منين.</p>
       </header>
 
       <Link className="v3-level-card is-active" to={`/learn/level/${A1_LEVEL_PRODUCT.id}`}>
         <div className="v3-level-card-main">
           <span className="v3-level-badge-large">A1</span>
           <div>
-            <small>المستوى الحالي</small>
+            <small>متاح الآن</small>
             <h2>{A1_LEVEL_PRODUCT.arabicTitle}</h2>
             <p>{A1_LEVEL_PRODUCT.description}</p>
           </div>
         </div>
         <div className="v3-level-card-footer">
-          <span>{A1_LEVEL_PRODUCT.unitCount} وحدات · {A1_LEVEL_PRODUCT.lessonSlotCount} خانة درس في المنهج</span>
-          <span className="v3-level-progress-copy">الوحدة 1: {summary.completedCount}/{summary.totalCount} موصل حاليًا</span>
+          <span>{A1_LEVEL_PRODUCT.unitCount} وحدات · {A1_LEVEL_PRODUCT.lessonSlotCount} درسًا في خطة A1</span>
+          <span className="v3-level-progress-copy">الوحدة 1 · {summary.completedCount}/{summary.totalCount} من الدروس المتاحة</span>
           <ProductIcon name="chevron" size={23} />
         </div>
       </Link>
@@ -55,7 +55,7 @@ export function LearnScreen() {
         {['A2', 'B1', 'B2', 'C1', 'C2'].map((level) => (
           <div key={level} className="v3-future-level-card" aria-disabled="true">
             <span>{level}</span>
-            <div><strong>قريبًا</strong><small>هيظهر هنا لما محتواه يتوصل بالـdelivery runtime.</small></div>
+            <div><strong>قريبًا</strong><small>هنفتح المستوى ده لما يكون جاهز للتعلم بالكامل.</small></div>
             <ProductIcon name="lock" size={19} />
           </div>
         ))}
