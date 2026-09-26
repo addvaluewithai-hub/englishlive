@@ -1,4 +1,5 @@
 import { Link, NavLink, Route, Routes, useLocation } from 'react-router-dom';
+import { ProductIcon } from '../components/ProductIcon';
 import { CharacterSelectScreen } from '../screens/CharacterSelectScreen';
 import { FreeSpeakScreen } from '../screens/FreeSpeakScreen';
 import { FreeSpeakSessionScreen } from '../screens/FreeSpeakSessionScreen';
@@ -12,9 +13,10 @@ import { ProgressScreen } from '../screens/ProgressScreen';
 import { ReviewScreen } from '../screens/ReviewScreen';
 import { SceneLessonScreen } from '../screens/SceneLessonScreen';
 import { SessionScreen } from '../screens/SessionScreen';
+import { UnitScreen } from '../screens/UnitScreen';
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
-  isActive ? 'app-nav-link is-active' : 'app-nav-link';
+  isActive ? 'v2-nav-link is-active' : 'v2-nav-link';
 
 export function App() {
   const location = useLocation();
@@ -29,37 +31,43 @@ export function App() {
   const isApp = !isLanding && !isOnboarding && !isSession && !isReview;
 
   return (
-    <div className={`app-shell${isSession ? ' is-session' : ''}${isLanding ? ' is-landing' : ''}`}>
-      <header className="app-header">
-        <Link to={isApp ? '/home' : '/'} className="brand" aria-label="EnglishLive home">
-          <span className="brand-mark" aria-hidden="true">E</span>
-          <span>EnglishLive</span>
-        </Link>
+    <div className={`app-shell${isSession ? ' is-session' : ''}${isLanding ? ' is-landing' : ''}${isApp ? ' is-product-v2' : ''}`}>
+      {isApp ? (
+        <header className="v2-app-header">
+          <Link to="/home" className="v2-brand" aria-label="EnglishLive home">
+            <span className="v2-brand-mark" aria-hidden="true">E</span>
+            <span>English<span>Live</span></span>
+          </Link>
+          <button type="button" className="v2-icon-button" aria-label="Notifications">
+            <ProductIcon name="bell" size={25} />
+            <span className="v2-notification-dot" />
+          </button>
+        </header>
+      ) : (
+        <header className="app-header">
+          <Link to={isLanding ? '/' : '/home'} className="brand" aria-label="EnglishLive home">
+            <span className="brand-mark" aria-hidden="true">E</span>
+            <span>EnglishLive</span>
+          </Link>
+          {isLanding ? (
+            <Link className="header-action" to="/onboarding">Start learning</Link>
+          ) : isOnboarding ? (
+            <Link className="header-action quiet-link" to="/">Not now</Link>
+          ) : isSession ? (
+            <Link className="header-action quiet-link" to={isFreeSpeakSession ? '/speak' : '/learn'}>Leave session</Link>
+          ) : isReview ? (
+            <Link className="header-action quiet-link" to="/learn">Back to Learn</Link>
+          ) : null}
+        </header>
+      )}
 
-        {isLanding ? (
-          <Link className="header-action" to="/onboarding">Start learning</Link>
-        ) : isOnboarding ? (
-          <Link className="header-action quiet-link" to="/">Not now</Link>
-        ) : isSession ? (
-          <Link className="header-action quiet-link" to={isFreeSpeakSession ? '/speak' : '/learn'}>Leave session</Link>
-        ) : isReview ? (
-          <Link className="header-action quiet-link" to="/learn">Back to Learn</Link>
-        ) : (
-          <nav className="desktop-nav" aria-label="Primary navigation">
-            <NavLink end to="/home" className={navClass}>Home</NavLink>
-            <NavLink to="/learn" className={navClass}>Learn</NavLink>
-            <NavLink end to="/speak" className={navClass}>Speak</NavLink>
-            <NavLink to="/progress" className={navClass}>Progress</NavLink>
-          </nav>
-        )}
-      </header>
-
-      <main className={isSession ? 'app-main app-main-session' : 'app-main'}>
+      <main className={isSession ? 'app-main app-main-session' : isApp ? 'v2-app-main' : 'app-main'}>
         <Routes>
           <Route path="/" element={<LandingScreen />} />
           <Route path="/onboarding" element={<OnboardingScreen />} />
           <Route path="/home" element={<HomeScreen />} />
           <Route path="/learn" element={<LearnScreen />} />
+          <Route path="/learn/unit/:unitId" element={<UnitScreen />} />
           <Route path="/lesson/:lessonId" element={<LessonScreen />} />
           <Route path="/scene-lesson/:lessonId" element={<SceneLessonScreen />} />
           <Route path="/lesson-review/:runId" element={<LessonReviewScreen />} />
@@ -74,11 +82,11 @@ export function App() {
       </main>
 
       {isApp ? (
-        <nav className="app-nav" aria-label="Primary navigation">
-          <NavLink end to="/home" className={navClass}>Home</NavLink>
-          <NavLink to="/learn" className={navClass}>Learn</NavLink>
-          <NavLink end to="/speak" className={navClass}>Speak</NavLink>
-          <NavLink to="/progress" className={navClass}>Progress</NavLink>
+        <nav className="v2-bottom-nav" aria-label="Primary navigation" dir="rtl">
+          <NavLink end to="/home" className={navClass}><ProductIcon name="home" /><span>الرئيسية</span></NavLink>
+          <NavLink to="/learn" className={navClass}><ProductIcon name="learn" /><span>التعلم</span></NavLink>
+          <NavLink end to="/speak" className={navClass}><ProductIcon name="speak" /><span>المحادثة</span></NavLink>
+          <NavLink to="/progress" className={navClass}><ProductIcon name="profile" /><span>تقدمي</span></NavLink>
         </nav>
       ) : null}
     </div>
