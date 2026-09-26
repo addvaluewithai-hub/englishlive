@@ -76,6 +76,7 @@ export interface SceneLessonEvidence {
   sceneId: string;
   responseKind: ConversationResponseKind;
   source: ConversationEvidenceSource;
+  /** Content-minimized semantic summary of evidence accumulated in the authored scene. */
   summary: string;
   metCriteria: string[];
   recordedAt: string;
