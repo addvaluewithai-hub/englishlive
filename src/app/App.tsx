@@ -29,9 +29,10 @@ export function App() {
   const isSession = isLegacySession || isLesson || isSceneLesson || isFreeSpeakSession;
   const isReview = location.pathname.startsWith('/review/') || location.pathname.startsWith('/lesson-review/');
   const isApp = !isLanding && !isOnboarding && !isSession && !isReview;
+  const usesProductV2 = isApp || isOnboarding;
 
   return (
-    <div className={`app-shell${isSession ? ' is-session' : ''}${isLanding ? ' is-landing' : ''}${isApp ? ' is-product-v2' : ''}`}>
+    <div className={`app-shell${isSession ? ' is-session' : ''}${isLanding ? ' is-landing' : ''}${usesProductV2 ? ' is-product-v2' : ''}`}>
       {isApp ? (
         <header className="v2-app-header">
           <Link to="/home" className="v2-brand" aria-label="EnglishLive home">
@@ -43,7 +44,7 @@ export function App() {
             <span className="v2-notification-dot" />
           </button>
         </header>
-      ) : (
+      ) : isOnboarding ? null : (
         <header className="app-header">
           <Link to={isLanding ? '/' : '/home'} className="brand" aria-label="EnglishLive home">
             <span className="brand-mark" aria-hidden="true">E</span>
@@ -51,8 +52,6 @@ export function App() {
           </Link>
           {isLanding ? (
             <Link className="header-action" to="/onboarding">Start learning</Link>
-          ) : isOnboarding ? (
-            <Link className="header-action quiet-link" to="/">Not now</Link>
           ) : isSession ? (
             <Link className="header-action quiet-link" to={isFreeSpeakSession ? '/speak' : '/learn'}>Leave session</Link>
           ) : isReview ? (
@@ -61,7 +60,7 @@ export function App() {
         </header>
       )}
 
-      <main className={isSession ? 'app-main app-main-session' : isApp ? 'v2-app-main' : 'app-main'}>
+      <main className={isSession ? 'app-main app-main-session' : usesProductV2 ? 'v2-app-main' : 'app-main'}>
         <Routes>
           <Route path="/" element={<LandingScreen />} />
           <Route path="/onboarding" element={<OnboardingScreen />} />
