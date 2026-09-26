@@ -1,5 +1,15 @@
 import type { CharacterEmotion, CharacterGesture, MouthPose } from '../types';
 
+type CharacterRig = {
+  setEmotion: (emotion: CharacterEmotion) => void;
+  setIntensity: (value: number) => void;
+  setEnergy: (value: number) => void;
+  setMouthPose: (pose: MouthPose | null) => void;
+  setGesture: (gesture: CharacterGesture, duration?: number) => void;
+  cancelActions: () => void;
+  destroy: () => void;
+};
+
 declare global {
   interface Window {
     CharacterGeometry: {
@@ -21,15 +31,26 @@ declare global {
       createRig: (
         root: Element,
         options: { preset: string; speechMotionScale?: number },
-      ) => {
-        setEmotion: (emotion: CharacterEmotion) => void;
-        setIntensity: (value: number) => void;
-        setEnergy: (value: number) => void;
-        setMouthPose: (pose: MouthPose | null) => void;
-        setGesture: (gesture: CharacterGesture, duration?: number) => void;
-        cancelActions: () => void;
-        destroy: () => void;
-      };
+      ) => CharacterRig;
+    };
+    OctopusAnatomy: {
+      rest: Record<string, number>;
+      poses: Record<string, Record<string, number>>;
+      eyes: Record<string, { x: number; y: number; rx: number; ry: number }>;
+      mouth: { x: number; y: number; sx: number; sy: number };
+      render: (persona: { name: string }, portrait?: boolean) => string;
+      draw: (
+        attr: (id: string, key: string, value: string | number) => void,
+        state: Record<string, number>,
+        time: number,
+        reduced: boolean,
+      ) => void;
+    };
+    OctopusMotion: {
+      createRig: (
+        root: Element,
+        options?: { speechMotionScale?: number },
+      ) => CharacterRig;
     };
   }
 }
