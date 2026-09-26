@@ -18,7 +18,7 @@ export class OttiRenderer implements CharacterRenderer {
   private host: HTMLElement | null = null;
   private rig: ReturnType<typeof window.OctopusMotion.createRig> | null = null;
 
-  constructor(private readonly _config: OttiSvgRendererConfig) {}
+  constructor(private readonly config: OttiSvgRendererConfig) {}
 
   mount(container: HTMLElement) {
     if (!window.CharacterGeometry || !window.OctopusAnatomy || !window.OctopusMotion) {
@@ -30,7 +30,7 @@ export class OttiRenderer implements CharacterRenderer {
     container.innerHTML = window.OctopusAnatomy.render({ name: 'Otti' }, false);
     container.dataset.renderer = 'otti-svg';
     this.rig = window.OctopusMotion.createRig(container, {
-      speechMotionScale: 0.42,
+      speechMotionScale: this.config.motionScale ?? 0.5,
     });
     this.setMode('idle');
     this.setEmotion('neutral', 0.7);
@@ -47,7 +47,7 @@ export class OttiRenderer implements CharacterRenderer {
   }
 
   setMode(mode: CharacterMode) {
-    this.rig?.setEnergy(modeEnergy[mode]);
+    this.rig?.setEnergy(modeEnergy[mode] * (this.config.motionScale ?? 0.5));
   }
 
   setEmotion(emotion: CharacterEmotion, intensity = 0.7) {
