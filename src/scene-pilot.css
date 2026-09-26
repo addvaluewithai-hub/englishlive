@@ -52,6 +52,37 @@
   line-height: 1.45;
 }
 
+.scene-lesson-screen .transcript-card p {
+  overflow-wrap: anywhere;
+}
+
+@media (min-width: 821px) {
+  .scene-lesson-screen {
+    height: calc(100dvh - 72px);
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .scene-lesson-screen .session-stage {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .scene-lesson-screen .conversation-sidebar {
+    height: 100%;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+  }
+
+  .scene-lesson-screen .transcript-card p {
+    max-height: 10.5rem;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+}
+
 @media (max-width: 520px) {
   .lesson-chat-composer {
     grid-template-columns: 1fr;
