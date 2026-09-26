@@ -34,9 +34,9 @@ export function SceneLessonCompleteScreen() {
       </div>
 
       <header className="v2-complete-heading">
-        <span className="v2-kicker">Lesson {lesson.order} complete</span>
+        <span className="v2-kicker">الدرس {lesson.order} اكتمل</span>
         <h1>أحسنت!</h1>
-        <p>أكملت <strong>{lessonProductTitle(lesson)}</strong> بنجاح.</p>
+        <p>خلصت <strong>{lessonProductTitle(lesson)}</strong> بنجاح.</p>
       </header>
 
       <section className="v2-complete-wins">
@@ -52,7 +52,7 @@ export function SceneLessonCompleteScreen() {
       </section>
 
       <div className="v2-complete-progress" aria-label={`${summary.completedCount} of ${summary.totalCount} available lessons complete`}>
-        <div><strong>{summary.completedCount}/{summary.totalCount}</strong><span>دروس متاحة مكتملة في الوحدة</span></div>
+        <div><strong>{summary.completedCount}/{summary.totalCount}</strong><span>دروس مكتملة من الدروس المتاحة في الوحدة</span></div>
         <div className="v2-mini-progress">
           {A1_UNIT_1_PRODUCT.lessons.map((item) => (
             <span key={item.id} className={progress.lessons[item.id]?.completedAt ? 'is-complete' : item.id === summary.nextLesson.id ? 'is-current' : ''} />
