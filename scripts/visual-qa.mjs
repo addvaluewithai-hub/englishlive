@@ -5,6 +5,21 @@ import path from 'node:path';
 const baseUrl = process.env.VISUAL_QA_BASE_URL ?? 'http://127.0.0.1:4173';
 const outputDir = process.env.VISUAL_QA_OUTPUT ?? 'artifacts/visual-qa';
 
+const characterIds = [
+  'otti',
+  'fustuq',
+  'hakim',
+  'reem',
+  'marwan',
+  'amal',
+  'ember',
+  'louz',
+  'sugar',
+  'bondoq',
+  'lumi',
+  'naseem',
+];
+
 const profile = {
   version: 1,
   firstName: 'ياسر',
@@ -51,7 +66,36 @@ const onboardingToTeacher = async (page) => {
   await onboardingToComfort(page);
   await page.locator('.v2-comfort-card').first().click();
   await page.locator('.v2-onboarding-actions .v2-primary-button').click();
+  await page.waitForFunction(
+    (expected) => document.querySelectorAll('.v2-teacher-card .character-portrait svg').length === expected,
+    characterIds.length,
+  );
 };
+
+const validateTeacherRoster = async (page) => {
+  await page.waitForFunction(
+    (expected) => {
+      const cards = document.querySelectorAll('.v2-character-card');
+      const portraits = document.querySelectorAll('.v2-character-card .character-portrait svg');
+      return cards.length === expected && portraits.length === expected;
+    },
+    characterIds.length,
+  );
+};
+
+const validateLiveCharacter = async (page, expectedId) => {
+  const host = page.locator('.character-host[data-renderer]');
+  await host.waitFor({ state: 'visible' });
+  await host.locator('svg').waitFor({ state: 'visible' });
+  const label = await host.getAttribute('aria-label');
+  if (!label) throw new Error(`Character ${expectedId} mounted without an accessible label.`);
+};
+
+const characterSessionScenarios = characterIds.map((characterId) => ({
+  name: `character-session-${characterId}`,
+  path: `/scene-lesson/a1-u1-l02-how-old-are-you?character=${characterId}`,
+  prepare: async (page) => validateLiveCharacter(page, characterId),
+}));
 
 const scenarios = [
   { name: 'landing', path: '/', profile: false, full: true },
@@ -63,7 +107,7 @@ const scenarios = [
   { name: 'learn-levels', path: '/learn', full: true },
   { name: 'level-a1', path: '/learn/level/a1', full: true },
   { name: 'unit-1', path: '/learn/unit/a1-u1-first-contact', full: true },
-  { name: 'lesson-live-idle', path: '/scene-lesson/a1-u1-l02-how-old-are-you?character=otti' },
+  ...characterSessionScenarios,
   {
     name: 'lesson-live-help',
     path: '/scene-lesson/a1-u1-l02-how-old-are-you?character=otti',
@@ -73,7 +117,7 @@ const scenarios = [
   { name: 'free-speak', path: '/speak', full: true },
   { name: 'free-speak-session', path: '/speak/just-chat?character=otti' },
   { name: 'progress', path: '/progress', full: true },
-  { name: 'teachers', path: '/characters', full: true },
+  { name: 'teachers', path: '/characters', prepare: validateTeacherRoster, full: true },
 ];
 
 await mkdir(outputDir, { recursive: true });
