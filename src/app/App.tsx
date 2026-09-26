@@ -43,10 +43,9 @@ export function App() {
             <span className="v2-brand-mark" aria-hidden="true">🐙</span>
             <span>Englotti</span>
           </Link>
-          <button type="button" className="v2-icon-button" aria-label="Notifications">
-            <ProductIcon name="bell" size={25} />
-            <span className="v2-notification-dot" />
-          </button>
+          <Link className="v2-icon-button" to="/characters" aria-label="اختيار المدرس">
+            <ProductIcon name="profile" size={24} />
+          </Link>
         </header>
       ) : isOnboarding || isCompletion || isSceneLesson ? null : (
         <header className="app-header">
