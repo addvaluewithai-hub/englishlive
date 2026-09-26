@@ -4,7 +4,7 @@ export const characterRegistry = [
   {
     id: 'hakim',
     name: 'Hakim',
-    tagline: 'Calm, thoughtful, and easy to talk to.',
+    tagline: 'هادي، متفهم، وسهل في الكلام.',
     description: 'A steady conversational partner who gives you space to think and finish your ideas.',
     accent: '#7E9586',
     renderer: { kind: 'svg-human', preset: 'hakim' },
@@ -13,7 +13,7 @@ export const characterRegistry = [
   {
     id: 'reem',
     name: 'Reem',
-    tagline: 'Warm, curious, and encouraging.',
+    tagline: 'دافئة، فضولية، ومشجعة دايمًا.',
     description: 'A friendly conversational partner who keeps the exchange moving with natural follow-up questions.',
     accent: '#D8A3AF',
     renderer: { kind: 'svg-human', preset: 'reem' },
@@ -22,7 +22,7 @@ export const characterRegistry = [
   {
     id: 'marwan',
     name: 'Marwan',
-    tagline: 'Relaxed, quick, and a little challenging.',
+    tagline: 'مريح، سريع البديهة، ويحب التحدي.',
     description: 'A confident conversational partner who helps you explain your thinking instead of stopping at short answers.',
     accent: '#9A8570',
     renderer: { kind: 'svg-human', preset: 'marwan' },
@@ -31,7 +31,7 @@ export const characterRegistry = [
   {
     id: 'amal',
     name: 'Amal',
-    tagline: 'Energetic, clear, and optimistic.',
+    tagline: 'واضحة، مليانة طاقة، ومتفاعلة.',
     description: 'An upbeat conversational partner who helps you keep speaking when you hesitate or lose your words.',
     accent: '#AE96CD',
     renderer: { kind: 'svg-human', preset: 'amal' },
