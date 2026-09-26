@@ -47,7 +47,7 @@
    left:['M166 154 C147 133 155 102 179 92 C202 82 230 94 235 119 C241 144 223 167 199 173Z','M175 150 C157 135 164 109 185 103 C206 98 226 111 225 133 Q220 160 195 162Z','M177 144 C166 133 172 115 187 111 C204 107 220 121 214 136 Q210 152 191 155Z',''],
    tail:['M371 410 C378 393 401 394 411 410 C420 427 405 444 389 441 C374 440 366 425 371 410Z','','','','']}
  };
- function mirrorPath(d){return d;}
+ function mirrorPath(d){return d;} // The right ear is mirrored as a component, not rewritten numerically.
  function createEngine(master){
   if(typeof master!=='string'||!master.includes('id="head-scale"'))throw new Error('Invalid character master.');
   const original={};for(const m of master.matchAll(/<([\w:-]+)\b([^<>]*)>/g)){const id=/\bid="([^"]+)"/.exec(m[2])?.[1];if(id){const attrs={};for(const a of m[2].matchAll(/([\w:-]+)="([^"]*)"/g))attrs[a[1]]=a[2];original[id]=attrs;}}
@@ -69,6 +69,7 @@
    const arm=[mix(fur,ink,.12),mix(fur,cream,.25),mix(fur,ink,.06)];
    grad('arm-fur',arm);grad('arm-fur-l',arm);grad('arm-fur-r',arm);
    for(const side of ['l','r']){
+    // Match the opaque shoulder to the torso lighting, rather than hiding it.
     const t=Math.hypot(((side==='l'?-52:52)+70)/140-.33,(367-326)/137-.2)/.86;
     const stops=[mix(fur,'#FFF2CE',.57),mix(fur,'#FFD499',.2),fur,mix(fur,'#62392F',.4)],offsets=[0,.36,.7,1];
     const j=t<.36?0:t<.7?1:2,shoulder=mix(stops[j],stops[j+1],clamp((t-offsets[j])/(offsets[j+1]-offsets[j]),0,1));
@@ -108,6 +109,7 @@
     setD('ear-r-part-'+i,spec?mirrorPath(spec.left[i]):original['ear-r-part-'+i].d);
     put('ear-r-part-'+i,{transform:spec?'translate(604 0) scale(-1 1)':''});
    }
+   // Species-specific silhouettes retain the shared animation IDs.
    put('tail-part-1',{fill:r.species==='cat'?'url(#fur)':'url(#ivory)'});
    put('tail-part-0',{fill:r.species==='rabbit'?'url(#ivory)':'url(#tail-fur)'});
    for(let i=1;i<5;i++)put('tail-part-'+i,{opacity:r.species==='cat'?(i===1?.16:.2):original['tail-part-'+i].opacity??1});
