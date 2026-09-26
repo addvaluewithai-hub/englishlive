@@ -44,3 +44,24 @@ export function lessonArabicTitle(lesson: SceneLessonDefinition) {
   };
   return titles[lesson.source.sourceLessonId] ?? lesson.subtitle;
 }
+
+export function lessonCompletionWins(lesson: SceneLessonDefinition): readonly string[] {
+  const wins: Record<string, readonly string[]> = {
+    'U1-L01': [
+      'إلقاء التحية على شخص جديد',
+      'التعريف بنفسك وذكر اسمك',
+      'السؤال عن الاسم والتعامل مع How are you?',
+    ],
+    'U1-L02': [
+      'فهم واستخدام أرقام مناسبة للسن',
+      'السؤال عن السن بطريقة بسيطة',
+      'قول سنك أو سن افتراضي في محادثة قصيرة',
+    ],
+    'U1-L03': [
+      'السؤال عن بلد الشخص',
+      'قول أنت منين باستخدام I’m from…',
+      'قول مكان سكنك باستخدام I live in…',
+    ],
+  };
+  return wins[lesson.source.sourceLessonId] ?? [lesson.performance];
+}
