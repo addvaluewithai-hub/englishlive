@@ -1,106 +1,81 @@
+import type { CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import { getCharacterDefinition } from '../character/registry';
-import { B1_UNIT_1, B1_UNIT_1_LESSONS } from '../course/b1/unit1';
-import { getNextCourseLessonId, readCourseProgress } from '../course/store';
+import { ProductIcon } from '../components/ProductIcon';
+import { A1_UNIT_1_PRODUCT, lessonArabicTitle, lessonProductTitle } from '../productV2/course';
+import { isProductLessonUnlocked, productUnitProgress, readProductCourseProgress } from '../productV2/progress';
 import { readLearnerProfile } from '../product/profile';
 
 export function ProgressScreen() {
   const profile = readLearnerProfile();
-  const progress = readCourseProgress();
 
   if (!profile) {
     return (
-      <section className="screen review-empty">
-        <p className="eyebrow">Course progress</p>
-        <h1>Set up EnglishLive first.</h1>
-        <p className="lead">Your course path starts after onboarding and a conversation partner choice.</p>
-        <Link className="button primary" to="/onboarding">Set up EnglishLive</Link>
+      <section className="v2-empty-screen" dir="rtl">
+        <h1>ابدأ رحلتك الأول</h1>
+        <p>التقدم هيظهر هنا بعد ما تبدأ أول درس.</p>
+        <Link className="v2-primary-button" to="/onboarding">ابدأ الإعداد</Link>
       </section>
     );
   }
 
   const character = getCharacterDefinition(profile.characterId);
-  const nextLessonId = getNextCourseLessonId(B1_UNIT_1_LESSONS.map((lesson) => lesson.id), progress);
-  const completedCount = B1_UNIT_1_LESSONS.filter((lesson) => progress.lessonProgress[lesson.id]?.completedAt).length;
-  const recentRuns = progress.recentRuns.filter((run) => run.unitId === B1_UNIT_1.id).slice(-5).reverse();
+  const progress = readProductCourseProgress();
+  const summary = productUnitProgress(A1_UNIT_1_PRODUCT, progress);
+  const completionPercent = Math.round((summary.completedCount / summary.totalCount) * 100);
 
   return (
-    <section className="screen progress-screen course-progress-screen">
-      <div className="progress-heading">
-        <p className="eyebrow">B1 · Unit 1</p>
-        <h1>{B1_UNIT_1.title}</h1>
-        <p className="lead">{completedCount} of {B1_UNIT_1_LESSONS.length} authored lessons are complete. That is course progress, not a percentage claim about your overall B1 ability.</p>
-      </div>
+    <section className="v2-progress-screen" dir="rtl">
+      <header className="v2-progress-heading">
+        <span className="v2-kicker">تقدمي</span>
+        <h1>خطواتك في A1</h1>
+        <p>ده تقدمك في الدروس المؤلفة اللي خلصتها، مش درجة مستوى أو نسبة إتقان.</p>
+      </header>
 
-      <section className="progress-next-card">
+      <section className="v2-progress-overview">
         <div>
-          <span className="session-meta">{nextLessonId ? 'Continue your course' : 'Unit complete'}</span>
-          <h2>{nextLessonId ? B1_UNIT_1_LESSONS.find((lesson) => lesson.id === nextLessonId)?.title : 'Replay the live story challenge'}</h2>
-          <p>{nextLessonId ? 'Your next unlocked lesson continues the authored Unit 1 sequence.' : 'All six lessons were completed. More units are not being implied until they are authored and validated.'}</p>
+          <strong>{summary.completedCount}/{summary.totalCount}</strong>
+          <span>دروس متاحة مكتملة</span>
         </div>
-        <Link className="button primary" to={nextLessonId ? `/lesson/${nextLessonId}?character=${character.id}` : `/lesson/${B1_UNIT_1_LESSONS.at(-1)?.id}?character=${character.id}`}>
-          {nextLessonId ? 'Continue' : 'Replay challenge'}
-        </Link>
+        <div className="v2-progress-ring" style={{ '--progress': `${completionPercent}%` } as CSSProperties} aria-label={`${summary.completedCount} of ${summary.totalCount} available lessons completed`}>
+          <span>{summary.completedCount}/{summary.totalCount}</span>
+        </div>
       </section>
 
-      <div className="mission-path-list course-progress-list">
-        {B1_UNIT_1_LESSONS.map((lesson, index) => {
-          const saved = progress.lessonProgress[lesson.id];
-          const stats = progress.lessonStats[lesson.id];
-          const completed = Boolean(saved?.completedAt);
-          const current = lesson.id === nextLessonId;
-          const locked = !completed && !current;
-          const metBeatCount = saved ? Object.values(saved.beatStatuses).filter((status) => status === 'met').length : 0;
+      <Link className="v2-progress-next" to={`/scene-lesson/${summary.nextLesson.id}?character=${character.id}`}>
+        <div>
+          <span>{summary.unitComplete ? 'مراجعة' : 'التالي'}</span>
+          <strong>{lessonProductTitle(summary.nextLesson)}</strong>
+          <small>{lessonArabicTitle(summary.nextLesson)}</small>
+        </div>
+        <span className="v2-round-arrow"><ProductIcon name="chevron" size={22} /></span>
+      </Link>
 
+      <section className="v2-progress-lessons">
+        <h2>الوحدة 1 · {A1_UNIT_1_PRODUCT.arabicTitle}</h2>
+        {A1_UNIT_1_PRODUCT.lessons.map((lesson, index) => {
+          const saved = progress.lessons[lesson.id];
+          const completed = Boolean(saved?.completedAt);
+          const started = Boolean(saved?.startedAt);
+          const unlocked = isProductLessonUnlocked(A1_UNIT_1_PRODUCT, lesson.id, progress);
           return (
-            <article className={`mission-path-card${current ? ' is-next' : ''}`} key={lesson.id}>
-              <div className="mission-path-index">{lesson.challenge ? '★' : String(index + 1).padStart(2, '0')}</div>
-              <div className="mission-path-copy">
-                <div className="mission-path-meta">
-                  <span>{lesson.challenge ? 'Unit challenge' : 'Live lesson'}</span>
-                  <strong className={`mission-status ${completed ? 'status-observed' : current ? 'status-seen' : ''}`}>
-                    {completed ? 'Completed' : current ? (saved ? 'In progress' : 'Next') : 'Locked'}
-                  </strong>
-                </div>
-                <h2>{lesson.title}</h2>
-                <p>{lesson.subtitle}</p>
-                <div className="mission-path-evidence">
-                  {completed
-                    ? <span>{stats?.completedRuns ?? 1} completed run{(stats?.completedRuns ?? 1) === 1 ? '' : 's'}</span>
-                    : saved
-                      ? <span>{metBeatCount}/{lesson.beats.length} authored steps completed · progress saved</span>
-                      : <span>{locked ? 'Complete the previous lesson to unlock' : 'Ready to start'}</span>}
-                </div>
+            <article className="v2-progress-lesson" key={lesson.id}>
+              <span className={`v2-progress-status${completed ? ' is-complete' : started ? ' is-started' : ''}`}>
+                {completed ? <ProductIcon name="check" size={22} /> : !unlocked ? <ProductIcon name="lock" size={18} /> : index + 1}
+              </span>
+              <div>
+                <strong>{lessonProductTitle(lesson)}</strong>
+                <small>{completed ? 'مكتمل' : started ? 'بدأته ولسه مكمل' : unlocked ? 'جاهز تبدأه' : 'مقفول لحد ما تخلص اللي قبله'}</small>
               </div>
-              {!locked || completed ? (
-                <Link className="text-link" to={`/lesson/${lesson.id}?character=${character.id}`}>
-                  {completed ? 'Practise again' : saved ? 'Continue' : 'Start'} →
-                </Link>
-              ) : <span className="course-lock">Locked</span>}
+              {unlocked ? <Link to={`/scene-lesson/${lesson.id}?character=${character.id}`}>{completed ? 'إعادة' : started ? 'متابعة' : 'ابدأ'}</Link> : null}
             </article>
           );
         })}
-      </div>
-
-      {recentRuns.length ? (
-        <section className="recent-lesson-runs">
-          <p className="eyebrow">Recent lesson runs</p>
-          <div className="recent-run-list">
-            {recentRuns.map((run) => (
-              <article key={run.runId}>
-                <div><strong>{run.lessonTitle}</strong><span>{run.completed ? 'Completed' : 'Paused'} · {new Date(run.endedAt).toLocaleDateString()}</span></div>
-                <span>{run.observations.filter((item) => item.outcome === 'met').length} spoken step{run.observations.filter((item) => item.outcome === 'met').length === 1 ? '' : 's'} evidenced</span>
-              </article>
-            ))}
-          </div>
-        </section>
-      ) : null}
-
-      <section className="progress-principle">
-        <p className="eyebrow">Two different truths</p>
-        <h2>Course completion is not proficiency certification.</h2>
-        <p>EnglishLive can truthfully say which authored lessons you completed. It still needs repeated fresh evidence across units and contexts before making broader claims about speaking ability.</p>
       </section>
+
+      <div className="v2-progress-note">
+        <strong>مهم:</strong> إكمال درس معناه إنك حققت عقد الدرس ده في الجلسة. مش معناه إننا بنقول إنك أتقنت A1 كله.
+      </div>
     </section>
   );
 }

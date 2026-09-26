@@ -1,0 +1,121 @@
+.v2-streak-days {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  max-width: 220px;
+}
+
+.v2-streak-days > span {
+  max-width: 48px;
+  color: #8a8d93;
+  font-size: 12px;
+  font-weight: 800;
+}
+.v2-streak-days > span.is-done { color: white; }
+
+.v2-complete-screen {
+  max-width: 620px;
+  margin: 0 auto;
+  display: grid;
+  gap: 22px;
+  text-align: center;
+}
+
+.v2-complete-celebration {
+  position: relative;
+  height: 270px;
+  display: grid;
+  place-items: end center;
+  overflow: hidden;
+}
+
+.v2-complete-character {
+  position: relative;
+  z-index: 2;
+  width: min(310px, 76vw);
+  height: 260px;
+  display: grid;
+  place-items: end center;
+}
+.v2-complete-character .character-portrait { width: 100%; height: 100%; display: grid; place-items: end center; }
+.v2-complete-character svg { width: 112%; height: 112%; filter: drop-shadow(0 18px 18px rgba(44,32,24,.1)); }
+
+.v2-complete-burst {
+  position: absolute;
+  inset: 22px 8% 0;
+  pointer-events: none;
+}
+.v2-complete-burst span { position: absolute; width: 14px; height: 34px; border-radius: 999px; background: var(--v2-accent); transform: rotate(28deg); }
+.v2-complete-burst span:nth-child(1) { top: 14px; right: 20%; }
+.v2-complete-burst span:nth-child(2) { top: 68px; left: 10%; background: #ffc548; transform: rotate(-35deg); }
+.v2-complete-burst span:nth-child(3) { top: 32px; left: 26%; background: #6fc4ee; transform: rotate(48deg); }
+.v2-complete-burst span:nth-child(4) { top: 118px; right: 8%; background: #ffc548; transform: rotate(52deg); }
+.v2-complete-burst span:nth-child(5) { top: 8px; left: 46%; height: 25px; background: #ff8aae; transform: rotate(-12deg); }
+
+.v2-complete-heading h1 {
+  margin: 2px 0 5px;
+  color: var(--v2-ink);
+  font-size: clamp(50px, 13vw, 76px);
+  line-height: .95;
+  letter-spacing: -.055em;
+}
+.v2-complete-heading p { margin: 0; color: var(--v2-muted); font-size: 17px; line-height: 1.6; }
+.v2-complete-heading strong { color: var(--v2-ink); }
+
+.v2-complete-wins {
+  padding: 20px;
+  border: 1px solid #f3dce2;
+  border-radius: 26px;
+  background: linear-gradient(145deg, #fff 0, #fff5f7 100%);
+  text-align: right;
+}
+.v2-complete-wins h2 { margin: 0 0 13px; font-size: 20px; }
+.v2-complete-wins > div { display: grid; gap: 8px; }
+.v2-complete-wins article {
+  min-height: 58px;
+  padding: 10px 12px;
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  gap: 11px;
+  align-items: center;
+  border-radius: 16px;
+  background: rgba(255,255,255,.9);
+}
+.v2-complete-wins article > span { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--v2-accent); color: white; }
+.v2-complete-wins article p { margin: 0; color: #31353c; line-height: 1.5; font-size: 15px; }
+
+.v2-complete-progress {
+  padding: 16px 18px;
+  border: 1px solid var(--v2-line);
+  border-radius: 18px;
+  background: white;
+  display: grid;
+  gap: 12px;
+  text-align: right;
+}
+.v2-complete-progress > div:first-child { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.v2-complete-progress > div:first-child strong { direction: ltr; color: var(--v2-accent-strong); font-size: 22px; }
+.v2-complete-progress > div:first-child span { color: var(--v2-muted); font-size: 12px; }
+.v2-complete-progress .v2-mini-progress { max-width: none; }
+
+.v2-complete-actions { display: grid; gap: 10px; }
+.v2-complete-actions .v2-primary-button { width: 100%; min-height: 58px; font-size: 18px; }
+.v2-replay-button {
+  min-height: 54px;
+  border: 1px solid #f2c7d2;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  color: var(--v2-accent-strong);
+  background: #fff8fa;
+  text-decoration: none;
+  font-weight: 850;
+}
+.v2-complete-home-link { justify-self: center; color: #71757c; text-decoration: none; font-size: 13px; font-weight: 750; }
+
+@media (max-width: 520px) {
+  .v2-complete-screen { gap: 17px; }
+  .v2-complete-celebration { height: 230px; }
+  .v2-complete-character { height: 220px; width: min(275px, 78vw); }
+  .v2-complete-wins { padding: 16px; border-radius: 22px; }
+}

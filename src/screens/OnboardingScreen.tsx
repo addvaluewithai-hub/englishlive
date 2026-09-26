@@ -2,31 +2,30 @@ import { useMemo, useState, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CharacterPortrait } from '../character/CharacterPortrait';
 import { characterRegistry, DEFAULT_CHARACTER_ID } from '../character/registry';
-import { B1_UNIT_1_LESSONS } from '../course/b1/unit1';
+import { ProductIcon } from '../components/ProductIcon';
+import { A1_UNIT_1_PRODUCT } from '../productV2/course';
 import {
-  goalLabel,
   learningGoals,
   readLearnerProfile,
   saveLearnerProfile,
   speakingComfortLevels,
-  comfortLabel,
   type LearningGoal,
   type SpeakingComfort,
 } from '../product/profile';
 
-const goalDescriptions: Record<LearningGoal, string> = {
-  work: 'Meetings, updates, clients, and everyday workplace talk.',
-  interviews: 'Answer naturally instead of translating a memorized response.',
-  travel: 'Handle plans, questions, and small surprises on the spot.',
-  everyday: 'Feel less tense in ordinary social conversations.',
-  study: 'Explain ideas and opinions out loud with more control.',
+const goalCopy: Record<LearningGoal, { title: string; body: string }> = {
+  work: { title: 'العمل', body: 'محادثات واجتماعات ومواقف الشغل اليومية' },
+  interviews: { title: 'المقابلات', body: 'تجاوب بطبيعية بدل حفظ إجابات جاهزة' },
+  travel: { title: 'السفر', body: 'تتواصل بسهولة في رحلاتك والمواقف الجديدة' },
+  everyday: { title: 'بناء الثقة', body: 'تتكلم براحة أكتر في المحادثات العادية' },
+  study: { title: 'الدراسة', body: 'تشرح أفكارك وتشارك في مواقف الدراسة' },
 };
 
-const comfortShort: Record<SpeakingComfort, string> = {
-  freeze: 'I freeze',
-  manage: 'I can manage',
-  natural: 'I want to sound natural',
-  challenge: 'I want a challenge',
+const comfortCopy: Record<SpeakingComfort, { title: string; body: string }> = {
+  freeze: { title: 'بتوتر وبقف', body: 'فاهم شوية، لكن الكلام مش بيطلع بسهولة.' },
+  manage: { title: 'بعرف أتصرف', body: 'بقدر أتكلم بجمل بسيطة مع شوية وقت.' },
+  natural: { title: 'عايز أبقى طبيعي', body: 'عايز الكلام يبقى أسرع وأقل ترجمة في دماغي.' },
+  challenge: { title: 'عايز تحدي', body: 'عايز المدرس يزقني شوية لما أكون جاهز.' },
 };
 
 export function OnboardingScreen() {
@@ -56,40 +55,33 @@ export function OnboardingScreen() {
       characterId,
       createdAt: existing?.createdAt ?? new Date().toISOString(),
     });
-    navigate(`/lesson/${B1_UNIT_1_LESSONS[0].id}?character=${characterId}&onboarding=1`);
+    const firstLesson = A1_UNIT_1_PRODUCT.lessons[0];
+    navigate(`/scene-lesson/${firstLesson.id}?character=${characterId}&onboarding=1`);
   }
 
   const canContinue = step === 0 || (step === 1 && goals.length > 0) || (step === 2 && comfort !== null);
   const selectedCharacter = characterRegistry.find((character) => character.id === characterId) ?? characterRegistry[0];
 
   return (
-    <section className="onboarding-screen">
-      <aside className="onboarding-rail">
-        <div>
-          <p className="eyebrow">Set up your live course</p>
-          <h1>Learn by speaking with a real-time teacher.</h1>
+    <section className="v2-onboarding" dir="rtl">
+      <header className="v2-onboarding-header">
+        <div className="v2-onboarding-brand"><span>E</span><strong>English<i>Live</i></strong></div>
+        <div className="v2-onboarding-progress" aria-label={`Step ${step + 1} of 4`}>
+          {[0, 1, 2, 3].map((value) => <span key={value} className={value <= step ? 'is-active' : ''} />)}
         </div>
-        <div className="onboarding-progress" aria-label={`Step ${step + 1} of 4`}>
-          {[0, 1, 2, 3].map((value) => (
-            <span key={value} className={value <= step ? 'is-active' : ''} />
-          ))}
-        </div>
-        <p className="rail-note">Four quick choices. Then Unit 1 begins live.</p>
-      </aside>
+      </header>
 
-      <div className="onboarding-panel">
+      <div className="v2-onboarding-card">
         {step === 0 ? (
-          <div className="onboarding-step">
-            <span className="step-number">01</span>
-            <h2>What should your teacher call you?</h2>
-            <p className="step-lead">Optional. We only use it to make lessons and conversations feel less mechanical.</p>
-            <label className="field-label" htmlFor="first-name">First name</label>
+          <div className="v2-onboarding-step">
+            <span className="v2-kicker">خلّينا نتعرف</span>
+            <h1>تحب مدرسك يناديك بإيه؟</h1>
+            <p>اختياري. الاسم بس بيخلي الدرس والمحادثة أدفى شوية.</p>
             <input
-              id="first-name"
-              className="text-field"
+              className="v2-text-input"
               value={firstName}
               onChange={(event) => setFirstName(event.target.value)}
-              placeholder="Your name"
+              placeholder="اسمك الأول"
               autoComplete="given-name"
               maxLength={40}
             />
@@ -97,26 +89,18 @@ export function OnboardingScreen() {
         ) : null}
 
         {step === 1 ? (
-          <div className="onboarding-step">
-            <span className="step-number">02</span>
-            <h2>Where do you want English to feel easier?</h2>
-            <p className="step-lead">Choose one or two. Your course sequence stays authored; examples and free conversations can lean toward what matters to you.</p>
-            <div className="choice-list">
+          <div className="v2-onboarding-step">
+            <span className="v2-kicker">هدفك الأساسي</span>
+            <h1>ما هدفك من الإنجليزية؟</h1>
+            <p>اختار هدف أو هدفين. المنهج نفسه منظم، لكن الأمثلة والمحادثات تقدر تقرب من اللي يهمك.</p>
+            <div className="v2-goal-grid">
               {learningGoals.map((goal) => {
                 const selected = goals.includes(goal);
                 return (
-                  <button
-                    key={goal}
-                    type="button"
-                    className={selected ? 'choice-row is-selected' : 'choice-row'}
-                    aria-pressed={selected}
-                    onClick={() => toggleGoal(goal)}
-                  >
-                    <span className="choice-check" aria-hidden="true">{selected ? '✓' : ''}</span>
-                    <span>
-                      <strong>{goalLabel(goal)}</strong>
-                      <small>{goalDescriptions[goal]}</small>
-                    </span>
+                  <button key={goal} type="button" className={`v2-goal-card${selected ? ' is-selected' : ''}`} onClick={() => toggleGoal(goal)} aria-pressed={selected}>
+                    <span className="v2-goal-check">{selected ? <ProductIcon name="check" size={22} /> : null}</span>
+                    <strong>{goalCopy[goal].title}</strong>
+                    <small>{goalCopy[goal].body}</small>
                   </button>
                 );
               })}
@@ -125,21 +109,15 @@ export function OnboardingScreen() {
         ) : null}
 
         {step === 2 ? (
-          <div className="onboarding-step">
-            <span className="step-number">03</span>
-            <h2>How does speaking feel right now?</h2>
-            <p className="step-lead">No placement claim yet. Pick the sentence that sounds most like you so the live teacher can pace the first lessons sensibly.</p>
-            <div className="choice-list comfort-list">
+          <div className="v2-onboarding-step">
+            <span className="v2-kicker">سرعة البداية</span>
+            <h1>الكلام بالإنجليزي عامل معاك إيه دلوقتي؟</h1>
+            <p>ده مش اختبار مستوى. بنستخدمه بس عشان المدرس يبدأ بسرعة ودعم مناسبين.</p>
+            <div className="v2-comfort-list">
               {speakingComfortLevels.map((value) => (
-                <button
-                  key={value}
-                  type="button"
-                  className={comfort === value ? 'choice-row is-selected' : 'choice-row'}
-                  aria-pressed={comfort === value}
-                  onClick={() => setComfort(value)}
-                >
-                  <span className="choice-kicker">{comfortShort[value]}</span>
-                  <span>{comfortLabel(value)}</span>
+                <button key={value} type="button" className={`v2-comfort-card${comfort === value ? ' is-selected' : ''}`} onClick={() => setComfort(value)} aria-pressed={comfort === value}>
+                  <span>{comfort === value ? <ProductIcon name="check" size={20} /> : null}</span>
+                  <div><strong>{comfortCopy[value].title}</strong><small>{comfortCopy[value].body}</small></div>
                 </button>
               ))}
             </div>
@@ -147,54 +125,43 @@ export function OnboardingScreen() {
         ) : null}
 
         {step === 3 ? (
-          <div className="onboarding-step partner-step">
-            <span className="step-number">04</span>
-            <h2>Who do you want as your first live teacher?</h2>
-            <p className="step-lead">You can switch later without changing your Unit or Lesson progress.</p>
-            <div className="onboarding-character-grid">
+          <div className="v2-onboarding-step">
+            <span className="v2-kicker">آخر خطوة</span>
+            <h1>اختر مدرسك</h1>
+            <p>اختار الشخصية اللي تحس إنك هترتاح تتعلم وتتكلم معاها. تقدر تغيرها في أي وقت.</p>
+            <div className="v2-teacher-grid">
               {characterRegistry.map((character) => (
                 <button
                   key={character.id}
                   type="button"
-                  className={characterId === character.id ? 'partner-choice is-selected' : 'partner-choice'}
+                  className={`v2-teacher-card${characterId === character.id ? ' is-selected' : ''}`}
                   style={{ '--character-accent': character.accent } as CSSProperties}
-                  aria-pressed={characterId === character.id}
                   onClick={() => setCharacterId(character.id)}
+                  aria-pressed={characterId === character.id}
                 >
+                  <span className="v2-teacher-check">{characterId === character.id ? <ProductIcon name="check" size={20} /> : null}</span>
                   <CharacterPortrait character={character} />
-                  <span>
-                    <strong>{character.name}</strong>
-                    <small>{character.tagline}</small>
-                  </span>
+                  <strong>{character.name}</strong>
+                  <small>{character.tagline}</small>
                 </button>
               ))}
             </div>
-            <div className="mic-note">
-              <strong>Next: B1 · Unit 1 · Lesson 1 with {selectedCharacter.name}.</strong>
-              <span>Microphone access is requested only when you press Start lesson.</span>
-            </div>
+            <div className="v2-onboarding-note">أول درس هيبدأ مع <strong>{selectedCharacter.name}</strong>. الميكروفون مش هيفتح إلا لما تضغط Start lesson.</div>
           </div>
         ) : null}
 
-        <div className="onboarding-actions">
-          {step > 0 ? (
-            <button type="button" className="button quiet" onClick={() => setStep((value) => value - 1)}>Back</button>
-          ) : <span />}
+        <footer className="v2-onboarding-actions">
+          {step > 0 ? <button type="button" className="v2-secondary-button" onClick={() => setStep((value) => value - 1)}>رجوع</button> : <span />}
           {step < 3 ? (
-            <button
-              type="button"
-              className="button primary"
-              disabled={!canContinue}
-              onClick={() => canContinue && setStep((value) => value + 1)}
-            >
-              Continue
+            <button type="button" className="v2-primary-button" disabled={!canContinue} onClick={() => canContinue && setStep((value) => value + 1)}>
+              متابعة <ProductIcon name="chevron" size={20} />
             </button>
           ) : (
-            <button type="button" className="button primary" onClick={finish}>
-              Start Lesson 1 with {selectedCharacter.name}
+            <button type="button" className="v2-primary-button" onClick={finish}>
+              ابدأ أول درس <ProductIcon name="play" size={21} />
             </button>
           )}
-        </div>
+        </footer>
       </div>
     </section>
   );

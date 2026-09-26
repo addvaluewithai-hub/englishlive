@@ -43,6 +43,23 @@ export class MicrophonePcmStream {
   private stream: MediaStream | null = null;
   private source: MediaStreamAudioSourceNode | null = null;
   private worklet: AudioWorkletNode | null = null;
+  private enabled = true;
+
+  /**
+   * Mute/unmute the learner turn without rebuilding the audio graph.
+   * Disabled microphone audio is never forwarded to Gemini and therefore
+   * cannot accidentally barge into an audible teacher turn.
+   */
+  setEnabled(enabled: boolean) {
+    this.enabled = enabled;
+    this.stream?.getAudioTracks().forEach((track) => {
+      track.enabled = enabled;
+    });
+  }
+
+  get isEnabled() {
+    return this.enabled;
+  }
 
   async start(onChunk: PcmChunkHandler, onLevel?: PcmLevelHandler) {
     if (this.context) return;
@@ -54,6 +71,9 @@ export class MicrophonePcmStream {
         channelCount: 1,
       },
     });
+    this.stream.getAudioTracks().forEach((track) => {
+      track.enabled = this.enabled;
+    });
     this.context = new AudioContext({ latencyHint: 'interactive' });
     if (this.context.state === 'suspended') await this.context.resume();
     await this.context.audioWorklet.addModule('/audio-capture.worklet.js');
@@ -61,6 +81,10 @@ export class MicrophonePcmStream {
     this.worklet = new AudioWorkletNode(this.context, 'englishlive-audio-capture');
     this.worklet.port.onmessage = (event: MessageEvent<Float32Array>) => {
       if (!this.context) return;
+      if (!this.enabled) {
+        onLevel?.(0);
+        return;
+      }
       const downsampled = downsample(event.data, this.context.sampleRate);
       onLevel?.(rmsLevel(downsampled));
       onChunk(floatToPcm16Base64(downsampled));
