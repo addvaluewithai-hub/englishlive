@@ -13,8 +13,8 @@ export function HomeScreen() {
   if (!profile) {
     return (
       <section className="v2-empty-screen" dir="rtl">
-        <div className="v2-empty-mark">E</div>
-        <h1>ابدأ رحلتك في EnglishLive</h1>
+        <div className="v2-empty-mark">🐙</div>
+        <h1>ابدأ رحلتك في Englotti</h1>
         <p>اختار هدفك ومدرسك، وبعدها هنبدأ معاك من أول درس مناسب.</p>
         <Link className="v2-primary-button" to="/onboarding">ابدأ الإعداد</Link>
       </section>
