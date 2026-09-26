@@ -91,6 +91,25 @@
   overflow-wrap: anywhere;
 }
 
+.scene-lesson-screen .board-compare-grid.is-partial {
+  grid-template-columns: 1fr;
+}
+
+.scene-lesson-screen .board-reveal-item {
+  animation: scene-board-reveal 220ms ease-out both;
+}
+
+@keyframes scene-board-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @media (min-width: 821px) {
   .scene-lesson-screen {
     height: calc(100dvh - 72px);
@@ -134,5 +153,11 @@
 
   .lesson-quick-actions button:last-child {
     grid-column: 1 / -1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scene-lesson-screen .board-reveal-item {
+    animation: none;
   }
 }
