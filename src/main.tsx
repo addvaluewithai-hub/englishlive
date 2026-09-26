@@ -7,6 +7,7 @@ import './session-stage.css';
 import './m9-shell.css';
 import './m9-5-course.css';
 import './scene-pilot.css';
+import './product-v2.css';
 
 const root = document.getElementById('root');
 if (!root) throw new Error('EnglishLive root element was not found.');
