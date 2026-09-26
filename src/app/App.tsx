@@ -35,6 +35,7 @@ export function App() {
   const usesProductV2 = isApp || isOnboarding || isSceneLesson;
   const showProductHeader = isApp && !isCompletion;
   const hideGlobalHeader = isLanding || isOnboarding || isCompletion || isSceneLesson;
+  const showBottomNav = isApp && !isCompletion;
 
   return (
     <div className={`app-shell${isSession ? ' is-session' : ''}${isSceneLesson ? ' is-scene-lesson' : ''}${isFreeSpeakSession ? ' is-free-speak-session' : ''}${isCompletion ? ' is-completion' : ''}${isLanding ? ' is-landing' : ''}${usesProductV2 ? ' is-product-v2' : ''}`}>
@@ -86,7 +87,7 @@ export function App() {
         </Routes>
       </main>
 
-      {isApp ? (
+      {showBottomNav ? (
         <nav className="v2-bottom-nav" aria-label="Primary navigation" dir="rtl">
           <NavLink end to="/home" className={navClass}><ProductIcon name="home" /><span>الرئيسية</span></NavLink>
           <NavLink to="/learn" className={navClass}><ProductIcon name="learn" /><span>التعلم</span></NavLink>
