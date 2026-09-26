@@ -64,6 +64,7 @@
     const left=side==='l',[x,y]=anchor(left?272:333,399),footY=475+q[side+'Foot'],footX=left?252:348;
     attr('m-leg-'+side,'d',`M${f(x)} ${f(y)} Q${f(lerp(x,footX,.4)+(left?6:-6))} ${f((y+footY)/2)} ${footX} ${f(footY)} Q${footX+(left?-6:6)} ${f(footY+1)} ${footX+(left?-17:15)} ${f(footY)}`);
     const arm=G.arm({side,x:q[side+'x'],y:q[side+'y']+42,body:1.5});attr('arm-'+side,'d',arm.d);attr('hand-'+side,'transform',`translate(${arm.x} ${f(arm.y-42)})`);
+    // Only the distal part comes in front for hand-to-cheek poses; its anchor stays inside the body.
     const [a,b,c,d]=arm.centerline,t=.62,point=(p,q)=>p.map((n,i)=>lerp(n,q[i],t));
     const ab=point(a,b),bc=point(b,c),cd=point(c,d),abc=point(ab,bc),bcd=point(bc,cd),start=point(abc,bcd);
     attr('m-fore-'+side,'d',`M${start.map(f).join(' ')} C${bcd.map(f).join(' ')} ${cd.map(f).join(' ')} ${d.map(f).join(' ')}`);
