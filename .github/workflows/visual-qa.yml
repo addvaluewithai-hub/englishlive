@@ -6,6 +6,10 @@ on:
     branches:
       - feat/visual-qa-premium-pass
 
+concurrency:
+  group: visual-qa-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   screenshots:
     runs-on: ubuntu-latest
