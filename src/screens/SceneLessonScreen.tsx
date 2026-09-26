@@ -6,6 +6,7 @@ import { CharacterHost, type CharacterHostHandle } from '../character/CharacterH
 import { CharacterPerformanceController } from '../character/CharacterPerformanceController';
 import { getCharacterDefinition } from '../character/registry';
 import { ConversationBoard } from '../components/ConversationBoard';
+import { ProductIcon } from '../components/ProductIcon';
 import { getRequiredSceneLesson } from '../lessonScenes/catalog';
 import { SceneLessonRuntime } from '../lessonScenes/SceneLessonRuntime';
 import type { SceneLessonState } from '../lessonScenes/types';
@@ -30,12 +31,12 @@ function appendTranscript(previous: string, incoming: string) {
 }
 
 const statusCopy: Record<LiveStatus, string> = {
-  idle: 'Ready',
-  connecting: 'Getting ready',
-  listening: 'Your turn',
-  speaking: 'Teaching',
-  reconnecting: 'Reconnecting',
-  error: 'Try again',
+  idle: 'جاهز',
+  connecting: 'بنجهز الدرس',
+  listening: 'دورك',
+  speaking: 'المدرس بيتكلم',
+  reconnecting: 'بنعيد الاتصال',
+  error: 'حاول تاني',
 };
 
 type CompactLogRole = 'AI' | 'YOU' | 'TOOL';
@@ -91,9 +92,7 @@ function formatToolLog(name: string, args: Record<string, unknown>, result: unkn
   const currentSceneId = compactText(currentScene?.id, 80);
   const error = compactText(response?.error, 180);
 
-  if (name === 'get_scene_state') {
-    return `get_scene_state → current=${currentSceneId || 'unknown'}`;
-  }
+  if (name === 'get_scene_state') return `get_scene_state → current=${currentSceneId || 'unknown'}`;
 
   if (name === 'reveal_board_next') {
     const sceneId = compactText(args.sceneId, 80) || 'unknown';
@@ -171,6 +170,7 @@ export function SceneLessonScreen() {
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
   const [chatMessage, setChatMessage] = useState('');
   const [welcomeComplete, setWelcomeComplete] = useState(false);
+  const [toolsOpen, setToolsOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   function setLearnerMicEnabled(enabled: boolean) {
@@ -185,11 +185,8 @@ export function SceneLessonScreen() {
     const label = typed ? `[text] ${value}` : value;
     const entries = compactLog.current;
     const last = entries.at(-1);
-    if (last?.role === role && !typed) {
-      last.text = appendTranscript(last.text, label).slice(-2400);
-    } else {
-      entries.push({ role, text: label.slice(-2400) });
-    }
+    if (last?.role === role && !typed) last.text = appendTranscript(last.text, label).slice(-2400);
+    else entries.push({ role, text: label.slice(-2400) });
     if (entries.length > 160) entries.splice(0, entries.length - 160);
   }
 
@@ -247,6 +244,7 @@ export function SceneLessonScreen() {
     setInputTranscript((current) => appendTranscript(current, `[typed] ${value}`));
     live.sendText(`[LEARNER TEXT CHAT] ${value}\nThis typed text is help/context only and is NOT spoken evidence. If it answers the speaking task, acknowledge it briefly and ask the learner to say it aloud before completing the scene.`);
     setChatMessage('');
+    setToolsOpen(false);
   }
 
   function sendQuickAction(actionId: QuickActionId) {
@@ -256,6 +254,7 @@ export function SceneLessonScreen() {
     appendQuickActionLog(action.label);
     setInputTranscript((current) => appendTranscript(current, `[quick] ${action.label}`));
     live.sendText(`[LEARNER QUICK ACTION: ${action.token}] ${action.instruction}\nThis quick action is NOT lesson evidence. Do not call complete_scene because of this action.`);
+    setToolsOpen(false);
   }
 
   function interruptTeacher() {
@@ -288,6 +287,12 @@ export function SceneLessonScreen() {
     setStatus('idle');
   }
 
+  async function leaveLesson() {
+    setToolsOpen(false);
+    await closeLive();
+    navigate(`/learn/unit/${lesson.unitId}`);
+  }
+
   useEffect(() => {
     return () => {
       transport.current?.close();
@@ -313,14 +318,13 @@ export function SceneLessonScreen() {
     setPerformanceLabel('audio-driven locally');
     setWelcomeComplete(false);
     setMicOpen(false);
+    setToolsOpen(false);
     welcomePlayed.current = false;
     manualInterrupt.current = false;
     holdMicForTeacherContinuation.current = false;
     compactLog.current = [];
 
-    const sceneRuntime = new SceneLessonRuntime(lesson, {
-      onStateChange: setLessonState,
-    });
+    const sceneRuntime = new SceneLessonRuntime(lesson, { onStateChange: setLessonState });
     runtime.current = sceneRuntime;
     setLessonState(sceneRuntime.snapshot);
 
@@ -411,9 +415,7 @@ export function SceneLessonScreen() {
 
     try {
       await queue.unlock();
-      await live.connect(
-        `${characterPrompt}\n\n${learnerContext}\n\n${sceneRuntime.systemPrompt}`,
-      );
+      await live.connect(`${characterPrompt}\n\n${learnerContext}\n\n${sceneRuntime.systemPrompt}`);
       await mic.start(
         (chunk) => live.sendAudio(chunk),
         (level) => {
@@ -421,7 +423,7 @@ export function SceneLessonScreen() {
           sceneRuntime.recordLearnerAudioLevel(level);
         },
       );
-      live.sendText(`Start the authored lesson now by calling get_scene_state. Because openingRequired is true, deliver ONLY the short human teacher welcome described there. Do not begin Scene 1 in the same turn. Speak calmly and stop after the welcome.`);
+      live.sendText('Start the authored lesson now by calling get_scene_state. Because openingRequired is true, deliver ONLY the short human teacher welcome described there. Do not begin Scene 1 in the same turn. Speak calmly and stop after the welcome.');
     } catch (reason) {
       const message = reason instanceof Error ? reason.message : 'Could not start the scene lesson.';
       setError(message);
@@ -453,156 +455,149 @@ export function SceneLessonScreen() {
   const quickActionsEnabled = welcomeComplete && learnerTurn && Boolean(transport.current?.connected);
 
   return (
-    <section className="session-screen lesson-session-screen scene-lesson-screen">
-      <div className="session-stage" style={{ '--character-accent': character.accent } as CSSProperties}>
-        <div className="session-stage-meta lesson-stage-meta">
-          <span>A1 · Unit 1 · Lesson {lesson.order} · Scene pilot</span>
+    <section className="premium-scene-lesson" dir="rtl" style={{ '--character-accent': character.accent } as CSSProperties}>
+      <header className="premium-lesson-topbar">
+        <button type="button" className="premium-top-icon" onClick={() => void leaveLesson()} aria-label="الخروج من الدرس">
+          <ProductIcon name="close" size={24} />
+        </button>
+        <div className="premium-lesson-title">
+          <small>A1 · الوحدة 1 · الدرس {lesson.order}</small>
           <strong>{lesson.title}</strong>
         </div>
+        <button type="button" className="premium-top-icon" onClick={() => setToolsOpen(true)} aria-label="أدوات الدرس">
+          <ProductIcon name="more" size={25} />
+        </button>
+      </header>
 
-        <div className={`session-stage-body stage-mode-${board ? 'board' : 'hero'}`}>
-          {board ? (
-            <div className="session-board-surface" aria-live="polite">
-              <ConversationBoard board={board} visibleCount={boardRevealCount} revealMode="focus" />
-            </div>
-          ) : null}
-          <CharacterHost ref={host} character={character} className="session-character-host" />
-        </div>
-
-        <div className="lesson-beat-strip" aria-label={`${completedScenes} of ${lesson.scenes.length} lesson scenes completed`}>
-          {lesson.scenes.map((scene, index) => (
-            <span
-              key={scene.id}
-              className={`${lessonState?.scenes[scene.id]?.status === 'met' ? 'is-complete' : ''}${index === sceneIndex && !lessonComplete ? ' is-current' : ''}`}
-            />
-          ))}
-        </div>
-
-        <div className="session-stage-footer">
-          <div className="session-partner">
-            <strong>{character.name}</strong>
-            <span className={`live-status status-${status}`} aria-live="polite">
-              {lessonComplete ? 'Lesson complete' : learnerTurn ? 'Your turn · mic on' : statusCopy[status]}
-            </span>
-          </div>
-          <div className="session-control-dock">
-            <div className="mic-meter" aria-label={`Microphone level ${Math.round(micLevel * 100)} percent`}>
-              <span style={{ width: `${Math.max(learnerTurn ? 3 : 0, micLevel * 100)}%` }} />
-            </div>
-            {lessonComplete ? (
-              <button
-                type="button"
-                className="button primary"
-                onClick={() => void closeLive().then(() => navigate('/learn'))}
-              >
-                Finish lesson
-              </button>
-            ) : teacherSpeaking ? (
-              <button
-                type="button"
-                className="button interrupt-teacher"
-                onClick={interruptTeacher}
-                aria-label="Interrupt teacher and open microphone"
-              >
-                مقاطعة
-              </button>
-            ) : liveLesson ? (
-              <button
-                type="button"
-                className="button learner-mic-open"
-                disabled
-                aria-label={learnerTurn ? 'Your turn. Microphone is open.' : 'Wait for your turn.'}
-              >
-                {learnerTurn ? 'دورك' : 'استنى'}
-              </button>
-            ) : (
-              <button
-                type="button"
-                className="button primary"
-                onClick={() => void startLive()}
-                disabled={connecting}
-              >
-                {connecting ? 'Getting ready…' : error ? 'Try again' : 'Start lesson'}
-              </button>
-            )}
-          </div>
-        </div>
+      <div className="premium-lesson-progress" aria-label={`${completedScenes} of ${lesson.scenes.length} lesson scenes completed`}>
+        {lesson.scenes.map((scene, index) => (
+          <span
+            key={scene.id}
+            className={`${lessonState?.scenes[scene.id]?.status === 'met' ? 'is-complete' : ''}${index === sceneIndex && !lessonComplete ? ' is-current' : ''}`}
+          />
+        ))}
       </div>
 
-      <aside className="conversation-sidebar lesson-sidebar">
-        <div className="conversation-sidebar-heading">
-          <p className="eyebrow">{welcomeComplete ? `Scene ${sceneIndex + 1} of ${lesson.scenes.length}` : 'Getting started'}</p>
-          <h2>{welcomeComplete ? currentScene.title : lesson.title}</h2>
-          <p>{welcomeComplete ? currentScene.goal : 'Your teacher will welcome you and explain what you will practise today.'}</p>
+      <main className={`premium-lesson-stage${board ? ' has-board' : ''}`}>
+        <div className="premium-scene-caption">
+          <small>{welcomeComplete ? `الخطوة ${sceneIndex + 1} من ${lesson.scenes.length}` : 'بداية الدرس'}</small>
+          <strong>{welcomeComplete ? currentScene.title : `مع ${character.name}`}</strong>
         </div>
 
-        {welcomeComplete ? (
-          <div className="lesson-language-focus">
-            <small>Target English</small>
-            {currentScene.teaching.englishTargets.slice(0, 5).map((target) => <span key={target}>{target}</span>)}
+        <CharacterHost ref={host} character={character} className="premium-lesson-character" />
+
+        {board ? (
+          <div className="premium-board-layer" aria-live="polite">
+            <ConversationBoard board={board} visibleCount={boardRevealCount} revealMode="focus" />
           </div>
         ) : null}
 
-        {error ? <div className="live-error" role="alert">{error}</div> : null}
+        {error ? <div className="premium-live-error" role="alert">{error}</div> : null}
+      </main>
 
-        <div className="scene-session-actions">
-          <button type="button" className="button quiet" onClick={() => void copyCompactLog()}>
-            {copyStatus === 'copied' ? 'Copied log' : 'Copy log'}
+      <footer className="premium-lesson-footer">
+        <div className="premium-live-status" aria-live="polite">
+          <span className={`premium-status-dot status-${status}`} />
+          <div>
+            <strong>{lessonComplete ? 'الدرس خلص' : learnerTurn ? 'دورك تتكلم' : statusCopy[status]}</strong>
+            <small>{learnerTurn ? 'المايك مفتوح تلقائيًا' : teacherSpeaking ? 'لو محتاج توقفه اضغط مقاطعة' : character.name}</small>
+          </div>
+        </div>
+
+        <div className="premium-control-row">
+          <button type="button" className="premium-secondary-control" onClick={() => setToolsOpen(true)} aria-label="المساعدة والكتابة">
+            <ProductIcon name="chat" size={22} />
+            <span>مساعدة</span>
           </button>
-          {copyStatus === 'error' ? <small>Could not copy. Try again in a secure browser context.</small> : null}
-        </div>
 
-        {welcomeComplete ? (
-          <div className="lesson-quick-actions" aria-label="Quick help">
-            {quickActions.map((action) => (
-              <button
-                key={action.id}
-                type="button"
-                onClick={() => sendQuickAction(action.id)}
-                disabled={!quickActionsEnabled}
-                title={teacherSpeaking ? 'اضغط مقاطعة الأول لو عايز توقف المدرس' : undefined}
-              >
-                {action.label}
-              </button>
-            ))}
+          {lessonComplete ? (
+            <button type="button" className="premium-main-control is-finish" onClick={() => void closeLive().then(() => navigate('/learn'))}>
+              <ProductIcon name="check" size={27} />
+              <span>إنهاء</span>
+            </button>
+          ) : teacherSpeaking ? (
+            <button type="button" className="premium-main-control is-interrupt" onClick={interruptTeacher}>
+              <span className="premium-pause-icon" aria-hidden="true" />
+              <span>مقاطعة</span>
+            </button>
+          ) : liveLesson ? (
+            <button type="button" className={`premium-main-control is-mic${learnerTurn ? ' is-open' : ''}`} disabled>
+              <ProductIcon name="speak" size={29} />
+              <span>{learnerTurn ? 'دورك' : 'استنى'}</span>
+            </button>
+          ) : (
+            <button type="button" className="premium-main-control is-start" onClick={() => void startLive()} disabled={connecting}>
+              <ProductIcon name="play" size={26} />
+              <span>{connecting ? 'لحظة…' : error ? 'حاول تاني' : 'ابدأ'}</span>
+            </button>
+          )}
+
+          <div className="premium-mic-meter" aria-label={`Microphone level ${Math.round(micLevel * 100)} percent`}>
+            <span style={{ height: `${Math.max(learnerTurn ? 8 : 0, micLevel * 100)}%` }} />
           </div>
-        ) : null}
-
-        <div className="transcript-stack" aria-live="polite">
-          <article className="transcript-card user-transcript">
-            <small>You</small>
-            <p>{inputTranscript || 'Your spoken or typed message will appear here once the lesson starts.'}</p>
-          </article>
-          <article className="transcript-card partner-transcript">
-            <small>{character.name}</small>
-            <p>{outputTranscript || `${character.name} will welcome you before the first teaching scene begins.`}</p>
-          </article>
         </div>
+      </footer>
 
-        <form className="lesson-chat-composer" onSubmit={sendChat}>
-          <input
-            value={chatMessage}
-            onChange={(event) => setChatMessage(event.target.value)}
-            placeholder={teacherSpeaking ? 'اضغط مقاطعة الأول لو محتاج تتكلم…' : 'Type a question or message…'}
-            aria-label="Type a message to your teacher"
-            disabled={!learnerTurn || !transport.current?.connected}
-          />
-          <button type="submit" className="button quiet" disabled={!chatMessage.trim() || !learnerTurn || !transport.current?.connected}>Send</button>
-          <small>Text can ask for help, but speaking tasks still need a spoken answer.</small>
-        </form>
+      {toolsOpen ? (
+        <div className="premium-tools-backdrop" role="presentation" onMouseDown={(event) => {
+          if (event.target === event.currentTarget) setToolsOpen(false);
+        }}>
+          <section className="premium-tools-sheet" role="dialog" aria-modal="true" aria-label="مساعدة الدرس">
+            <header>
+              <div><small>أثناء الدرس</small><h2>محتاج مساعدة؟</h2></div>
+              <button type="button" onClick={() => setToolsOpen(false)} aria-label="إغلاق"><ProductIcon name="close" size={22} /></button>
+            </header>
 
-        <details className="session-tech-details">
-          <summary>Scene details</summary>
-          <span>Lesson: {lesson.source.sourceLessonId}</span>
-          <span>Scene progress: {completedScenes}/{lesson.scenes.length}</span>
-          <span>Interaction: {welcomeComplete ? currentScene.interaction.kind : 'teacher welcome'}</span>
-          <span>Board reveal: {welcomeComplete ? `${boardRevealCount}/${boardTotal} · focus mode` : 'not started'}</span>
-          <span>Microphone: {micOpen ? 'learner turn open' : 'closed while teacher speaks'}</span>
-          <span>Performance: {performanceLabel}</span>
-          <span>Curriculum source: english-course · {lesson.source.branch}</span>
-          <span>Copy log contains dialogue + scene tool calls only.</span>
-        </details>
-      </aside>
+            {welcomeComplete ? (
+              <div className="premium-quick-actions">
+                {quickActions.map((action) => (
+                  <button key={action.id} type="button" onClick={() => sendQuickAction(action.id)} disabled={!quickActionsEnabled}>
+                    {action.label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+
+            {!quickActionsEnabled && liveLesson ? (
+              <p className="premium-tools-hint">{teacherSpeaking ? 'لو عايز توقف المدرس، اقفل القائمة واضغط مقاطعة.' : 'استنى لحد ما دورك ييجي.'}</p>
+            ) : null}
+
+            <form className="premium-chat-composer" onSubmit={sendChat}>
+              <ProductIcon name="keyboard" size={20} />
+              <input
+                value={chatMessage}
+                onChange={(event) => setChatMessage(event.target.value)}
+                placeholder="اكتب سؤال أو استفسار…"
+                aria-label="اكتب رسالة للمدرس"
+                disabled={!learnerTurn || !transport.current?.connected}
+              />
+              <button type="submit" disabled={!chatMessage.trim() || !learnerTurn || !transport.current?.connected}>إرسال</button>
+            </form>
+
+            <details className="premium-transcript-preview">
+              <summary>آخر كلام في الجلسة</summary>
+              <div><small>أنت</small><p>{inputTranscript || '—'}</p></div>
+              <div><small>{character.name}</small><p>{outputTranscript || '—'}</p></div>
+            </details>
+
+            <div className="premium-tools-actions">
+              <button type="button" onClick={() => void copyCompactLog()}>
+                {copyStatus === 'copied' ? 'تم نسخ اللوج' : 'Copy log'}
+              </button>
+              {copyStatus === 'error' ? <small>تعذر النسخ. جرب تاني.</small> : null}
+            </div>
+
+            <details className="premium-tech-details">
+              <summary>تفاصيل تقنية</summary>
+              <span>Scene: {sceneIndex + 1}/{lesson.scenes.length}</span>
+              <span>Interaction: {welcomeComplete ? currentScene.interaction.kind : 'teacher welcome'}</span>
+              <span>Board: {welcomeComplete ? `${boardRevealCount}/${boardTotal} · focus` : 'not started'}</span>
+              <span>Mic: {micOpen ? 'open' : 'closed'}</span>
+              <span>Performance: {performanceLabel}</span>
+            </details>
+          </section>
+        </div>
+      ) : null}
     </section>
   );
 }
