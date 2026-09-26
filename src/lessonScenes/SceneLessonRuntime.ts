@@ -1,5 +1,6 @@
 import type { LiveClientTool } from '../live/tools';
 import { boardRevealChunk, boardRevealTotal } from '../presentation/boardReveal';
+import { markProductLessonCompleted, markProductLessonStarted } from '../productV2/progress';
 import {
   conversationResponseKinds,
   type ConversationEvidenceSource,
@@ -48,6 +49,7 @@ export class SceneLessonRuntime {
     if (!lesson.scenes.length) throw new Error('Scene lesson requires at least one scene.');
     this.state = this.createInitialState();
     if (options.onStateChange) this.listeners.add(options.onStateChange);
+    markProductLessonStarted(lesson.id);
     this.tools = [
       this.stateTool(),
       this.revealBoardTool(),
@@ -497,6 +499,7 @@ FRESH TRANSFER
           };
         }
         this.state.completedAt ??= new Date().toISOString();
+        markProductLessonCompleted(this.lesson.id);
         this.persistAndEmit();
         return {
           result: 'Lesson complete. Give one short warm closing in Arabic with the key English win, then stop teaching. Do not add another test.',
