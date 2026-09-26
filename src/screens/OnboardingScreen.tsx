@@ -1,6 +1,7 @@
 import { useMemo, useState, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CharacterPortrait } from '../character/CharacterPortrait';
+import { OttiMark } from '../character/otti/OttiMark';
 import { characterRegistry, DEFAULT_CHARACTER_ID } from '../character/registry';
 import { ProductIcon } from '../components/ProductIcon';
 import { A1_UNIT_1_PRODUCT } from '../productV2/course';
@@ -65,7 +66,7 @@ export function OnboardingScreen() {
   return (
     <section className="v2-onboarding" dir="rtl">
       <header className="v2-onboarding-header">
-        <div className="v2-onboarding-brand"><span>🐙</span><strong>Englotti</strong></div>
+        <div className="v2-onboarding-brand"><span><OttiMark /></span><strong>Englotti</strong></div>
         <div className="v2-onboarding-progress" aria-label={`Step ${step + 1} of 4`}>
           {[0, 1, 2, 3].map((value) => <span key={value} className={value <= step ? 'is-active' : ''} />)}
         </div>
@@ -75,7 +76,7 @@ export function OnboardingScreen() {
         {step === 0 ? (
           <div className="v2-onboarding-step">
             <span className="v2-kicker">خلّينا نتعرف</span>
-            <h1>تحب مدرسك يناديك بإيه؟</h1>
+            <h1>تحب Otti يناديك بإيه؟</h1>
             <p>اختياري. الاسم بس بيخلي الدرس والمحادثة أدفى شوية.</p>
             <input
               className="v2-text-input"
@@ -112,7 +113,7 @@ export function OnboardingScreen() {
           <div className="v2-onboarding-step">
             <span className="v2-kicker">سرعة البداية</span>
             <h1>الكلام بالإنجليزي عامل معاك إيه دلوقتي؟</h1>
-            <p>ده مش اختبار مستوى. بنستخدمه بس عشان المدرس يبدأ بسرعة ودعم مناسبين.</p>
+            <p>ده مش اختبار مستوى. بنستخدمه بس عشان Otti يبدأ بسرعة ودعم مناسبين.</p>
             <div className="v2-comfort-list">
               {speakingComfortLevels.map((value) => (
                 <button key={value} type="button" className={`v2-comfort-card${comfort === value ? ' is-selected' : ''}`} onClick={() => setComfort(value)} aria-pressed={comfort === value}>
@@ -126,21 +127,22 @@ export function OnboardingScreen() {
 
         {step === 3 ? (
           <div className="v2-onboarding-step">
-            <span className="v2-kicker">آخر خطوة</span>
-            <h1>اختر مدرسك</h1>
-            <p>اختار الشخصية اللي تحس إنك هترتاح تتعلم وتتكلم معاها. تقدر تغيرها في أي وقت.</p>
+            <span className="v2-kicker">قابل مدرسك</span>
+            <h1>Otti هيبدأ معاك</h1>
+            <p>Otti هو مدرس Englotti الأساسي ورفيق الرحلة. لو تفضّل شخصية تانية، تقدر تختار واحدة من المدرسين الموجودين تحت.</p>
             <div className="v2-teacher-grid">
               {characterRegistry.map((character) => (
                 <button
                   key={character.id}
                   type="button"
-                  className={`v2-teacher-card${characterId === character.id ? ' is-selected' : ''}`}
+                  className={`v2-teacher-card${character.id === 'otti' ? ' is-otti' : ''}${characterId === character.id ? ' is-selected' : ''}`}
+                  data-character={character.id}
                   style={{ '--character-accent': character.accent } as CSSProperties}
                   onClick={() => setCharacterId(character.id)}
                   aria-pressed={characterId === character.id}
                 >
                   <span className="v2-teacher-check">{characterId === character.id ? <ProductIcon name="check" size={20} /> : null}</span>
-                  <CharacterPortrait character={character} />
+                  <CharacterPortrait character={character} pose={character.id === 'otti' ? 'wave' : 'idle'} />
                   <strong>{character.name}</strong>
                   <small>{character.tagline}</small>
                 </button>
