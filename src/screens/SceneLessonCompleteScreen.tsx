@@ -1,4 +1,4 @@
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom';
 import { CharacterPortrait } from '../character/CharacterPortrait';
 import { getCharacterDefinition } from '../character/registry';
 import { ProductIcon } from '../components/ProductIcon';
@@ -14,6 +14,11 @@ export function SceneLessonCompleteScreen() {
   const profile = readLearnerProfile();
   const character = getCharacterDefinition(params.get('character') ?? profile?.characterId);
   const progress = readProductCourseProgress();
+
+  if (!progress.lessons[lesson.id]?.completedAt) {
+    return <Navigate replace to="/learn" />;
+  }
+
   const summary = productUnitProgress(A1_UNIT_1_PRODUCT, progress);
   const lessonIndex = A1_UNIT_1_PRODUCT.lessons.findIndex((item) => item.id === lesson.id);
   const nextLesson = A1_UNIT_1_PRODUCT.lessons[lessonIndex + 1];
