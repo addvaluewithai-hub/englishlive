@@ -12,6 +12,7 @@ import type { SceneLessonState } from '../lessonScenes/types';
 import { GeminiLiveTransport } from '../live/GeminiLiveTransport';
 import type { LiveClientTool } from '../live/tools';
 import type { LiveStatus } from '../live/types';
+import { boardRevealTotal } from '../presentation/boardReveal';
 import { comfortLabel, goalPrompt, readLearnerProfile } from '../product/profile';
 
 function pcmSampleRate(mimeType: string) {
@@ -38,11 +39,38 @@ const statusCopy: Record<LiveStatus, string> = {
 };
 
 type CompactLogRole = 'AI' | 'YOU' | 'TOOL';
+type QuickActionId = 'dont-understand' | 'repeat' | 'another-example';
 
 interface CompactLogEntry {
   role: CompactLogRole;
   text: string;
 }
+
+const quickActions: ReadonlyArray<{
+  id: QuickActionId;
+  label: string;
+  token: string;
+  instruction: string;
+}> = [
+  {
+    id: 'dont-understand',
+    label: 'مش فاهم',
+    token: 'DONT_UNDERSTAND',
+    instruction: 'Explain the current point again in simpler Egyptian Arabic, slowly. Stay in the same scene and do not add a new target.',
+  },
+  {
+    id: 'repeat',
+    label: 'عيد تاني',
+    token: 'REPEAT',
+    instruction: 'Repeat the last teaching point more slowly and clearly. Stay in the same scene and do not advance.',
+  },
+  {
+    id: 'another-example',
+    label: 'مثال تاني',
+    token: 'ANOTHER_EXAMPLE',
+    instruction: 'Give one short new example using only the current scene language. Do not add curriculum and do not advance.',
+  },
+];
 
 function compactText(value: unknown, limit = 180) {
   if (typeof value !== 'string') return '';
@@ -65,6 +93,16 @@ function formatToolLog(name: string, args: Record<string, unknown>, result: unkn
 
   if (name === 'get_scene_state') {
     return `get_scene_state → current=${currentSceneId || 'unknown'}`;
+  }
+
+  if (name === 'reveal_board_next') {
+    const sceneId = compactText(args.sceneId, 80) || 'unknown';
+    const reveal = readRecord(currentScene?.boardReveal);
+    const visible = typeof reveal?.visibleCount === 'number' ? reveal.visibleCount : '?';
+    const total = typeof reveal?.totalCount === 'number' ? reveal.totalCount : '?';
+    return error
+      ? `reveal_board_next scene=${sceneId} → REJECTED: ${error}`
+      : `reveal_board_next scene=${sceneId} → ${visible}/${total}`;
   }
 
   if (name === 'complete_scene') {
@@ -146,6 +184,11 @@ export function SceneLessonScreen() {
     if (entries.length > 160) entries.splice(0, entries.length - 160);
   }
 
+  function appendQuickActionLog(label: string) {
+    compactLog.current.push({ role: 'YOU', text: `[quick] ${label}` });
+    if (compactLog.current.length > 160) compactLog.current.splice(0, compactLog.current.length - 160);
+  }
+
   function appendToolLog(name: string, args: Record<string, unknown>, result: unknown) {
     compactLog.current.push({ role: 'TOOL', text: formatToolLog(name, args, result) });
     if (compactLog.current.length > 160) compactLog.current.splice(0, compactLog.current.length - 160);
@@ -193,8 +236,17 @@ export function SceneLessonScreen() {
     if (!value || !live?.connected) return;
     appendDialogueLog('YOU', value, true);
     setInputTranscript((current) => appendTranscript(current, `[typed] ${value}`));
-    live.sendText(`The learner typed this message: ${value}\nTreat typed text as help/context only. It is NOT spoken evidence for complete_scene. If it answers the speaking task, acknowledge it briefly and ask the learner to say the answer aloud before completing the scene.`);
+    live.sendText(`[LEARNER TEXT CHAT] ${value}\nThis typed text is help/context only and is NOT spoken evidence. If it answers the speaking task, acknowledge it briefly and ask the learner to say it aloud before completing the scene.`);
     setChatMessage('');
+  }
+
+  function sendQuickAction(actionId: QuickActionId) {
+    const action = quickActions.find((item) => item.id === actionId);
+    const live = transport.current;
+    if (!action || !welcomeComplete || !live?.connected) return;
+    appendQuickActionLog(action.label);
+    setInputTranscript((current) => appendTranscript(current, `[quick] ${action.label}`));
+    live.sendText(`[LEARNER QUICK ACTION: ${action.token}] ${action.instruction}\nThis quick action is NOT lesson evidence. Do not call complete_scene because of this action.`);
   }
 
   async function closeLive() {
@@ -262,8 +314,9 @@ export function SceneLessonScreen() {
         sceneRuntime.markPartnerTurnComplete();
         if (!welcomePlayed.current) {
           welcomePlayed.current = true;
+          sceneRuntime.markLessonOpeningComplete();
           setWelcomeComplete(true);
-          live.sendText('The spoken welcome is now finished. Call get_scene_state now, then begin only the current authored scene. Do not repeat the lesson overview.');
+          live.sendText('The spoken welcome is now finished. Call get_scene_state now, then begin only the current authored scene. If it has a board, reveal the first board chunk with reveal_board_next immediately before explaining that chunk. Teach slowly, one small idea at a time. Do not repeat the lesson overview.');
         }
       },
     });
@@ -310,7 +363,7 @@ export function SceneLessonScreen() {
       ? `The learner's private profile says their first name is ${profile.firstName || 'not provided'}, their main reason for English is to ${goalPrompt(profile.goals[0] ?? 'everyday')}, and their speaking comfort is ${comfortLabel(profile.comfort)}. Use this only to pace support. Never use profile facts to satisfy lesson evidence or answer for the learner.`
       : 'No learner profile is available. Keep support very concrete and calibrate only from the live interaction.';
 
-    const characterPrompt = `You are ${character.name}, ${character.persona.style}. You are teaching an adult A1 English learner live. Be warm, patient and concise without sounding childish. In THIS lesson, explanations should be mostly simple Egyptian Arabic while target phrases, models and roleplay remain in English. Use Arabic to make the idea clear, then get the learner speaking English quickly. Allow interruption and react naturally.`;
+    const characterPrompt = `You are ${character.name}, ${character.persona.style}. You are teaching an adult A1 English learner live. Be warm, patient and concise without sounding childish. Speak at a calm teacher pace: short Arabic sentences, clear pauses, and unhurried target English. In THIS lesson, explanations should be mostly simple Egyptian Arabic while target phrases, models and roleplay remain in English. Use Arabic to make one small idea clear, then get the learner speaking English quickly. Allow interruption and react naturally.`;
 
     try {
       await queue.unlock();
@@ -324,7 +377,7 @@ export function SceneLessonScreen() {
           sceneRuntime.recordLearnerAudioLevel(level);
         },
       );
-      live.sendText(`Start with a short, natural teacher welcome ONLY. Do NOT call get_scene_state yet and do NOT begin Scene 1 yet. In simple Egyptian Arabic: greet the learner warmly; say today's lesson is "${lesson.title}"; explain in one sentence what they will be able to do (${lesson.performance}); give one brief encouraging line. Keep it around 15–25 seconds, do not list curriculum targets, and do not ask the learner a question yet. Stop after the welcome and wait.`);
+      live.sendText(`Start the authored lesson now by calling get_scene_state. Because openingRequired is true, deliver ONLY the short human teacher welcome described there. Do not begin Scene 1 in the same turn. Speak calmly and stop after the welcome.`);
     } catch (reason) {
       const message = reason instanceof Error ? reason.message : 'Could not start the scene lesson.';
       setError(message);
@@ -346,7 +399,11 @@ export function SceneLessonScreen() {
     ? lesson.scenes.filter((scene) => lessonState.scenes[scene.id]?.status === 'met').length
     : 0;
   const lessonComplete = Boolean(lessonState?.completedAt);
-  const board = welcomeComplete ? currentScene.board ?? null : null;
+  const currentSceneState = lessonState?.scenes[currentScene.id];
+  const boardRevealCount = currentSceneState?.boardRevealCount ?? 0;
+  const boardTotal = boardRevealTotal(currentScene.board);
+  const board = welcomeComplete && boardRevealCount > 0 ? currentScene.board ?? null : null;
+  const quickActionsEnabled = welcomeComplete && liveLesson && Boolean(transport.current?.connected);
 
   return (
     <section className="session-screen lesson-session-screen scene-lesson-screen">
@@ -359,7 +416,7 @@ export function SceneLessonScreen() {
         <div className={`session-stage-body stage-mode-${board ? 'board' : 'hero'}`}>
           {board ? (
             <div className="session-board-surface" aria-live="polite">
-              <ConversationBoard board={board} />
+              <ConversationBoard board={board} visibleCount={boardRevealCount} />
             </div>
           ) : null}
           <CharacterHost ref={host} character={character} className="session-character-host" />
@@ -428,6 +485,21 @@ export function SceneLessonScreen() {
           {copyStatus === 'error' ? <small>Could not copy. Try again in a secure browser context.</small> : null}
         </div>
 
+        {welcomeComplete ? (
+          <div className="lesson-quick-actions" aria-label="Quick help">
+            {quickActions.map((action) => (
+              <button
+                key={action.id}
+                type="button"
+                onClick={() => sendQuickAction(action.id)}
+                disabled={!quickActionsEnabled}
+              >
+                {action.label}
+              </button>
+            ))}
+          </div>
+        ) : null}
+
         <div className="transcript-stack" aria-live="polite">
           <article className="transcript-card user-transcript">
             <small>You</small>
@@ -447,7 +519,7 @@ export function SceneLessonScreen() {
             aria-label="Type a message to your teacher"
             disabled={!liveLesson || !transport.current?.connected}
           />
-          <button type="submit" className="button quiet" disabled={!chatMessage.trim() || !liveLesson}>Send</button>
+          <button type="submit" className="button quiet" disabled={!chatMessage.trim() || !liveLesson || !transport.current?.connected}>Send</button>
           <small>Text can ask for help, but speaking tasks still need a spoken answer.</small>
         </form>
 
@@ -456,6 +528,7 @@ export function SceneLessonScreen() {
           <span>Lesson: {lesson.source.sourceLessonId}</span>
           <span>Scene progress: {completedScenes}/{lesson.scenes.length}</span>
           <span>Interaction: {welcomeComplete ? currentScene.interaction.kind : 'teacher welcome'}</span>
+          <span>Board reveal: {welcomeComplete ? `${boardRevealCount}/${boardTotal}` : 'not started'}</span>
           <span>Performance: {performanceLabel}</span>
           <span>Curriculum source: english-course · {lesson.source.branch}</span>
           <span>Copy log contains dialogue + scene tool calls only.</span>
