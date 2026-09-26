@@ -2,6 +2,15 @@ import type { CharacterDefinition } from './types';
 
 export const characterRegistry = [
   {
+    id: 'otti',
+    name: 'Otti',
+    tagline: 'خفيف، مشجّع، وبيفضل جنبك خطوة بخطوة.',
+    description: 'Englotti’s main teacher and companion: warm, playful, patient, and focused on getting the learner speaking.',
+    accent: '#FF3F68',
+    renderer: { kind: 'otti-svg', preset: 'otti' },
+    persona: { style: 'warm, playful, patient, concise, encouraging without sounding childish' },
+  },
+  {
     id: 'hakim',
     name: 'Hakim',
     tagline: 'هادي، متفهم، وسهل في الكلام.',
@@ -39,7 +48,7 @@ export const characterRegistry = [
   },
 ] as const satisfies readonly CharacterDefinition[];
 
-export const DEFAULT_CHARACTER_ID = 'reem';
+export const DEFAULT_CHARACTER_ID = 'otti';
 
 export function getCharacterDefinition(id: string | null | undefined): CharacterDefinition {
   return characterRegistry.find((character) => character.id === id) ?? characterRegistry.find((character) => character.id === DEFAULT_CHARACTER_ID)!;
