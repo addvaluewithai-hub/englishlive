@@ -18,6 +18,7 @@
   }
   function step(dt,reduced=false){
    if(!Number.isFinite(dt)||dt<=0)return {...s};
+   // Substeps keep acceleration stable on slow displays; a hidden tab does not teleport.
    let remaining=Math.min(dt,.1);
    while(remaining>1e-7){
     const h=Math.min(remaining,1/120);remaining-=h;
@@ -34,6 +35,7 @@
      if(route.t===1&&Math.hypot(s.x-route.end.x,s.y-route.end.y)<.001&&v<.004){s.landed=route.land;route=null;braking=true;}
     }else{const decay=Math.exp(-h*9);s.vx*=decay;s.vy*=decay;}
     for(const a of ['x','y']){
+     // Predictive braking before the boundary, including rapid direction changes.
      const v='v'+a,bound=s[v]>0?1-s[a]:s[a];
      s[v]=Math.sign(s[v])*Math.min(Math.abs(s[v]),Math.sqrt(2*.9*Math.max(0,bound)),Math.max(0,bound)/h);
      s[a]=clamp(s[a]+s[v]*h);
