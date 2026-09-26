@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import { CharacterPortrait } from '../character/CharacterPortrait';
 import { getCharacterDefinition } from '../character/registry';
@@ -34,7 +35,7 @@ export function HomeScreen() {
           <h1>{greeting}</h1>
           <p>خطوة صغيرة كل يوم، ومع كل درس هتتكلم أكتر بثقة.</p>
         </div>
-        <div className="v2-home-character" style={{ '--character-accent': character.accent } as React.CSSProperties}>
+        <div className="v2-home-character" style={{ '--character-accent': character.accent } as CSSProperties}>
           <CharacterPortrait character={character} />
         </div>
       </div>
