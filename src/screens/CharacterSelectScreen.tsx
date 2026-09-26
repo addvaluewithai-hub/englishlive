@@ -5,6 +5,13 @@ import { characterRegistry } from '../character/registry';
 import { ProductIcon } from '../components/ProductIcon';
 import { readLearnerProfile, saveLearnerProfile } from '../product/profile';
 
+const teacherCopy: Record<string, string> = {
+  hakim: 'هادي، متفهم، وسهل في الكلام.',
+  reem: 'دافئة، فضولية، ومشجعة دايمًا.',
+  marwan: 'مريح، سريع البديهة، ويحب التحدي.',
+  amal: 'واضحة، مليانة طاقة، ومتفاعلة.',
+};
+
 export function CharacterSelectScreen() {
   const profile = readLearnerProfile();
   const selectedId = profile?.characterId ?? characterRegistry[0].id;
@@ -19,7 +26,7 @@ export function CharacterSelectScreen() {
       <header className="v2-character-heading">
         <span className="v2-kicker">مدرسك</span>
         <h1>اختر مدرسك</h1>
-        <p>اختار الشخصية اللي تناسبك. تغيير المدرس ما يغيرش ترتيب الدروس ولا تقدمك في المنهج.</p>
+        <p>اختار الشخصية اللي ترتاح معاها. تغيير المدرس ما يغيرش ترتيب الدروس ولا تقدمك.</p>
       </header>
 
       <div className="v2-character-grid">
@@ -36,13 +43,13 @@ export function CharacterSelectScreen() {
               <span className="v2-character-check">{selected ? <ProductIcon name="check" size={21} /> : null}</span>
               <div className="v2-character-art"><CharacterPortrait character={character} /></div>
               <strong>{character.name}</strong>
-              <span>{character.tagline}</span>
+              <span>{teacherCopy[character.id] ?? character.tagline}</span>
             </Link>
           );
         })}
       </div>
 
-      <div className="v2-character-hint">اختيارك يغير أسلوب الشخصية والعلاقة، لكن المنهج والأهداف التعليمية يفضلوا ثابتين.</div>
+      <div className="v2-character-hint">شخصية المدرس وطريقته ممكن تتغير، لكن المنهج والأهداف التعليمية ثابتة.</div>
     </section>
   );
 }
