@@ -1,0 +1,308 @@
+/* Final screenshot-driven corrections. Loaded after all previous product CSS. */
+
+.v3-primary-cta,
+.v3-primary-cta span,
+.v3-primary-cta svg {
+  color: #fff !important;
+}
+
+.v2-goal-check:empty,
+.v2-comfort-card > span:empty,
+.v2-teacher-check:empty,
+.v2-character-check:empty {
+  display: none !important;
+}
+
+.v2-onboarding-actions > span:empty + .v2-primary-button {
+  grid-column: 1 / -1;
+}
+
+.v2-onboarding-actions > span:empty { display: none; }
+
+.v2-comfort-card > span,
+.v2-goal-check,
+.v2-teacher-check,
+.v2-character-check {
+  width: 34px;
+  height: 34px;
+}
+
+.v2-complete-character {
+  width: 138px;
+  height: 138px;
+  overflow: hidden;
+  border: 5px solid #fff;
+  border-radius: 50%;
+  background: #fff0f3;
+  box-shadow: 0 14px 34px rgba(70, 43, 36, .12);
+}
+
+.v2-complete-character .character-portrait,
+.v2-complete-character svg {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.v2-complete-celebration { height: 164px; }
+
+.premium-scene-caption strong b {
+  font: inherit;
+  font-weight: inherit;
+}
+
+/* Arabic-first landing */
+.qa-landing {
+  min-height: 100dvh;
+  background: #fffdfb;
+  color: #111827;
+}
+
+.qa-landing-header {
+  position: sticky;
+  z-index: 50;
+  top: 0;
+  min-height: 72px;
+  padding: 12px max(18px, calc((100vw - 1120px) / 2 + 18px));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #ebe7e3;
+  background: rgba(255,253,251,.96);
+  backdrop-filter: blur(16px);
+}
+
+.qa-landing-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  direction: ltr;
+  color: #111827;
+  text-decoration: none;
+  font-size: 20px;
+  letter-spacing: -.03em;
+}
+
+.qa-landing-brand > span {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 13px;
+  background: #ff3f68;
+  box-shadow: 0 8px 20px rgba(255,63,104,.2);
+  font-size: 19px;
+}
+
+.qa-landing-header-cta {
+  min-height: 42px;
+  padding: 0 17px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #f3cbd5;
+  border-radius: 14px;
+  color: #e92753;
+  background: #fff;
+  text-decoration: none;
+  font-weight: 850;
+}
+
+.qa-landing main {
+  width: min(100%, 1120px);
+  margin: 0 auto;
+  padding: 44px 22px 64px;
+}
+
+.qa-landing-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.12fr) minmax(330px, .88fr);
+  gap: 42px;
+  align-items: center;
+}
+
+.qa-landing-copy { max-width: 650px; }
+.qa-landing-kicker {
+  color: #f72f5b;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.qa-landing-copy h1 {
+  margin: 12px 0 18px;
+  font-size: clamp(48px, 6.4vw, 82px);
+  line-height: .98;
+  letter-spacing: -.055em;
+}
+
+.qa-landing-copy h1 em {
+  color: #ff3f68;
+  font-style: normal;
+}
+
+.qa-landing-copy > p {
+  max-width: 610px;
+  margin: 0;
+  color: #666b75;
+  font-size: 18px;
+  line-height: 1.8;
+}
+
+.qa-landing-actions {
+  margin-top: 25px;
+  display: flex;
+  gap: 11px;
+  flex-wrap: wrap;
+}
+
+.qa-landing-primary,
+.qa-landing-secondary {
+  min-height: 56px;
+  padding: 0 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  border-radius: 17px;
+  text-decoration: none;
+  font-weight: 900;
+}
+
+.qa-landing-primary {
+  border: 0;
+  background: #ff3f68;
+  color: #fff;
+  box-shadow: 0 12px 26px rgba(255,63,104,.2);
+}
+
+.qa-landing-secondary {
+  border: 1px solid #ded8d2;
+  background: #fff;
+  color: #2f333a;
+}
+
+.qa-landing-proof {
+  margin-top: 22px;
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  color: #747983;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.qa-landing-proof span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.qa-landing-proof svg { color: #ff3f68; }
+
+.qa-landing-teacher-card {
+  overflow: hidden;
+  border: 1px solid #f1dce2;
+  border-radius: 34px;
+  background: #fff3f6;
+  box-shadow: 0 24px 56px rgba(45,31,27,.09);
+}
+
+.qa-landing-teacher-art {
+  height: 340px;
+  overflow: hidden;
+  display: grid;
+  place-items: end center;
+  background: #fff1ed;
+}
+.qa-landing-teacher-art .character-portrait,
+.qa-landing-teacher-art svg { width: 100%; height: 100%; }
+
+.qa-landing-teacher-copy { padding: 22px; }
+.qa-landing-teacher-copy small { color: #f72f5b; font-weight: 850; }
+.qa-landing-teacher-copy strong {
+  margin: 7px 0 8px;
+  display: block;
+  font-size: 20px;
+  line-height: 1.55;
+}
+.qa-landing-teacher-copy span { color: #747983; font-size: 13px; }
+
+.qa-landing-flow { margin-top: 94px; }
+.qa-landing-section-heading { max-width: 720px; }
+.qa-landing-section-heading > span { color: #f72f5b; font-weight: 900; }
+.qa-landing-section-heading h2 {
+  margin: 8px 0 26px;
+  font-size: clamp(34px, 4.4vw, 56px);
+  line-height: 1.05;
+  letter-spacing: -.045em;
+}
+
+.qa-landing-flow-grid,
+.qa-landing-split {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.qa-landing-flow-grid article,
+.qa-landing-split > div {
+  padding: 24px;
+  border: 1px solid #ebe7e3;
+  border-radius: 24px;
+  background: #fff;
+  box-shadow: 0 10px 30px rgba(35,28,23,.045);
+}
+
+.qa-landing-flow-grid b {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: #fff0f3;
+  color: #f72f5b;
+}
+.qa-landing-flow-grid strong { margin-top: 18px; display: block; font-size: 22px; }
+.qa-landing-flow-grid p,
+.qa-landing-split p { margin: 7px 0 0; color: #70757f; line-height: 1.7; }
+
+.qa-landing-split {
+  margin-top: 52px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.qa-landing-split > div:first-child { background: #fff4f6; border-color: #f3d8df; }
+.qa-landing-split span { color: #f72f5b; font-weight: 900; }
+.qa-landing-split h2 { margin: 6px 0 0; font-size: 29px; line-height: 1.18; }
+
+.qa-landing-final {
+  margin-top: 52px;
+  padding: 42px 24px;
+  display: grid;
+  justify-items: center;
+  text-align: center;
+  border-radius: 32px;
+  background: #111827;
+  color: #fff;
+}
+.qa-landing-final > span { font-size: 42px; }
+.qa-landing-final h2 { margin: 10px 0 7px; font-size: clamp(30px, 4vw, 44px); }
+.qa-landing-final p { max-width: 560px; margin: 0 0 20px; color: #c7cad1; line-height: 1.7; }
+
+@media (max-width: 760px) {
+  .qa-landing-header { min-height: 68px; padding: 10px 16px; }
+  .qa-landing-header-cta { min-height: 40px; padding: 0 13px; font-size: 13px; }
+  .qa-landing main { padding: 28px 16px 44px; }
+  .qa-landing-hero { grid-template-columns: 1fr; gap: 28px; }
+  .qa-landing-copy h1 { margin-top: 9px; font-size: clamp(43px, 12vw, 62px); }
+  .qa-landing-copy > p { font-size: 16px; line-height: 1.72; }
+  .qa-landing-actions { display: grid; grid-template-columns: 1.35fr 1fr; }
+  .qa-landing-primary, .qa-landing-secondary { padding: 0 14px; }
+  .qa-landing-proof { gap: 9px 14px; }
+  .qa-landing-teacher-card { border-radius: 28px; }
+  .qa-landing-teacher-art { height: 250px; }
+  .qa-landing-teacher-copy { padding: 18px; }
+  .qa-landing-flow { margin-top: 58px; }
+  .qa-landing-section-heading h2 { font-size: 35px; }
+  .qa-landing-flow-grid, .qa-landing-split { grid-template-columns: 1fr; }
+  .qa-landing-flow-grid article, .qa-landing-split > div { padding: 20px; }
+  .qa-landing-split { margin-top: 36px; }
+  .qa-landing-final { margin-top: 36px; padding: 32px 18px; border-radius: 26px; }
+}
