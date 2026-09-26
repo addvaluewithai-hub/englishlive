@@ -1,4 +1,5 @@
 import { Link, NavLink, Route, Routes, useLocation } from 'react-router-dom';
+import { OttiMark } from '../character/otti/OttiMark';
 import { ProductIcon } from '../components/ProductIcon';
 import { CharacterSelectScreen } from '../screens/CharacterSelectScreen';
 import { FreeSpeakScreen } from '../screens/FreeSpeakScreen';
@@ -42,7 +43,7 @@ export function App() {
       {hideGlobalHeader ? null : showProductHeader ? (
         <header className="v2-app-header">
           <Link to="/home" className="v2-brand" aria-label="Englotti home">
-            <span className="v2-brand-mark" aria-hidden="true">🐙</span>
+            <span className="v2-brand-mark" aria-hidden="true"><OttiMark /></span>
             <span>Englotti</span>
           </Link>
           <Link className="v2-icon-button" to="/characters" aria-label="اختيار المدرس">
@@ -52,7 +53,7 @@ export function App() {
       ) : (
         <header className="app-header">
           <Link to="/home" className="brand" aria-label="Englotti home">
-            <span className="brand-mark" aria-hidden="true">🐙</span>
+            <span className="brand-mark" aria-hidden="true"><OttiMark /></span>
             <span>Englotti</span>
           </Link>
           {isSession ? (
