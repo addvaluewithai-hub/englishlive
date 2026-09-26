@@ -1,11 +1,6 @@
 import type { LiveClientTool } from '../live/tools';
-import { boardRevealChunk, boardRevealTotal } from '../presentation/boardReveal';
+import type { SupportBoard } from '../presentation/types';
 import { markProductLessonCompleted, markProductLessonStarted } from '../productV2/progress';
-import {
-  conversationResponseKinds,
-  type ConversationEvidenceSource,
-  type ConversationResponseKind,
-} from '../tutor/types';
 import type {
   SceneLessonDefinition,
   SceneLessonEvidence,
@@ -14,10 +9,6 @@ import type {
   SceneLessonState,
 } from './types';
 
-const evidenceSources = new Set<ConversationEvidenceSource>([
-  'live_audio',
-  'automatic_transcript',
-]);
 const LEARNER_AUDIO_ACTIVITY_THRESHOLD = 0.04;
 
 function clone<T>(value: T): T {
@@ -33,29 +24,32 @@ function appendTranscript(previous: string, incoming: string) {
   return `${previous} ${next}`.trim().slice(-1200);
 }
 
+function compactString(value: unknown, max = 180) {
+  return typeof value === 'string' ? value.replace(/\s+/g, ' ').trim().slice(0, max) : '';
+}
+
 export class SceneLessonRuntime {
   readonly tools: readonly LiveClientTool[];
   private state: SceneLessonState;
   private learnerAudioObserved = false;
   private lessonOpeningComplete = false;
+  private activeBoard: SupportBoard | null = null;
   private readonly listeners = new Set<(state: SceneLessonState) => void>();
+  private readonly onBoardChange?: (board: SupportBoard | null) => void;
 
   constructor(
     readonly lesson: SceneLessonDefinition,
     options: {
       onStateChange?: (state: SceneLessonState) => void;
+      onBoardChange?: (board: SupportBoard | null) => void;
     } = {},
   ) {
     if (!lesson.scenes.length) throw new Error('Scene lesson requires at least one scene.');
     this.state = this.createInitialState();
     if (options.onStateChange) this.listeners.add(options.onStateChange);
+    this.onBoardChange = options.onBoardChange;
     markProductLessonStarted(lesson.id);
-    this.tools = [
-      this.stateTool(),
-      this.revealBoardTool(),
-      this.completeSceneTool(),
-      this.finishLessonTool(),
-    ];
+    this.tools = [this.completeSceneTool(), this.showBoardTool()];
   }
 
   get snapshot(): SceneLessonState {
@@ -67,109 +61,60 @@ export class SceneLessonRuntime {
       ?? this.lesson.scenes[0];
   }
 
+  get currentBoard(): SupportBoard | null {
+    return this.activeBoard;
+  }
+
   get systemPrompt() {
     return `
-You are delivering one authored EnglishLive lesson as a sequence of application-owned teaching scenes.
+You are delivering one authored Englotti lesson as a natural live lesson with very small application-owned scenes.
 
 LESSON
 ${this.lesson.levelId.toUpperCase()} · ${this.lesson.unitTitle} · ${this.lesson.title}
 Primary learner performance: ${this.lesson.performance}
 Core language: ${this.lesson.coreLanguage.join('; ')}
 
-AUTHORITY
-- The APPLICATION owns lesson order, scene content, board reveal order, success criteria and completion.
-- You own only natural phrasing, warmth, calm pacing inside the current scene, and how you react to the learner.
-- Future scenes are intentionally hidden. Never invent, preview, merge, skip or reorder them.
-- Before your first spoken turn, call get_scene_state.
-- After a scene is completed, use only the new currentScene returned by the tool.
+YOUR JOB
+- Teach ONLY the CURRENT SCENE shown below.
+- Each scene is intentionally small: one teaching idea and one short interaction.
+- Explain mostly in concise Egyptian Arabic. Keep target English, models and roleplay in English.
+- Teach calmly, then let the learner USE the target. Do not ask abstract "did you understand?" questions when successful use can show understanding.
+- If the learner struggles, use the scene support ladder from lightest to strongest support and let them retry.
+- Correct only what helps the current target. Keep the interaction human and conversational.
+- Do not invent future curriculum, preview hidden scenes, or expand into unrelated grammar/vocabulary.
 
-SESSION OPENING — FIRST AUDIBLE TURN ONLY
-- If get_scene_state returns openingRequired=true, do NOT teach or test currentScene yet.
-- Give a short, human teacher welcome in Egyptian Arabic using this fixed four-move shape:
-  1. Welcome the learner warmly in one short sentence. Do not use a stored profile name in the welcome.
-  2. Say: "النهارده عندنا درس اسمه ${this.lesson.title}." Then explain the practical lesson outcome in ONE simple Arabic sentence using only the Primary learner performance above; do not add curriculum.
-  3. Say that you will take it step by step: a small explanation, then speaking practice together.
-  4. Give ONE short reassurance about mistakes, such as that mistakes are normal and you will help.
-- Keep the whole opening around 15–25 seconds. No motivational speech, no unrelated small talk, and no learner test yet.
-- Stop after the opening. Do not start currentScene in the same turn. The application will confirm that the welcome was heard and then tell you to begin the scene.
+SCENE COMPLETION
+- The application does NOT grade semantic criteria for you. You are the live teacher making the pedagogical decision.
+- Stay in the scene until the learner can use the scene target successfully enough in the intended interaction.
+- When you are genuinely satisfied, call complete_scene with one short content-minimized summary of what the learner could do.
+- complete_scene has only a mechanical safeguard: the app must have observed real learner voice activity in this scene.
+- If complete_scene is rejected because no learner voice was observed, ask for a spoken attempt and continue naturally.
+- After complete_scene succeeds, immediately follow ONLY the nextScene returned by the tool. Do not continue the old scene.
+- If the tool says lessonComplete=true, give one short warm closing and stop teaching.
 
-A1 PACING
-- Teach at a calm beginner-teacher pace. Do NOT deliver a paragraph of Arabic followed by many English targets.
-- One teaching chunk = ONE small idea, normally 1–2 short Arabic sentences plus at most one or two English examples.
-- Say important target English clearly and unhurriedly, with short natural spoken pauses around it.
-- IMPORTANT: slow teaching means slower speech and small chunks, NOT long silence and NOT ending your turn after every board item.
-- Keep the same teacher turn flowing across consecutive explanation-only chunks when no learner response is required between them.
-- Hand the turn to the learner ONLY when the authored teacherMoves / learnerTask actually asks them to repeat, answer, choose, ask, or speak, or when you need a real comprehension check.
-- If the learner sounds unsure, slow down further. Simpler is better than more explanation.
+BOARD
+- The authored board for the CURRENT SCENE appears automatically. You do not need a tool to reveal it.
+- The board is support, never a completion gate.
+- If extra visual explanation would genuinely help, you may call show_board.
+- show_board REPLACES the current board; it never appends to it.
+- show_board may contain only 1–4 short items and must stay inside the current scene language. Never introduce a new curriculum target through the board.
+- Prefer the authored board unless the learner actually needs another example, a tiny comparison, or a simpler note.
 
-PROGRESSIVE BOARD
-- Authored board content starts hidden for every scene.
-- If currentScene.board is not null, call reveal_board_next immediately BEFORE explaining the corresponding next board chunk.
-- reveal_board_next is presentation-only and non-blocking: after calling it, continue speaking immediately in the SAME teacher turn.
-- Reveal only ONE board chunk at a time and explain that newly revealed chunk before revealing another.
-- If the next authored chunk is also explanation-only, call reveal_board_next again after a brief spoken transition and continue. Do NOT wait for learner input merely because a board chunk finished.
-- If the authored interaction requires learner input at that point, ask for it and then wait normally.
-- Do not verbally list hidden board content before it is revealed.
-- Do not invent, rewrite, reorder, or mutate board content.
-- Before completing a scene that has a board, every authored board chunk must have been revealed.
+TEXT CHAT AND QUICK HELP
+- Typed learner chat and quick-help actions can be used for clarification, but they are not spoken evidence.
+- If typed text answers the speaking task, acknowledge it and ask the learner to say the answer aloud before completing the scene.
+- "مش فاهم" means explain the current point again more simply in Egyptian Arabic.
+- "عيد تاني" means repeat the last point more slowly.
+- "مثال تاني" means give one short example using only current-scene language.
 
-LANGUAGE AND TEACHING STYLE
-- For this A1 delivery pilot, explain concepts MOSTLY in concise Egyptian Arabic.
-- Keep target English expressions, examples, pronunciation models and roleplay language in English.
-- Do not translate everything. Arabic is scaffolding; English is the thing being learned and used.
-- Teach one small idea at a time, then make the learner use it at the next authored interaction point.
-- Do not expand into grammar tables, vocabulary dumps, or extra curriculum outside the current scene.
-- Never reveal scene IDs, tool names, criteria IDs, evidence fields, or lesson mechanics.
+OPENING
+- Your FIRST audible turn is only a short human welcome in Egyptian Arabic: greet the learner, say today's lesson title and practical outcome, explain that you will go step by step, and reassure them briefly about mistakes.
+- Keep it around 15–25 seconds and stop. Do NOT begin the current scene in the same turn.
+- The application will then tell you to begin the CURRENT SCENE.
 
-TEXT CHAT
-- Messages prefixed with [LEARNER TEXT CHAT] are typed by the learner, not spoken.
-- Answer typed questions naturally and use them to clarify or support learning.
-- Typed text is NEVER valid speaking evidence for complete_scene.
-- If the learner types a correct target answer, acknowledge it briefly, then ask them to SAY the answer aloud before you consider the speaking criterion demonstrated.
-
-QUICK ACTIONS
-- [LEARNER QUICK ACTION: DONT_UNDERSTAND] means: stay in the same scene, explain the CURRENT point again in simpler Egyptian Arabic, slowly, using only already-authored content. Do not advance.
-- [LEARNER QUICK ACTION: REPEAT] means: repeat the LAST teaching point more slowly and more clearly. Do not add a new target and do not advance.
-- [LEARNER QUICK ACTION: ANOTHER_EXAMPLE] means: give ONE short new example that uses only the current scene's authorized English. Do not add curriculum and do not advance.
-- A quick action is help/context, never evidence. Never call complete_scene merely because the learner tapped a quick action.
-
-SCENE LOOP
-1. Read currentScene carefully.
-2. If there is a board, reveal one authored chunk immediately before explaining it; the reveal call must not create a learner wait.
-3. Explain that chunk calmly. If the next authored move is still teacher explanation, reveal the next chunk and continue in the same teacher turn.
-4. Stop and give the learner real speaking space only at an authored interaction point that asks them to do something.
-5. Model only the English targets authorized in the scene.
-6. Run the interaction kind and teacherMoves in order, skipping only a move the learner has already clearly demonstrated.
-7. If the learner struggles, use supportLadder in order. Use the lightest support that works, then ask for another attempt.
-8. Stay in the SAME scene until the learner has demonstrated every required success criterion.
-9. Only then call complete_scene BEFORE you continue speaking.
-10. If complete_scene succeeds, continue only from the returned new currentScene. If all scenes are complete, call finish_scene_lesson.
-
-EVIDENCE RULES
-- Never complete a scene from your own example, typed chat, quick action, silence, filler, room noise, or a help request.
-- Prefer evidenceSource=live_audio when you clearly heard the learner. The application separately requires observed microphone activity.
-- Automatic transcription is only an approximate fallback hint and may be wrong.
-- metCriteria must contain ONLY criteria genuinely demonstrated during this scene.
-- Equivalent natural English can satisfy a communicative criterion unless the criterion specifically requires target production.
-- Keep evidenceSummary content-minimized: describe the speaking action, not private story details.
-- If uncertain, stay in the scene and create one more natural opportunity.
-
-CORRECTION
-- Correct selectively and immediately enough to help the current scene.
-- For a small error, prefer a brief recast plus retry rather than a lecture.
-- If an error blocks the current target, explain the minimum needed in Arabic, point to the currently visible board content if available, and let the learner try again.
-- Do not punish accent variation. Prioritize intelligibility and the authored language goal.
-
-FRESH TRANSFER
-- When interaction.kind is fresh_transfer, do not give a complete model before the learner's first attempt.
-- Do not recreate the earlier guided script. Let the new context test whether the learner can use the lesson language with reduced support.
+CURRENT SCENE
+${JSON.stringify(this.scenePayload(this.currentScene), null, 2)}
 `.trim();
-  }
-
-  subscribe(listener: (state: SceneLessonState) => void) {
-    this.listeners.add(listener);
-    listener(this.snapshot);
-    return () => this.listeners.delete(listener);
   }
 
   recordLearnerAudioLevel(level: number) {
@@ -181,21 +126,20 @@ FRESH TRANSFER
     if (this.state.completedAt) return;
     const current = this.state.scenes[this.currentScene.id];
     current.automaticTranscript = appendTranscript(current.automaticTranscript ?? '', text);
-    this.learnerAudioObserved = true;
+    if (text.trim()) this.learnerAudioObserved = true;
     this.persistAndEmit();
   }
 
-  /** The UI calls this only after the short lesson welcome was audibly played. */
+  /** Called only after the welcome was actually played to the learner. */
   markLessonOpeningComplete() {
     if (this.lessonOpeningComplete) return;
     this.lessonOpeningComplete = true;
+    this.showAuthoredBoard();
     this.persistAndEmit();
   }
 
-  /** Playback completion is presentation timing only; scene evidence stays valid until the scene is completed. */
-  markPartnerTurnComplete() {
-    // Intentionally no curriculum transition and no evidence reset.
-  }
+  /** Presentation timing only; no curriculum transition happens on playback completion. */
+  markPartnerTurnComplete() {}
 
   private createInitialState(): SceneLessonState {
     const scenes: Record<string, SceneLessonSceneState> = {};
@@ -203,7 +147,6 @@ FRESH TRANSFER
       scenes[scene.id] = {
         status: index === 0 ? 'active' : 'pending',
         evidence: [],
-        boardRevealCount: 0,
       };
     });
     return {
@@ -214,297 +157,174 @@ FRESH TRANSFER
     };
   }
 
+  private scenePayload(scene: SceneLessonScene) {
+    return {
+      id: scene.id,
+      title: scene.title,
+      goal: scene.goal,
+      teaching: scene.teaching,
+      interaction: scene.interaction,
+      authoredBoard: scene.board ?? null,
+    };
+  }
+
+  private showAuthoredBoard() {
+    this.activeBoard = this.currentScene.board ?? null;
+    this.onBoardChange?.(this.activeBoard ? clone(this.activeBoard) : null);
+  }
+
   private persistAndEmit() {
     this.state.updatedAt = new Date().toISOString();
     const snapshot = this.snapshot;
     for (const listener of this.listeners) listener(snapshot);
   }
 
-  private readyToFinish() {
-    return this.lesson.scenes.every((scene) => this.state.scenes[scene.id]?.status === 'met');
-  }
-
   private advanceFrom(sceneId: string) {
     const index = this.lesson.scenes.findIndex((scene) => scene.id === sceneId);
-    const next = this.lesson.scenes.slice(index + 1).find(
-      (scene) => this.state.scenes[scene.id]?.status !== 'met',
-    );
+    const next = this.lesson.scenes[index + 1];
     if (!next) return false;
     this.state.currentSceneId = next.id;
     this.state.scenes[next.id] = {
       ...this.state.scenes[next.id],
       status: 'active',
       automaticTranscript: '',
-      boardRevealCount: 0,
     };
+    this.learnerAudioObserved = false;
+    this.showAuthoredBoard();
     return true;
-  }
-
-  private compactState() {
-    const scene = this.currentScene;
-    const sceneState = this.state.scenes[scene.id];
-    const metCount = this.lesson.scenes.filter(
-      (item) => this.state.scenes[item.id]?.status === 'met',
-    ).length;
-    const boardTotal = boardRevealTotal(scene.board);
-    const boardVisible = Math.min(sceneState?.boardRevealCount ?? 0, boardTotal);
-
-    return {
-      lessonId: this.lesson.id,
-      lessonTitle: this.lesson.title,
-      primaryPerformance: this.lesson.performance,
-      boundaries: this.lesson.boundaries,
-      openingRequired: !this.lessonOpeningComplete,
-      currentScene: {
-        id: scene.id,
-        title: scene.title,
-        goal: scene.goal,
-        teaching: scene.teaching,
-        board: scene.board ?? null,
-        boardReveal: {
-          visibleCount: boardVisible,
-          totalCount: boardTotal,
-          hasMore: boardVisible < boardTotal,
-        },
-        interaction: scene.interaction,
-      },
-      automaticTranscriptHint: sceneState?.automaticTranscript || undefined,
-      metCount,
-      totalScenes: this.lesson.scenes.length,
-      readyToFinish: this.readyToFinish(),
-      finished: Boolean(this.state.completedAt),
-    };
-  }
-
-  private stateTool(): LiveClientTool {
-    return {
-      declaration: {
-        name: 'get_scene_state',
-        description: 'Get the authoritative current teaching scene, board reveal progress, and whether the short lesson opening is still required. Call before speaking at lesson start and whenever you lose your place.',
-        behavior: 'BLOCKING',
-        parameters: { type: 'OBJECT', properties: {} },
-      },
-      handle: () => ({
-        result: this.state.completedAt
-          ? 'The scene lesson is already finished.'
-          : !this.lessonOpeningComplete
-            ? 'Deliver ONLY the short authored lesson opening first. Do not teach or assess currentScene yet. The application will notify you after the welcome was audibly completed.'
-            : 'Teach and practise only the currentScene below. Future scenes are hidden and application-owned. Reveal authored board chunks progressively with reveal_board_next.',
-        state: this.compactState(),
-      }),
-    };
-  }
-
-  private revealBoardTool(): LiveClientTool {
-    return {
-      declaration: {
-        name: 'reveal_board_next',
-        description: 'Presentation-only: reveal exactly the next authored board chunk in the current scene, then continue speaking immediately in the same teacher turn. Never reveal multiple chunks at once.',
-        behavior: 'NON_BLOCKING',
-        parameters: {
-          type: 'OBJECT',
-          properties: {
-            sceneId: { type: 'STRING', description: 'Exact currentScene.id returned by get_scene_state.' },
-          },
-          required: ['sceneId'],
-        },
-      },
-      handle: (args) => {
-        if (this.state.completedAt) return { finished: true, state: this.compactState() };
-        if (!this.lessonOpeningComplete) {
-          return {
-            error: 'The lesson opening has not audibly completed yet. Do not reveal teaching-board content.',
-            state: this.compactState(),
-          };
-        }
-        const scene = this.currentScene;
-        if (args.sceneId !== scene.id) {
-          return {
-            error: 'Stale scene. Call get_scene_state and use only the returned currentScene.',
-            state: this.compactState(),
-          };
-        }
-        const total = boardRevealTotal(scene.board);
-        if (!total) {
-          return {
-            error: 'The current scene has no authored board. Continue the scene without board reveal calls.',
-            state: this.compactState(),
-          };
-        }
-        const current = this.state.scenes[scene.id];
-        if (current.boardRevealCount >= total) {
-          return {
-            error: 'All authored board chunks are already visible. Continue teaching or practise the current scene.',
-            state: this.compactState(),
-          };
-        }
-        const nextIndex = current.boardRevealCount;
-        current.boardRevealCount += 1;
-        const revealedChunk = boardRevealChunk(scene.board, nextIndex);
-        this.persistAndEmit();
-        return {
-          result: `Revealed board chunk ${current.boardRevealCount} of ${total}. Continue speaking immediately in this same teacher turn. Explain only this newly visible chunk calmly; do not wait merely because the reveal happened.`,
-          revealedChunk,
-          state: this.compactState(),
-        };
-      },
-    };
   }
 
   private completeSceneTool(): LiveClientTool {
     return {
       declaration: {
         name: 'complete_scene',
-        description: 'Advance the authored lesson ONLY after the learner has genuinely demonstrated every required success criterion in the current scene.',
+        description: 'Complete the current tiny teaching scene when, as the live teacher, you are satisfied the learner can use its target successfully enough in the intended interaction.',
         behavior: 'BLOCKING',
         parameters: {
           type: 'OBJECT',
           properties: {
-            sceneId: { type: 'STRING', description: 'Exact currentScene.id returned by get_scene_state.' },
-            responseKind: { type: 'STRING', enum: [...conversationResponseKinds] },
-            evidenceSource: { type: 'STRING', enum: ['live_audio', 'automatic_transcript'] },
-            evidenceSummary: { type: 'STRING', description: 'Short content-minimized description of what the learner demonstrated.' },
-            metCriteria: {
-              type: 'ARRAY',
-              items: { type: 'STRING' },
-              description: 'Exact successCriteria ids genuinely demonstrated in this scene.',
+            summary: {
+              type: 'STRING',
+              description: 'One short content-minimized summary of what the learner successfully understood or used in this scene.',
             },
           },
-          required: ['sceneId', 'responseKind', 'evidenceSource', 'evidenceSummary', 'metCriteria'],
+          required: ['summary'],
         },
       },
       handle: (args) => {
-        if (this.state.completedAt) return { finished: true, state: this.compactState() };
+        if (this.state.completedAt) {
+          return { lessonComplete: true, result: 'The lesson is already complete.' };
+        }
         if (!this.lessonOpeningComplete) {
           return {
-            error: 'The lesson opening has not audibly completed yet. Do not assess or advance the first scene.',
-            state: this.compactState(),
+            error: 'The spoken lesson opening has not finished yet.',
+            nextAction: 'Finish the short welcome first; do not assess the scene yet.',
           };
         }
+        if (!this.learnerAudioObserved) {
+          return {
+            error: 'No real learner voice activity has been observed in this scene.',
+            nextAction: 'Ask the learner for one spoken attempt on the current scene target, listen, help if needed, then decide again.',
+            currentScene: this.scenePayload(this.currentScene),
+          };
+        }
+        const summary = compactString(args.summary, 360);
+        if (!summary) {
+          return {
+            error: 'A short teacher summary is required.',
+            nextAction: 'Summarize what the learner could actually use, then call complete_scene again.',
+            currentScene: this.scenePayload(this.currentScene),
+          };
+        }
+
         const scene = this.currentScene;
-        if (args.sceneId !== scene.id) {
-          return {
-            error: 'Stale scene. Call get_scene_state and use only the returned currentScene.',
-            state: this.compactState(),
-          };
-        }
-
-        const boardTotal = boardRevealTotal(scene.board);
-        const boardVisible = this.state.scenes[scene.id]?.boardRevealCount ?? 0;
-        if (boardTotal && boardVisible < boardTotal) {
-          return {
-            error: `Scene stays active. The authored board was not fully taught yet (${boardVisible}/${boardTotal} chunks visible). Reveal and teach the remaining chunks progressively.`,
-            state: this.compactState(),
-          };
-        }
-
-        const responseKind = conversationResponseKinds.includes(args.responseKind as ConversationResponseKind)
-          ? args.responseKind as ConversationResponseKind
-          : null;
-        const source = evidenceSources.has(args.evidenceSource as ConversationEvidenceSource)
-          ? args.evidenceSource as ConversationEvidenceSource
-          : null;
-        const summary = typeof args.evidenceSummary === 'string'
-          ? args.evidenceSummary.trim().slice(0, 500)
-          : '';
-        const metCriteria = Array.isArray(args.metCriteria)
-          ? args.metCriteria.filter((value): value is string => typeof value === 'string')
-          : [];
-
-        if (!responseKind || !source || !summary) {
-          return {
-            error: 'Invalid scene evidence. Supply a valid response kind, source and concise evidence summary.',
-            state: this.compactState(),
-          };
-        }
-        if (!scene.interaction.acceptedResponseKinds.includes(responseKind)) {
-          return {
-            error: `Scene cannot complete from responseKind=${responseKind}. Continue the authored interaction.`,
-            state: this.compactState(),
-          };
-        }
-        if (source === 'live_audio' && !this.learnerAudioObserved) {
-          return {
-            error: 'No learner microphone activity was observed in the current scene. Do not invent live-audio evidence.',
-            state: this.compactState(),
-          };
-        }
-        if (source === 'automatic_transcript' && !this.state.scenes[scene.id]?.automaticTranscript) {
-          return {
-            error: 'No automatic transcript evidence is available. Stay in the scene and clarify naturally.',
-            state: this.compactState(),
-          };
-        }
-
-        const allowedCriteria = new Set(scene.interaction.successCriteria.map((criterion) => criterion.id));
-        const unknownCriteria = metCriteria.filter((criterion) => !allowedCriteria.has(criterion));
-        if (unknownCriteria.length) {
-          return {
-            error: `Unknown success criteria: ${unknownCriteria.join(', ')}. Use only currentScene.successCriteria ids.`,
-            state: this.compactState(),
-          };
-        }
-        const requiredCriteria = scene.interaction.successCriteria
-          .filter((criterion) => criterion.required !== false)
-          .map((criterion) => criterion.id);
-        const missingCriteria = requiredCriteria.filter((criterion) => !metCriteria.includes(criterion));
-        if (missingCriteria.length) {
-          return {
-            error: `Scene stays active. Required criteria not yet demonstrated: ${missingCriteria.join(', ')}. Use the authored support ladder and create another natural opportunity.`,
-            state: this.compactState(),
-          };
-        }
-
         const evidence: SceneLessonEvidence = {
           id: crypto.randomUUID(),
           sceneId: scene.id,
-          responseKind,
-          source,
           summary,
-          metCriteria: [...new Set(metCriteria)],
           recordedAt: new Date().toISOString(),
         };
         const current = this.state.scenes[scene.id];
-        current.evidence = [...current.evidence, evidence].slice(-4);
+        current.evidence = [...current.evidence, evidence].slice(-3);
         current.status = 'met';
         current.metAt ??= new Date().toISOString();
         delete current.automaticTranscript;
         this.learnerAudioObserved = false;
-        this.advanceFrom(scene.id);
-        this.persistAndEmit();
 
+        if (this.advanceFrom(scene.id)) {
+          this.persistAndEmit();
+          return {
+            result: 'Scene complete. Move directly into the next tiny scene and teach only that scene.',
+            completedSceneId: scene.id,
+            lessonComplete: false,
+            nextScene: this.scenePayload(this.currentScene),
+          };
+        }
+
+        this.state.completedAt ??= new Date().toISOString();
+        this.activeBoard = null;
+        this.onBoardChange?.(null);
+        markProductLessonCompleted(this.lesson.id);
+        this.persistAndEmit();
         return {
-          result: this.readyToFinish()
-            ? 'Scene complete. All authored scenes are now met; call finish_scene_lesson before claiming lesson completion.'
-            : 'Scene complete. Continue only from the NEW currentScene returned below. Its board starts hidden again.',
-          state: this.compactState(),
+          result: 'Lesson complete. Give one short warm closing in Arabic that mentions the practical English win, then stop.',
+          completedSceneId: scene.id,
+          lessonComplete: true,
         };
       },
     };
   }
 
-  private finishLessonTool(): LiveClientTool {
+  private showBoardTool(): LiveClientTool {
     return {
       declaration: {
-        name: 'finish_scene_lesson',
-        description: 'Mandatory final gate. Call only after every authored scene has completed.',
-        behavior: 'BLOCKING',
-        parameters: { type: 'OBJECT', properties: {} },
+        name: 'show_board',
+        description: 'Replace the current board with one small visual support for the CURRENT scene only. Use only when extra visual explanation genuinely helps.',
+        behavior: 'NON_BLOCKING',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            mode: { type: 'STRING', enum: ['note', 'examples', 'compare'] },
+            title: { type: 'STRING' },
+            items: {
+              type: 'ARRAY',
+              items: { type: 'STRING' },
+              description: 'One to four short board items. compare requires exactly two.',
+            },
+          },
+          required: ['mode', 'title', 'items'],
+        },
       },
-      handle: () => {
-        if (!this.readyToFinish()) {
-          return {
-            error: 'Lesson is not complete. Continue only from the current authored scene.',
-            state: this.compactState(),
-          };
+      handle: (args) => {
+        if (this.state.completedAt) return { error: 'The lesson is already complete.' };
+        if (!this.lessonOpeningComplete) return { error: 'Do not show teaching-board content during the welcome.' };
+
+        const mode = args.mode === 'note' || args.mode === 'examples' || args.mode === 'compare'
+          ? args.mode
+          : null;
+        const title = compactString(args.title, 80);
+        const items = Array.isArray(args.items)
+          ? args.items.map((item) => compactString(item, 120)).filter(Boolean).slice(0, 4)
+          : [];
+        if (!mode || !title || !items.length) {
+          return { error: 'show_board requires a valid mode, short title, and 1–4 short items.' };
         }
-        this.state.completedAt ??= new Date().toISOString();
-        markProductLessonCompleted(this.lesson.id);
-        this.persistAndEmit();
+        if (mode === 'compare' && items.length !== 2) {
+          return { error: 'compare mode requires exactly two short items.' };
+        }
+
+        const board: SupportBoard = mode === 'note'
+          ? { type: 'note', title, body: items.join(' · ') }
+          : mode === 'compare'
+            ? { type: 'compare', title, left: { title: items[0] }, right: { title: items[1] } }
+            : { type: 'examples', title, items: items.map((item) => ({ title: item })) };
+
+        this.activeBoard = board;
+        this.onBoardChange?.(clone(board));
         return {
-          result: 'Lesson complete. Give one short warm closing in Arabic with the key English win, then stop teaching. Do not add another test.',
-          finished: true,
-          state: this.compactState(),
+          result: 'Board replaced. Explain this visual support briefly, then continue the SAME current scene.',
+          board,
+          currentSceneId: this.currentScene.id,
         };
       },
     };
