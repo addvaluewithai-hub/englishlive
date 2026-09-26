@@ -34,10 +34,11 @@ export function App() {
   const isApp = !isLanding && !isOnboarding && !isSession && !isReview;
   const usesProductV2 = isApp || isOnboarding || isSceneLesson;
   const showProductHeader = isApp && !isCompletion;
+  const hideGlobalHeader = isLanding || isOnboarding || isCompletion || isSceneLesson;
 
   return (
     <div className={`app-shell${isSession ? ' is-session' : ''}${isSceneLesson ? ' is-scene-lesson' : ''}${isCompletion ? ' is-completion' : ''}${isLanding ? ' is-landing' : ''}${usesProductV2 ? ' is-product-v2' : ''}`}>
-      {showProductHeader ? (
+      {hideGlobalHeader ? null : showProductHeader ? (
         <header className="v2-app-header">
           <Link to="/home" className="v2-brand" aria-label="Englotti home">
             <span className="v2-brand-mark" aria-hidden="true">🐙</span>
@@ -47,15 +48,13 @@ export function App() {
             <ProductIcon name="profile" size={24} />
           </Link>
         </header>
-      ) : isOnboarding || isCompletion || isSceneLesson ? null : (
+      ) : (
         <header className="app-header">
-          <Link to={isLanding ? '/' : '/home'} className="brand" aria-label="Englotti home">
+          <Link to="/home" className="brand" aria-label="Englotti home">
             <span className="brand-mark" aria-hidden="true">🐙</span>
             <span>Englotti</span>
           </Link>
-          {isLanding ? (
-            <Link className="header-action" to="/onboarding">Start learning</Link>
-          ) : isSession ? (
+          {isSession ? (
             <Link className="header-action quiet-link" to={isFreeSpeakSession ? '/speak' : '/learn'}>Leave session</Link>
           ) : isReview ? (
             <Link className="header-action quiet-link" to="/learn">Back to Learn</Link>
