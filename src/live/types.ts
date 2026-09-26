@@ -7,12 +7,6 @@ export interface LiveTokenResponse {
   model: string;
 }
 
-export interface LiveToolTrace {
-  name: string;
-  args: Record<string, unknown>;
-  result: Record<string, unknown>;
-}
-
 export interface LiveCallbacks {
   onStatus(status: LiveStatus): void;
   onInputTranscript(text: string): void;
@@ -23,8 +17,6 @@ export interface LiveCallbacks {
   onInterrupted(): void;
   onTurnComplete(): void;
   onError(message: string): void;
-  /** Optional diagnostic hook for application tools only. Performance/transport noise is intentionally excluded. */
-  onToolCall?(trace: LiveToolTrace): void;
 }
 
 export interface LiveTransport {
