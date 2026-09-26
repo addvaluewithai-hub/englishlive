@@ -86,6 +86,8 @@ export interface SceneLessonSceneState {
   status: 'pending' | 'active' | 'met';
   evidence: SceneLessonEvidence[];
   automaticTranscript?: string;
+  /** Application-owned count of authored board chunks already revealed in this scene. */
+  boardRevealCount: number;
   metAt?: string;
 }
 
