@@ -29,12 +29,19 @@ function appendTranscript(previous: string, incoming: string) {
 }
 
 const statusCopy: Record<LiveStatus, string> = {
-  idle: 'Ready',
-  connecting: 'Getting ready',
-  listening: 'Listening',
-  speaking: 'Speaking',
-  reconnecting: 'Reconnecting',
-  error: 'Try again',
+  idle: 'جاهز',
+  connecting: 'بنجهز',
+  listening: 'دورك',
+  speaking: 'بيتكلم',
+  reconnecting: 'بنعيد الاتصال',
+  error: 'حاول تاني',
+};
+
+const modeUiCopy: Record<string, { title: string; body: string }> = {
+  'just-chat': { title: 'دردشة عادية', body: 'اتكلم براحتك في موضوع مألوف من غير درس أو اختبار.' },
+  work: { title: 'محادثة للعمل', body: 'اتكلم عن الشغل، الاجتماعات، الخطط والقرارات اليومية.' },
+  travel: { title: 'السفر والمواقف اليومية', body: 'اتدرب على الكلام العفوي في السفر والخدمات والمواقف الجديدة.' },
+  interview: { title: 'تدريب مقابلة', body: 'مقابلة واقعية وداعمة من غير درجات أو تغيير في تقدم المنهج.' },
 };
 
 export function FreeSpeakSessionScreen() {
@@ -43,6 +50,7 @@ export function FreeSpeakSessionScreen() {
   const profile = readLearnerProfile();
   const character = getCharacterDefinition(params.get('character') ?? profile?.characterId);
   const mode = getFreeSpeakMode(modeId);
+  const modeCopy = modeUiCopy[mode.id] ?? { title: mode.title, body: mode.description };
 
   const host = useRef<CharacterHostHandle | null>(null);
   const transport = useRef<GeminiLiveTransport | null>(null);
@@ -56,7 +64,6 @@ export function FreeSpeakSessionScreen() {
   const [inputTranscript, setInputTranscript] = useState('');
   const [outputTranscript, setOutputTranscript] = useState('');
   const [relationshipProposal, setRelationshipProposal] = useState<RelationshipMemoryProposal | null>(null);
-  const [performanceLabel, setPerformanceLabel] = useState('audio-driven locally');
   const [startedOnce, setStartedOnce] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -81,7 +88,6 @@ export function FreeSpeakSessionScreen() {
     setInputTranscript('');
     setOutputTranscript('');
     setRelationshipProposal(null);
-    setPerformanceLabel('audio-driven locally');
 
     const memoryCollector = new RelationshipMemoryCollector(setRelationshipProposal);
     relationshipCollector.current = memoryCollector;
@@ -111,18 +117,9 @@ export function FreeSpeakSessionScreen() {
           setOutputTranscript((current) => appendTranscript(current, text));
         },
         onAudio: (data, mimeType) => void queue.enqueue(data, pcmSampleRate(mimeType)),
-        onPerformanceCue: (cue) => {
-          characterPerformance.applyCue(cue);
-          setPerformanceLabel(`${cue.emotion} · ${cue.gesture}`);
-        },
-        onPerformanceCancelled: () => {
-          characterPerformance.cancelCue();
-          setPerformanceLabel('audio-driven locally');
-        },
         onInterrupted: () => {
           queue.interrupt();
           characterPerformance.interrupt();
-          setPerformanceLabel('audio-driven locally');
         },
         onTurnComplete: () => queue.markTurnComplete(),
         onError: setError,
@@ -182,18 +179,18 @@ export function FreeSpeakSessionScreen() {
   const liveConversation = status === 'listening' || status === 'speaking';
 
   return (
-    <section className="session-screen free-speak-session">
+    <section className="session-screen free-speak-session" dir="rtl">
       <div className="session-stage" style={{ '--character-accent': character.accent } as CSSProperties}>
         <div className="session-stage-meta">
-          <span>Free Speak · no course progress</span>
-          <strong>{mode.title}</strong>
+          <span>محادثة حرة · خارج تقدم المنهج</span>
+          <strong>{modeCopy.title}</strong>
         </div>
         <div className="session-stage-body">
           <CharacterHost ref={host} character={character} className="session-character-host" />
         </div>
         <div className="session-stage-footer">
           <div className="session-partner">
-            <strong>{character.name}</strong>
+            <strong><bdi dir="ltr">{character.name}</bdi></strong>
             <span className={`live-status status-${status}`} aria-live="polite">{statusCopy[status]}</span>
           </div>
           <div className="session-control-dock">
@@ -206,7 +203,7 @@ export function FreeSpeakSessionScreen() {
               onClick={liveConversation ? () => void stopLive() : () => void startLive()}
               disabled={connecting}
             >
-              {connecting ? 'Getting ready…' : liveConversation ? 'End conversation' : error ? 'Try again' : 'Start Free Speak'}
+              {connecting ? 'بنجهز…' : liveConversation ? 'إنهاء المحادثة' : error ? 'حاول تاني' : 'ابدأ المحادثة'}
             </button>
           </div>
         </div>
@@ -215,39 +212,41 @@ export function FreeSpeakSessionScreen() {
       <aside className="conversation-sidebar">
         <div className="conversation-sidebar-heading">
           <p className="eyebrow">Free Speak</p>
-          <h2>{mode.title}</h2>
-          <p>{mode.description}</p>
+          <h2>{modeCopy.title}</h2>
+          <p>{modeCopy.body}</p>
         </div>
-        {error ? <div className="live-error" role="alert">{error}</div> : null}
+        {error ? <div className="live-error" role="alert">تعذر بدء المحادثة. جرّب مرة تانية.</div> : null}
         <div className="transcript-stack" aria-live="polite">
-          <article className="transcript-card user-transcript"><small>You</small><p>{inputTranscript || 'Your words will appear here once you start speaking.'}</p></article>
-          <article className="transcript-card partner-transcript"><small>{character.name}</small><p>{outputTranscript || `${character.name} is ready when you are.`}</p></article>
+          <article className="transcript-card user-transcript">
+            <small>أنت</small>
+            <p dir="auto">{inputTranscript || 'كلامك هيظهر هنا بعد ما تبدأ.'}</p>
+          </article>
+          <article className="transcript-card partner-transcript">
+            <small><bdi dir="ltr">{character.name}</bdi></small>
+            <p dir="auto">{outputTranscript || `${character.name} جاهز يبدأ معاك.`}</p>
+          </article>
         </div>
 
         {startedOnce && status === 'idle' ? (
           <div className="session-next-step">
-            <strong>Free Speak ended.</strong>
-            <p>Your structured course progress did not change.</p>
+            <strong>المحادثة خلصت.</strong>
+            <p>تقدمك في الدروس المنظمة ما اتغيرش.</p>
             {relationshipProposal ? (
               <div className="memory-consent-card">
-                <strong>Remember this with {character.name} for next time?</strong>
-                <p>{relationshipProposal.text}</p>
+                <strong>تحب <bdi dir="ltr">{character.name}</bdi> يفتكر ده المرة الجاية؟</strong>
+                <p dir="auto">{relationshipProposal.text}</p>
                 <div className="actions">
-                  <button type="button" className="button primary" onClick={keepProposal}>Keep</button>
-                  <button type="button" className="button quiet" onClick={() => setRelationshipProposal(null)}>Not now</button>
+                  <button type="button" className="button primary" onClick={keepProposal}>احتفظ بيها</button>
+                  <button type="button" className="button quiet" onClick={() => setRelationshipProposal(null)}>مش دلوقتي</button>
                 </div>
               </div>
             ) : null}
-            <div className="actions"><Link className="button quiet" to="/speak">Another Free Speak</Link><Link className="text-link" to="/learn">Back to Learn →</Link></div>
+            <div className="actions">
+              <Link className="button quiet" to="/speak">محادثة تانية</Link>
+              <Link className="text-link" to="/learn">الرجوع للتعلم</Link>
+            </div>
           </div>
         ) : null}
-
-        <details className="session-tech-details">
-          <summary>Session details</summary>
-          <span>Mode: {mode.id}</span>
-          <span>Course writes: disabled</span>
-          <span>Performance: {performanceLabel}</span>
-        </details>
       </aside>
     </section>
   );
