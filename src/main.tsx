@@ -18,6 +18,7 @@ import './product-v4-visual-qa.css';
 import './product-v5-final-polish.css';
 import './product-v6-session-polish.css';
 import './product-v7-final-qa.css';
+import './otti.css';
 
 const root = document.getElementById('root');
 if (!root) throw new Error('Englotti root element was not found.');
