@@ -54,7 +54,12 @@ export interface SvgHumanRendererConfig {
   preset: 'hakim' | 'reem' | 'marwan' | 'amal';
 }
 
-export type CharacterRendererConfig = SvgHumanRendererConfig;
+export interface OttiSvgRendererConfig {
+  kind: 'otti-svg';
+  preset: 'otti';
+}
+
+export type CharacterRendererConfig = SvgHumanRendererConfig | OttiSvgRendererConfig;
 
 export interface CharacterDefinition {
   id: string;
