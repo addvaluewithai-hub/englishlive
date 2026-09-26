@@ -96,7 +96,7 @@ The Scene Lesson screen exposes `Copy log` for manual live review. The copied te
 - scene-runtime tool calls (`get_scene_state`, `complete_scene`, `finish_scene_lesson`)
 - concise tool outcomes, criteria and evidence summaries
 
-It intentionally excludes audio payloads, microphone levels, performance cues, WebSocket traffic, token/session metadata and other transport noise.
+Scene tools are wrapped locally by the Scene Lesson screen for logging, so the diagnostic log does not include `perform_character` calls. It also excludes audio payloads, microphone levels, WebSocket traffic, token/session metadata and other transport noise.
 
 ## Scope
 
@@ -110,7 +110,7 @@ This branch pilots the first three A1 lessons only. It does not migrate the exis
 - Every lesson alternates bounded teaching with immediate spoken use.
 - Guided scenes combine targets without a fixed dialogue script.
 - Final scenes use a fresh context with reduced support and no authored board.
-- `Copy log` produces a compact dialogue + tool trace suitable for pedagogical review.
+- `Copy log` produces a compact dialogue + scene tool trace suitable for pedagogical review.
 
 ## Manual/live acceptance still required
 
