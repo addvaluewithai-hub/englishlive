@@ -1,8 +1,8 @@
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { getCharacterDefinition } from '../character/registry';
 import { ProductIcon } from '../components/ProductIcon';
 import { A1_UNIT_1_PRODUCT, lessonArabicTitle, lessonProductTitle } from '../productV2/course';
-import { isProductLessonUnlocked, productUnitProgress, readProductCourseProgress } from '../productV2/progress';
+import { isProductLessonUnlocked, productUnitProgress, readProductCourseProgress, takePendingProductLessonCompletion } from '../productV2/progress';
 import { readLearnerProfile } from '../product/profile';
 
 export function LearnScreen() {
@@ -19,6 +19,11 @@ export function LearnScreen() {
   }
 
   const character = getCharacterDefinition(profile.characterId);
+  const completedLessonHandoff = takePendingProductLessonCompletion();
+  if (completedLessonHandoff) {
+    return <Navigate replace to={`/lesson-complete/${completedLessonHandoff}?character=${character.id}`} />;
+  }
+
   const progress = readProductCourseProgress();
   const summary = productUnitProgress(A1_UNIT_1_PRODUCT, progress);
 
