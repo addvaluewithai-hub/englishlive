@@ -15,7 +15,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22.18.0
-          cache: npm
+      - run: npm install --package-lock-only
       - run: npm ci
       - run: npm run build
       - name: Install Playwright Chromium for QA only
