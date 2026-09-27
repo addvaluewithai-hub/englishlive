@@ -1,0 +1,13 @@
+/* Final screenshot-driven tuning for the live lesson portrait. */
+
+.premium-lesson-character svg {
+  transform: translateY(-10%);
+}
+
+@media (max-width: 520px) {
+  .premium-lesson-character svg {
+    width: 146%;
+    height: 146%;
+    transform: translateY(-10%);
+  }
+}
