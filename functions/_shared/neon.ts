@@ -2,6 +2,7 @@ import { neon } from '@neondatabase/serverless';
 
 export interface NeonEnv {
   DATABASE_URL?: string;
+  NEON_AUTH_JWKS_URL?: string;
 }
 
 export function getSql(env: NeonEnv) {
@@ -13,7 +14,7 @@ export function getSql(env: NeonEnv) {
 export const jsonHeaders = {
   'content-type': 'application/json; charset=utf-8',
   'access-control-allow-origin': '*',
-  'access-control-allow-methods': 'GET, OPTIONS',
+  'access-control-allow-methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
   'access-control-allow-headers': 'content-type, authorization',
 };
 
