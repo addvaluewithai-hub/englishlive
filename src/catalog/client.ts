@@ -19,6 +19,33 @@ export interface ProductCatalog {
 let memoryCatalog: ProductCatalog | null = null;
 let inFlight: Promise<ProductCatalog> | null = null;
 
+const CEFR_PRESENTATION: Record<string, { arabicTitle: string; description: string }> = {
+  a1: {
+    arabicTitle: A1_LEVEL_PRODUCT.arabicTitle,
+    description: A1_LEVEL_PRODUCT.description,
+  },
+  a2: {
+    arabicTitle: 'ما قبل المتوسط',
+    description: 'بناء ثقتك في التحدث وفهم المواقف اليومية الأكثر تنوعًا.',
+  },
+  b1: {
+    arabicTitle: 'المتوسط',
+    description: 'التواصل بثقة في مواقف الحياة والعمل والدراسة.',
+  },
+  b2: {
+    arabicTitle: 'ما فوق المتوسط',
+    description: 'التعبير عن الأفكار المعقدة ومناقشة مواضيع أوسع بوضوح وسلاسة.',
+  },
+  c1: {
+    arabicTitle: 'المتقدم',
+    description: 'التواصل بطلاقة ومرونة في المواقف المهنية والأكاديمية والاجتماعية.',
+  },
+  c2: {
+    arabicTitle: 'المتمكن',
+    description: 'فهم وإتقان اللغة في سياقات واسعة بدقة وطلاقة عالية.',
+  },
+};
+
 function localFallbackCatalog(): ProductCatalog {
   return {
     source: 'local-fallback',
@@ -29,13 +56,7 @@ function localFallbackCatalog(): ProductCatalog {
 }
 
 function presentationForLevel(code: string, title: string) {
-  if (code.toLowerCase() === 'a1') {
-    return {
-      arabicTitle: A1_LEVEL_PRODUCT.arabicTitle,
-      description: A1_LEVEL_PRODUCT.description,
-    };
-  }
-  return {
+  return CEFR_PRESENTATION[code.toLowerCase()] ?? {
     arabicTitle: title,
     description: 'مسار تعلم منشور في Englotti.',
   };
