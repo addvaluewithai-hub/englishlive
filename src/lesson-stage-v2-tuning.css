@@ -4,10 +4,36 @@
   transform: translateY(-10%);
 }
 
+/* Otti's renderer intentionally overflows on other product surfaces. The live
+ * lesson reference needs every teacher contained by the circular portrait. */
+.premium-lesson-character.character-host[data-renderer="otti-svg"] {
+  padding: 0;
+  overflow: hidden;
+}
+
+.premium-lesson-character.character-host[data-renderer="otti-svg"] > svg {
+  width: 112%;
+  height: 112%;
+  max-height: none;
+  transform: translateY(3%);
+}
+
 @media (max-width: 520px) {
   .premium-lesson-character svg {
     width: 146%;
     height: 146%;
     transform: translateY(-10%);
+  }
+
+  .premium-lesson-character.character-host[data-renderer="otti-svg"] {
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .premium-lesson-character.character-host[data-renderer="otti-svg"] > svg {
+    width: 112%;
+    height: 112%;
+    max-height: none;
+    transform: translateY(3%);
   }
 }
