@@ -19,7 +19,7 @@ async function studioRequest(init: RequestInit = {}) {
     const message = typeof payload?.error === 'string' ? payload.error : `Studio request failed (${response.status}).`;
     throw new Error(message);
   }
-  return payload;
+  return payload ?? {};
 }
 
 export async function loadStudioOverview(): Promise<StudioOverview> {
