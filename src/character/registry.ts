@@ -124,6 +124,20 @@ export const characterRegistry = [
 
 export const DEFAULT_CHARACTER_ID = 'otti';
 
+const publishedCharacterDefinitions = new Map<string, CharacterDefinition>();
+
+export function setPublishedCharacterDefinitions(characters: readonly CharacterDefinition[]) {
+  publishedCharacterDefinitions.clear();
+  for (const character of characters) publishedCharacterDefinitions.set(character.id, character);
+}
+
 export function getCharacterDefinition(id: string | null | undefined): CharacterDefinition {
-  return characterRegistry.find((character) => character.id === id) ?? characterRegistry.find((character) => character.id === DEFAULT_CHARACTER_ID)!;
+  if (id) {
+    const published = publishedCharacterDefinitions.get(id);
+    if (published) return published;
+    const local = characterRegistry.find((character) => character.id === id);
+    if (local) return local;
+  }
+  return publishedCharacterDefinitions.get(DEFAULT_CHARACTER_ID)
+    ?? characterRegistry.find((character) => character.id === DEFAULT_CHARACTER_ID)!;
 }
