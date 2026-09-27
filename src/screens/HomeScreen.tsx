@@ -1,15 +1,17 @@
 import type { CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
+import { useProductCatalog } from '../catalog/client';
 import { CharacterPortrait } from '../character/CharacterPortrait';
 import { OttiMark } from '../character/otti/OttiMark';
 import { getCharacterDefinition } from '../character/registry';
 import { ProductIcon } from '../components/ProductIcon';
-import { A1_UNIT_1_PRODUCT, lessonArabicTitle, lessonProductTitle } from '../productV2/course';
+import { lessonArabicTitle, lessonProductTitle } from '../productV2/course';
 import { productUnitProgress, readProductCourseProgress } from '../productV2/progress';
 import { readLearnerProfile } from '../product/profile';
 
 export function HomeScreen() {
   const profile = readLearnerProfile();
+  const catalog = useProductCatalog();
 
   if (!profile) {
     return (
@@ -22,9 +24,15 @@ export function HomeScreen() {
     );
   }
 
+  const level = catalog.levels[0];
+  const unit = level?.connectedUnits[0];
+  if (!level || !unit || unit.lessons.length === 0) {
+    return <section className="v2-empty-screen" dir="rtl"><h1>المسار بيتجهز</h1><p>مفيش دروس منشورة في المسار دلوقتي.</p></section>;
+  }
+
   const character = getCharacterDefinition(profile.characterId);
   const progress = readProductCourseProgress();
-  const summary = productUnitProgress(A1_UNIT_1_PRODUCT, progress);
+  const summary = productUnitProgress(unit, progress);
   const lessonSaved = progress.lessons[summary.nextLesson.id];
   const greeting = profile.firstName ? `مرحبًا ${profile.firstName}!` : 'مرحبًا بك!';
 
@@ -43,14 +51,14 @@ export function HomeScreen() {
 
       <Link className="v2-continue-card" to={`/scene-lesson/${summary.nextLesson.id}?character=${character.id}`}>
         <div className="v2-card-heading-row">
-          <span className="v2-level-badge">A1</span>
-          <span className="v2-small-muted">الوحدة 1 · الدرس {summary.nextLesson.order}</span>
+          <span className="v2-level-badge">{level.title}</span>
+          <span className="v2-small-muted">الوحدة {unit.order} · الدرس {summary.nextLesson.order}</span>
         </div>
         <h2>{lessonProductTitle(summary.nextLesson)}</h2>
         <p>{lessonArabicTitle(summary.nextLesson)}</p>
         <div className="v2-continue-footer">
           <div className="v2-mini-progress" aria-label={`${summary.completedCount} of ${summary.totalCount} lessons complete`}>
-            {A1_UNIT_1_PRODUCT.lessons.map((lesson) => (
+            {unit.lessons.map((lesson) => (
               <span key={lesson.id} className={progress.lessons[lesson.id]?.completedAt ? 'is-complete' : lesson.id === summary.nextLesson.id ? 'is-current' : ''} />
             ))}
           </div>
@@ -61,10 +69,10 @@ export function HomeScreen() {
       <section className="v2-streak-card">
         <div>
           <strong>تقدمك في الوحدة</strong>
-          <span>{summary.completedCount} من {summary.totalCount} دروس متاحة مكتملة.</span>
+          <span>{summary.completedCount} من {summary.totalCount} دروس منشورة مكتملة.</span>
         </div>
-        <div className="v2-streak-days" aria-label={`${summary.completedCount} of ${summary.totalCount} available lessons complete`}>
-          {A1_UNIT_1_PRODUCT.lessons.map((lesson, index) => {
+        <div className="v2-streak-days" aria-label={`${summary.completedCount} of ${summary.totalCount} published lessons complete`}>
+          {unit.lessons.map((lesson, index) => {
             const completed = Boolean(progress.lessons[lesson.id]?.completedAt);
             return (
               <span key={lesson.id} className={completed ? 'is-done' : ''} aria-label={`Lesson ${index + 1}${completed ? ' complete' : ' not complete'}`}>
