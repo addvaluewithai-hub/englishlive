@@ -18,5 +18,5 @@
     "forceConsistentCasingInFileNames": true,
     "types": ["vite/client"]
   },
-  "include": ["src", "functions", "vite.config.ts", "capacitor.config.ts"]
+  "include": ["src", "functions", "scripts/**/*.ts", "vite.config.ts", "capacitor.config.ts"]
 }
