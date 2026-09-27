@@ -113,7 +113,7 @@ export function LevelScreen() {
                   aria-hidden="true"
                   style={{ background: `linear-gradient(#ff9fb8 0 ${unitCompletion}%, #dedede ${unitCompletion}% 100%)` }}
                 />
-                <img className={`journey-path-decor decor-${unitIndex % 2 ? 'left' : 'right'}`} src={decoration} alt="" aria-hidden="true" />
+                <img className={`journey-path-decor decor-${unitIndex % 2 === 0 ? 'left' : 'right'}`} src={decoration} alt="" aria-hidden="true" />
 
                 {unit.lessons.map((lesson, localIndex) => {
                   const currentGlobalIndex = globalLessonIndex++;
@@ -121,7 +121,7 @@ export function LevelScreen() {
                   const completed = Boolean(saved?.completedAt);
                   const unlocked = isUnlocked(currentGlobalIndex, lesson.id);
                   const current = lesson.id === nextLesson?.id && !completed;
-                  const side = localIndex % 2 === 0 ? 'right' : 'left';
+                  const side = localIndex % 2 === 0 ? 'left' : 'right';
                   const lessonNumber = lesson.order || localIndex + 1;
 
                   const content = (
