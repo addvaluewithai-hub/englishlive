@@ -23,6 +23,7 @@ export interface PublishedCharacterCatalog {
 }
 
 let memoryCatalog: PublishedCharacterCatalog | null = null;
+let memoryLoadedAt = 0;
 let inFlight: Promise<PublishedCharacterCatalog> | null = null;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -82,26 +83,38 @@ function isPayload(value: unknown): value is PublishedCharacterPayload {
   });
 }
 
+export function invalidatePublishedCharacters() {
+  memoryCatalog = null;
+  memoryLoadedAt = 0;
+  inFlight = null;
+}
+
 export async function loadPublishedCharacters(): Promise<PublishedCharacterCatalog> {
   if (import.meta.env.VITE_VISUAL_QA === '1') {
     memoryCatalog = localFallback();
+    memoryLoadedAt = Date.now();
     return memoryCatalog;
   }
-  if (memoryCatalog?.source === 'neon') return memoryCatalog;
+  if (memoryCatalog?.source === 'neon' && Date.now() - memoryLoadedAt < 5_000) return memoryCatalog;
   if (inFlight) return inFlight;
 
   inFlight = (async () => {
     try {
-      const response = await fetch(apiUrl('/api/content/characters'), { headers: { accept: 'application/json' } });
+      const response = await fetch(apiUrl('/api/content/characters'), {
+        headers: { accept: 'application/json' },
+        cache: 'no-store',
+      });
       const payload = await response.json().catch(() => null) as unknown;
       if (!response.ok || !isPayload(payload)) throw new Error(`Characters API returned ${response.status}.`);
       const characters = payload.characters.map(materialize);
       if (!characters.length) throw new Error('No published characters were returned.');
       memoryCatalog = { source: 'neon', characters };
+      memoryLoadedAt = Date.now();
       return memoryCatalog;
     } catch (reason) {
       console.warn('[Englotti characters] using local fallback', reason instanceof Error ? reason.message : String(reason));
       memoryCatalog = localFallback();
+      memoryLoadedAt = Date.now();
       return memoryCatalog;
     } finally {
       inFlight = null;
