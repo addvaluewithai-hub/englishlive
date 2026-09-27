@@ -124,7 +124,7 @@ export const onRequestGet = async ({ request, env }: PagesContext) => {
       source: 'neon',
       course: { slug: first.course_slug, title: first.course_title },
       levels,
-    }, 200, 'public, max-age=30, stale-while-revalidate=120');
+    }, 200, 'no-store');
   } catch (reason) {
     console.error('[content/catalog]', reason);
     return jsonResponse({ error: 'Unable to load published course catalog.' }, 500);
