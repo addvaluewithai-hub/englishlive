@@ -5,7 +5,58 @@ import { ProductIcon } from '../components/ProductIcon';
 import { productUnitProgress, readProductCourseProgress, takePendingProductLessonCompletion } from '../productV2/progress';
 import { readLearnerProfile } from '../product/profile';
 
-const FUTURE_LEVELS = ['A2', 'B1', 'B2', 'C1', 'C2'];
+interface LevelPresentation {
+  code: string;
+  arabicTitle: string;
+  description: string;
+  art: string;
+  tone: string;
+}
+
+const LEVEL_PRESENTATION: readonly LevelPresentation[] = [
+  {
+    code: 'A1',
+    arabicTitle: 'المبتدئ',
+    description: 'أساسيات التواصل في المواقف اليومية: التعارف، الناس، البيت، الوقت والمواقف العملية.',
+    art: '/learn-assets/mascot-reading.png',
+    tone: 'pink',
+  },
+  {
+    code: 'A2',
+    arabicTitle: 'ما قبل المتوسط',
+    description: 'بناء ثقتك في التحدث وفهم المواقف اليومية الأكثر تنوعًا.',
+    art: '/learn-assets/chat-cloud.png',
+    tone: 'peach',
+  },
+  {
+    code: 'B1',
+    arabicTitle: 'المتوسط',
+    description: 'التواصل بثقة في مواقف الحياة والعمل والدراسة.',
+    art: '/learn-assets/big-ben.png',
+    tone: 'blue',
+  },
+  {
+    code: 'B2',
+    arabicTitle: 'ما فوق المتوسط',
+    description: 'التعبير عن الأفكار المعقدة ومناقشة مواضيع أوسع بوضوح وسلاسة.',
+    art: '/learn-assets/purple-note-cloud.png',
+    tone: 'purple',
+  },
+  {
+    code: 'C1',
+    arabicTitle: 'المتقدم',
+    description: 'التواصل بطلاقة ومرونة في المواقف المهنية والأكاديمية والاجتماعية.',
+    art: '/learn-assets/mountain-flag.png',
+    tone: 'mint',
+  },
+  {
+    code: 'C2',
+    arabicTitle: 'المتمكن',
+    description: 'فهم وإتقان اللغة في سياقات واسعة بدقة وطلاقة عالية.',
+    art: '/learn-assets/trophy.png',
+    tone: 'sky',
+  },
+];
 
 export function LearnScreen() {
   const profile = readLearnerProfile();
@@ -28,46 +79,71 @@ export function LearnScreen() {
   }
 
   const progress = readProductCourseProgress();
-  const publishedLevelCodes = new Set(catalog.levels.map((level) => level.title.toUpperCase()));
+  const publishedByCode = new Map(catalog.levels.map((level) => [level.id.toUpperCase(), level]));
 
   return (
-    <section className="v3-learn-levels" dir="rtl">
-      <header className="v3-learn-hero">
-        <span className="v3-kicker">مسار Englotti</span>
-        <h1>ابدأ من مستواك</h1>
-        <p>كل مستوى متقسم لوحدات ودروس منشورة من Englotti Cloud. أي درس جديد يتنشر هيوصل للمسار من غير تحديث للتطبيق.</p>
+    <section className="journey-levels" dir="rtl">
+      <header className="journey-levels-hero">
+        <div className="journey-levels-hero-art" aria-hidden="true">
+          <img src="/learn-assets/mascot-reading.png" alt="" />
+          <span className="journey-hero-star one" />
+          <span className="journey-hero-star two" />
+        </div>
+        <div className="journey-levels-hero-copy">
+          <span>رحلتك في الإنجليزية</span>
+          <h1>ابدأ من مستواك</h1>
+          <p>امشِ خطوة بخطوة في الدروس المنشورة، وكل ما نضيف محتوى جديد هتلاقيه هنا تلقائيًا.</p>
+        </div>
       </header>
 
-      {catalog.levels.map((level) => {
-        const firstUnit = level.connectedUnits[0];
-        const summary = firstUnit ? productUnitProgress(firstUnit, progress) : null;
-        return (
-          <Link key={level.id} className="v3-level-card is-active" to={`/learn/level/${level.id}`}>
-            <div className="v3-level-card-main">
-              <span className="v3-level-badge-large">{level.title}</span>
-              <div>
-                <small>متاح الآن</small>
-                <h2>{level.arabicTitle}</h2>
-                <p>{level.description}</p>
-              </div>
-            </div>
-            <div className="v3-level-card-footer">
-              <span>{level.unitCount} وحدات منشورة · {level.lessonSlotCount} دروس متاحة</span>
-              {summary && firstUnit ? <span className="v3-level-progress-copy">الوحدة {firstUnit.order} · {summary.completedCount}/{summary.totalCount} مكتمل</span> : <span />}
-              <ProductIcon name="chevron" size={23} />
-            </div>
-          </Link>
-        );
-      })}
+      <div className="journey-level-card-list">
+        {LEVEL_PRESENTATION.map((presentation) => {
+          const level = publishedByCode.get(presentation.code);
+          if (!level) {
+            return (
+              <article key={presentation.code} className={`journey-level-card is-locked tone-${presentation.tone}`} aria-disabled="true">
+                <div className="journey-level-badge">
+                  <strong>{presentation.code}</strong>
+                  <span>{presentation.arabicTitle}</span>
+                </div>
+                <img className="journey-level-art" src={presentation.art} alt="" aria-hidden="true" />
+                <div className="journey-level-copy">
+                  <h2>{presentation.arabicTitle}</h2>
+                  <p>{presentation.description}</p>
+                </div>
+                <span className="journey-level-lock"><ProductIcon name="lock" size={25} /></span>
+              </article>
+            );
+          }
 
-      <div className="v3-future-levels" aria-label="Future levels">
-        {FUTURE_LEVELS.filter((level) => !publishedLevelCodes.has(level)).map((level) => (
-          <div key={level} className="v3-future-level-card" aria-disabled="true">
-            <span>{level}</span>
-            <div><strong>قريبًا</strong><small>هنفتح المستوى ده لما يكون جاهز للتعلم بالكامل.</small></div>
-            <ProductIcon name="lock" size={19} />
-          </div>
-        ))}
+          const completed = level.connectedUnits.reduce((sum, unit) => sum + productUnitProgress(unit, progress).completedCount, 0);
+          const total = level.lessonSlotCount;
+          const completion = total > 0 ? Math.min(100, Math.round((completed / total) * 100)) : 0;
+
+          return (
+            <Link key={level.id} className={`journey-level-card is-live tone-${presentation.tone}`} to={`/learn/level/${level.id}`}>
+              <div className="journey-level-badge">
+                <strong>{presentation.code}</strong>
+                <span>{level.arabicTitle || presentation.arabicTitle}</span>
+              </div>
+              <img className="journey-level-art" src={presentation.art} alt="" aria-hidden="true" />
+              <div className="journey-level-copy">
+                <span className="journey-now-pill">متاح الآن <i aria-hidden="true">✦</i></span>
+                <h2>{level.arabicTitle || presentation.arabicTitle}</h2>
+                <p>{level.description || presentation.description}</p>
+                <div className="journey-level-progress" aria-label={`${completed} of ${total} lessons complete`}>
+                  <span style={{ width: `${completion}%` }} />
+                </div>
+                <div className="journey-level-stats">
+                  <span><strong>{level.unitCount}</strong> وحدات</span>
+                  <span><strong>{total}</strong> دروس منشورة</span>
+                  <span><strong>{completed}/{total}</strong> مكتمل</span>
+                </div>
+              </div>
+              <span className="journey-level-go"><ProductIcon name="chevron" size={27} /></span>
+            </Link>
+          );
+        })}
       </div>
     </section>
   );
