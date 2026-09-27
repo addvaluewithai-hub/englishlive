@@ -54,9 +54,9 @@
 }
 .studio-curriculum-create button,
 .studio-inline-create button { background: #182a23; color: #fff; }
-button.is-danger { background: #fff0ee; color: #8b342a; }
-button.is-restore { background: #e8f6ef; color: #255944; }
-button:disabled { opacity: .5; cursor: default; }
+.studio-curriculum-shell button.is-danger { background: #fff0ee; color: #8b342a; }
+.studio-curriculum-shell button.is-restore { background: #e8f6ef; color: #255944; }
+.studio-curriculum-shell button:disabled { opacity: .5; cursor: default; }
 
 .studio-curriculum-levels { display: grid; gap: 14px; }
 .studio-curriculum-level { padding: 16px; }
