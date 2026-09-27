@@ -47,11 +47,27 @@ const CEFR_PRESENTATION: Record<string, { arabicTitle: string; description: stri
 };
 
 function localFallbackCatalog(): ProductCatalog {
+  const connectedUnits = A1_LEVEL_PRODUCT.connectedUnits;
+  const lessonSlotCount = connectedUnits.reduce((sum, unit) => sum + unit.lessons.length, 0);
+  const level: ProductLevelDefinition = {
+    ...A1_LEVEL_PRODUCT,
+    unitCount: connectedUnits.length,
+    lessonSlotCount,
+    outline: connectedUnits.map((unit) => ({
+      id: unit.id,
+      order: unit.order,
+      title: unit.title,
+      arabicTitle: unit.arabicTitle,
+      lessonCount: unit.lessons.length,
+      connected: true,
+    })),
+  };
+
   return {
     source: 'local-fallback',
     courseSlug: 'englotti-english',
     courseTitle: 'Englotti English',
-    levels: [A1_LEVEL_PRODUCT],
+    levels: [level],
   };
 }
 
