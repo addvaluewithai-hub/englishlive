@@ -9,9 +9,7 @@ export const authClient = createAuthClient(NEON_AUTH_URL, {
   adapter: BetterAuthReactAdapter(),
 });
 
-export type EnglottiAuthSession = NonNullable<ReturnType<typeof authClient.useSession>['data']>;
-
 export async function getAuthJwt() {
-  const token = await authClient.getJWTToken?.();
+  const token = await authClient.getJwtToken();
   return typeof token === 'string' && token.length > 0 ? token : null;
 }
