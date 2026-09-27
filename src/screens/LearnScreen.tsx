@@ -18,7 +18,7 @@ const LEVEL_PRESENTATION: readonly LevelPresentation[] = [
   {
     code: 'A1',
     arabicTitle: 'المبتدئ',
-    description: 'أساسيات التواصل في المواقف اليومية: التعارف، الناس، البيت، الوقت والمواقف العملية.',
+    description: 'أساسيات التواصل في المواقف اليومية: التعارف، الناس، البيت، الوقت، التسوق، السفر والمواقف العملية.',
     art: learnArt.mascotReading,
     tone: 'pink',
   },
@@ -93,7 +93,7 @@ export function LearnScreen() {
         <div className="journey-levels-hero-copy">
           <span>رحلتك في الإنجليزية</span>
           <h1>ابدأ من مستواك</h1>
-          <p>امشِ خطوة بخطوة في الدروس المنشورة، وكل ما نضيف محتوى جديد هتلاقيه هنا تلقائيًا.</p>
+          <p>ستة مستويات مرتبة بعناية، تاخدك خطوة بخطوة من الأساسيات إلى الطلاقة.</p>
         </div>
       </header>
 
@@ -112,7 +112,7 @@ export function LearnScreen() {
                   <h2>{presentation.arabicTitle}</h2>
                   <p>{presentation.description}</p>
                 </div>
-                <span className="journey-level-lock"><ProductIcon name="lock" size={25} /></span>
+                <span className="journey-level-lock" aria-label="غير متاح حاليًا"><ProductIcon name="lock" size={25} /></span>
               </article>
             );
           }
@@ -132,16 +132,16 @@ export function LearnScreen() {
                 <span className="journey-now-pill">متاح الآن <i aria-hidden="true">✦</i></span>
                 <h2>{level.arabicTitle || presentation.arabicTitle}</h2>
                 <p>{level.description || presentation.description}</p>
-                <div className="journey-level-progress" aria-label={`${completed} of ${total} lessons complete`}>
+                <div className="journey-level-progress" aria-hidden="true">
                   <span style={{ width: `${completion}%` }} />
                 </div>
-                <div className="journey-level-stats">
-                  <span><strong>{level.unitCount}</strong> وحدات</span>
-                  <span><strong>{total}</strong> دروس منشورة</span>
-                  <span><strong>{completed}/{total}</strong> مكتمل</span>
-                </div>
               </div>
-              <span className="journey-level-go"><ProductIcon name="chevron" size={27} /></span>
+              <div className="journey-level-stats" aria-label={`${completed} of ${total} lessons complete`}>
+                <span><strong>{level.unitCount}</strong><small>وحدات</small></span>
+                <span><strong>{total}</strong><small>دروس منشورة</small></span>
+                <span><strong>{completed}/{total}</strong><small>مكتمل</small></span>
+              </div>
+              <span className="journey-level-go" aria-hidden="true"><ProductIcon name="chevron" size={27} /></span>
             </Link>
           );
         })}
