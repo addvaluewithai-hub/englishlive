@@ -13,27 +13,58 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
+function isOptionalString(value: unknown) {
+  return value === undefined || value === null || typeof value === 'string';
+}
+
+function isStringArray(value: unknown) {
+  return Array.isArray(value) && value.every((item) => typeof item === 'string');
+}
+
 function isSceneLessonDefinition(value: unknown): value is SceneLessonDefinition {
   if (!isRecord(value)) return false;
-  if (typeof value.id !== 'string' || typeof value.title !== 'string') return false;
+  if (
+    typeof value.id !== 'string'
+    || typeof value.levelId !== 'string'
+    || typeof value.unitId !== 'string'
+    || typeof value.unitTitle !== 'string'
+    || typeof value.order !== 'number'
+    || typeof value.title !== 'string'
+    || typeof value.subtitle !== 'string'
+    || typeof value.performance !== 'string'
+    || !isStringArray(value.coreLanguage)
+    || !isStringArray(value.boundaries)
+    || !isRecord(value.source)
+    || typeof value.source.sourceLessonId !== 'string'
+  ) return false;
   if (!Array.isArray(value.scenes) || value.scenes.length === 0) return false;
   return value.scenes.every((scene) => {
-    if (!isRecord(scene)) return false;
+    if (!isRecord(scene) || !isRecord(scene.teaching) || !isRecord(scene.interaction)) return false;
     return typeof scene.id === 'string'
       && typeof scene.title === 'string'
       && typeof scene.goal === 'string'
-      && isRecord(scene.teaching)
-      && isRecord(scene.interaction);
+      && isStringArray(scene.teaching.explainInArabic)
+      && isStringArray(scene.teaching.englishTargets)
+      && (scene.teaching.constraints === undefined || isStringArray(scene.teaching.constraints))
+      && typeof scene.interaction.kind === 'string'
+      && typeof scene.interaction.setup === 'string'
+      && typeof scene.interaction.learnerTask === 'string'
+      && isStringArray(scene.interaction.supportLadder)
+      && (scene.interaction.teacherMoves === undefined || isStringArray(scene.interaction.teacherMoves));
   });
 }
 
 function isCharacterContent(value: unknown): value is CharacterAuthoringContent {
   if (!isRecord(value)) return false;
-  return value.displayName === undefined || typeof value.displayName === 'string';
+  return isOptionalString(value.displayName)
+    && isOptionalString(value.personaPrompt)
+    && isOptionalString(value.teachingStylePrompt)
+    && isOptionalString(value.voiceName);
 }
 
 function isTeachingPolicy(value: unknown): value is TeachingPolicyContent {
-  return isRecord(value) && typeof value.prompt === 'string';
+  if (!isRecord(value) || typeof value.prompt !== 'string') return false;
+  return isOptionalString(value.openingPrompt) && isOptionalString(value.decisionNudgePrompt);
 }
 
 function parseTeachingBundle(value: unknown): TeachingBundleResponse | null {
