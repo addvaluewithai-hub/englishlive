@@ -5,6 +5,7 @@ import { PcmPlaybackQueue } from '../audio/PcmPlaybackQueue';
 import { CharacterHost, type CharacterHostHandle } from '../character/CharacterHost';
 import { CharacterPerformanceController } from '../character/CharacterPerformanceController';
 import { getCharacterDefinition } from '../character/registry';
+import { loadPublishedCharacter } from '../content/client';
 import { getFreeSpeakMode } from '../freeSpeak/modes';
 import { GeminiLiveTransport } from '../live/GeminiLiveTransport';
 import type { LiveStatus } from '../live/types';
@@ -65,7 +66,13 @@ export function FreeSpeakSessionScreen() {
   const [outputTranscript, setOutputTranscript] = useState('');
   const [relationshipProposal, setRelationshipProposal] = useState<RelationshipMemoryProposal | null>(null);
   const [startedOnce, setStartedOnce] = useState(false);
+  const [teacherDisplayName, setTeacherDisplayName] = useState(character.name);
+  const [contentSource, setContentSource] = useState<'neon' | 'local-fallback'>('local-fallback');
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setTeacherDisplayName(character.name);
+  }, [character.id, character.name]);
 
   useEffect(() => {
     return () => {
@@ -84,10 +91,17 @@ export function FreeSpeakSessionScreen() {
 
   async function startLive() {
     if (status !== 'idle' && status !== 'error') return;
+    setStatus('connecting');
     setError(null);
     setInputTranscript('');
     setOutputTranscript('');
     setRelationshipProposal(null);
+
+    const publishedCharacter = await loadPublishedCharacter(character);
+    const characterConfig = publishedCharacter.content;
+    const teacherName = characterConfig.displayName?.trim() || character.name;
+    setTeacherDisplayName(teacherName);
+    setContentSource(publishedCharacter.source);
 
     const memoryCollector = new RelationshipMemoryCollector(setRelationshipProposal);
     relationshipCollector.current = memoryCollector;
@@ -135,11 +149,21 @@ export function FreeSpeakSessionScreen() {
       : 'No learner profile is available. Keep the conversation on familiar, accessible topics.';
     const relationshipContext = buildRelationshipPrompt(readEnglishLiveMemory(), character.id);
     const freeSpeakPrompt = `FREE SPEAK MODE\nThis is intentionally outside the structured course. Do not call lesson or mission assessment tools, do not claim course progress, and do not give a numeric proficiency score. ${mode.prompt} Correct selectively only when it helps the conversation or the learner asks. Keep your turns concise enough to give the learner plenty of speaking time.`;
-    const characterPrompt = `You are ${character.name}, ${character.persona.style}. Be a natural adult English conversation partner. Speak English by default; if the learner explicitly asks for a brief Arabic clarification, clarify briefly and return to English. Allow interruption and respond to meaning rather than sounding like an assistant.`;
+    const persona = characterConfig.personaPrompt?.trim() || character.persona.style;
+    const teachingStyle = characterConfig.teachingStylePrompt?.trim();
+    const characterPrompt = [
+      `You are ${teacherName}, ${persona}. Be a natural adult English conversation partner.`,
+      'Speak English by default; if the learner explicitly asks for a brief Arabic clarification, clarify briefly and return to English.',
+      'Allow interruption and respond to meaning rather than sounding like an assistant.',
+      `Never call yourself another character name; when referring to yourself, always use ${teacherName}.`,
+      teachingStyle,
+    ].filter(Boolean).join(' ');
 
     try {
       await queue.unlock();
-      await live.connect(`${characterPrompt}\n\n${learnerContext}\n\n${relationshipContext}\n\n${memoryCollector.systemPrompt}\n\n${freeSpeakPrompt}`);
+      await live.connect(`${characterPrompt}\n\n${learnerContext}\n\n${relationshipContext}\n\n${memoryCollector.systemPrompt}\n\n${freeSpeakPrompt}`, {
+        voiceName: characterConfig.voiceName ?? undefined,
+      });
       await mic.start((chunk) => live.sendAudio(chunk), setMicLevel);
       setStartedOnce(true);
       live.sendText(`Start ${mode.title} naturally. Greet the learner briefly and open with one genuine conversational move. Do not explain the mode.`);
@@ -190,7 +214,7 @@ export function FreeSpeakSessionScreen() {
         </div>
         <div className="session-stage-footer">
           <div className="session-partner">
-            <strong><bdi dir="ltr">{character.name}</bdi></strong>
+            <strong><bdi dir="ltr">{teacherDisplayName}</bdi></strong>
             <span className={`live-status status-${status}`} aria-live="polite">{statusCopy[status]}</span>
           </div>
           <div className="session-control-dock">
@@ -222,8 +246,8 @@ export function FreeSpeakSessionScreen() {
             <p dir="auto">{inputTranscript || 'كلامك هيظهر هنا بعد ما تبدأ.'}</p>
           </article>
           <article className="transcript-card partner-transcript">
-            <small><bdi dir="ltr">{character.name}</bdi></small>
-            <p dir="auto">{outputTranscript || `${character.name} جاهز يبدأ معاك.`}</p>
+            <small><bdi dir="ltr">{teacherDisplayName}</bdi></small>
+            <p dir="auto">{outputTranscript || `${teacherDisplayName} جاهز يبدأ معاك.`}</p>
           </article>
         </div>
 
@@ -233,7 +257,7 @@ export function FreeSpeakSessionScreen() {
             <p>تقدمك في الدروس المنظمة ما اتغيرش.</p>
             {relationshipProposal ? (
               <div className="memory-consent-card">
-                <strong>تحب <bdi dir="ltr">{character.name}</bdi> يفتكر ده المرة الجاية؟</strong>
+                <strong>تحب <bdi dir="ltr">{teacherDisplayName}</bdi> يفتكر ده المرة الجاية؟</strong>
                 <p dir="auto">{relationshipProposal.text}</p>
                 <div className="actions">
                   <button type="button" className="button primary" onClick={keepProposal}>احتفظ بيها</button>
@@ -247,6 +271,11 @@ export function FreeSpeakSessionScreen() {
             </div>
           </div>
         ) : null}
+
+        <details className="premium-tech-details">
+          <summary>تفاصيل تقنية</summary>
+          <span>Character config: {contentSource}</span>
+        </details>
       </aside>
     </section>
   );
