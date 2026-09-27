@@ -2,8 +2,8 @@ import type { CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import { useProductCatalog } from '../catalog/client';
 import { CharacterPortrait } from '../character/CharacterPortrait';
+import { publishedCharacterById, usePublishedCharacters } from '../character/catalog';
 import { OttiMark } from '../character/otti/OttiMark';
-import { getCharacterDefinition } from '../character/registry';
 import { ProductIcon } from '../components/ProductIcon';
 import { lessonArabicTitle, lessonProductTitle } from '../productV2/course';
 import { productUnitProgress, readProductCourseProgress } from '../productV2/progress';
@@ -12,6 +12,7 @@ import { readLearnerProfile } from '../product/profile';
 export function HomeScreen() {
   const profile = readLearnerProfile();
   const catalog = useProductCatalog();
+  const characterCatalog = usePublishedCharacters();
 
   if (!profile) {
     return (
@@ -30,7 +31,7 @@ export function HomeScreen() {
     return <section className="v2-empty-screen" dir="rtl"><h1>المسار بيتجهز</h1><p>مفيش دروس منشورة في المسار دلوقتي.</p></section>;
   }
 
-  const character = getCharacterDefinition(profile.characterId);
+  const character = publishedCharacterById(characterCatalog.characters, profile.characterId);
   const progress = readProductCourseProgress();
   const summary = productUnitProgress(unit, progress);
   const lessonSaved = progress.lessons[summary.nextLesson.id];
