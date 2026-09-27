@@ -1,4 +1,5 @@
 import {
+  abandonCloudLessonSession,
   completeCloudLessonSession,
   recordCloudSceneResult,
   startCloudLessonSession,
@@ -19,6 +20,11 @@ export async function beginCloudLessonSession(input: {
 }) {
   if (!input.lessonRevisionId || !input.characterRevisionId || !input.teachingPolicyRevisionId) return null;
   try {
+    const existing = activeSessions.get(input.lessonId);
+    if (existing) {
+      await abandonCloudLessonSession(existing.sessionId).catch(() => undefined);
+      activeSessions.delete(input.lessonId);
+    }
     const sessionId = await startCloudLessonSession({
       lessonRevisionId: input.lessonRevisionId,
       characterRevisionId: input.characterRevisionId,
@@ -33,6 +39,17 @@ export async function beginCloudLessonSession(input: {
   } catch (reason) {
     console.warn('[Englotti cloud] could not start learner session', reason instanceof Error ? reason.message : String(reason));
     return null;
+  }
+}
+
+export async function abandonRuntimeLessonSession(lessonId: string) {
+  const active = activeSessions.get(lessonId);
+  if (!active) return;
+  activeSessions.delete(lessonId);
+  try {
+    await abandonCloudLessonSession(active.sessionId);
+  } catch (reason) {
+    console.warn('[Englotti cloud] could not abandon learner session', reason instanceof Error ? reason.message : String(reason));
   }
 }
 
