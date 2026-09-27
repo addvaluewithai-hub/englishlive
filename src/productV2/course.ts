@@ -3,7 +3,7 @@ import type { SceneLessonDefinition } from '../lessonScenes/types';
 
 export interface ProductUnitDefinition {
   id: string;
-  levelId: 'a1';
+  levelId: string;
   order: number;
   title: string;
   arabicTitle: string;
@@ -21,7 +21,7 @@ export interface ProductUnitOutline {
 }
 
 export interface ProductLevelDefinition {
-  id: 'a1';
+  id: string;
   title: string;
   arabicTitle: string;
   description: string;
