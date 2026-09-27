@@ -1,0 +1,131 @@
+import type { SceneLessonDefinition } from '../types';
+
+export const A1_U1_L03_SCENE_LESSON: SceneLessonDefinition = {
+  id: 'a1-u1-l03-where-are-you-from',
+  levelId: 'a1',
+  unitId: 'a1-u1-first-contact',
+  unitTitle: 'First Contact: Me and You',
+  order: 3,
+  title: 'Where are you from?',
+  subtitle: 'Ask and answer about origin and where someone lives now.',
+  performance: 'Ask, say, and understand simple origin and residence information in a first-contact exchange.',
+  coreLanguage: ['Where are you from?', "I'm from …", 'Where do you live?', 'I live in …'],
+  boundaries: [
+    'Keep origin and current residence distinct; do not turn this into a geography vocabulary lesson.',
+    'Use only a tiny number of familiar place examples.',
+    'Do not introduce nationality systems, addresses, moving history, or travel language.',
+    'Invented locations are always acceptable.',
+  ],
+  source: {
+    repository: 'addvaluewithai-hub/english-course',
+    branch: 'curriculum/level-source-of-truth-v1',
+    path: 'curriculum/levels/a1/design-review/07-lesson-briefs/lesson-briefs.md',
+    sourceLessonId: 'U1-L03',
+  },
+  scenes: [
+    {
+      id: 'ask-origin',
+      title: 'Ask where someone is from',
+      goal: 'The learner can ask Where are you from? as one useful first-contact question.',
+      teaching: {
+        explainInArabic: ['اشرح إن Where are you from? بنستخدمها عشان نسأل الشخص هو منين أو أصله منين. علّمها كجملة كاملة.'],
+        englishTargets: ['Where are you from?'],
+        constraints: ['Do not explain are as a grammar table.', 'Do not add nationality words.'],
+      },
+      board: { type: 'note', title: 'Where are you from?' },
+      interaction: {
+        kind: 'elicitation',
+        setup: 'Ask the learner to ask where you are from.',
+        learnerTask: 'Ask me where I am from.',
+        teacherMoves: ['When they ask successfully, answer with one simple place.'],
+        supportLadder: ['قل بالعربي: اسألني أنا منين.', "Give only 'Where are…'", 'Model once, then retry.'],
+      },
+    },
+    {
+      id: 'say-origin',
+      title: 'Say where you are from',
+      goal: "The learner can answer with I'm from + place.",
+      teaching: {
+        explainInArabic: ["اشرح إن أبسط إجابة هنا هي I'm from + المكان. استخدم مثال مكان واحد فقط."],
+        englishTargets: ["I'm from Egypt."],
+        constraints: ['A real or invented place is fine.', 'Do not open a country vocabulary list.'],
+      },
+      board: { type: 'note', title: "I'm from ___." },
+      interaction: {
+        kind: 'micro_practice',
+        setup: 'Ask Where are you from? and let the learner answer with any real or invented place.',
+        learnerTask: 'Tell me where you are from.',
+        supportLadder: ["Give only 'I'm from…'", 'Offer one simple place example.', 'Model once, then ask again.'],
+      },
+    },
+    {
+      id: 'ask-residence',
+      title: 'Ask where someone lives',
+      goal: 'The learner can ask Where do you live? as a useful question about current residence.',
+      teaching: {
+        explainInArabic: ['اشرح إن Where do you live? معناها عايش فين دلوقتي. علّم الجملة كchunk من غير شرح do كقاعدة منفصلة.'],
+        englishTargets: ['Where do you live?'],
+        constraints: ['Do not introduce address details or home vocabulary.'],
+      },
+      board: { type: 'note', title: 'Where do you live?' },
+      interaction: {
+        kind: 'elicitation',
+        setup: 'Ask the learner to ask where you live.',
+        learnerTask: 'Ask me where I live.',
+        teacherMoves: ['Answer naturally with one simple city after a successful question.'],
+        supportLadder: ['قل بالعربي: اسألني أنا عايش فين.', "Give only 'Where do…'", 'Model once, then retry.'],
+      },
+    },
+    {
+      id: 'say-residence',
+      title: 'Say where you live',
+      goal: 'The learner can answer with I live in + place.',
+      teaching: {
+        explainInArabic: ['اشرح إن I live in… معناها أنا عايش/ساكن في المكان ده دلوقتي.'],
+        englishTargets: ['I live in Cairo.'],
+        constraints: ['A real or invented city is fine.', 'Do not add address language.'],
+      },
+      board: { type: 'note', title: 'I live in ___.' },
+      interaction: {
+        kind: 'micro_practice',
+        setup: 'Ask Where do you live? and let the learner answer.',
+        learnerTask: 'Tell me where you live.',
+        supportLadder: ["Give only 'I live in…'", 'Offer one simple city example.', 'Model once, then ask again.'],
+      },
+    },
+    {
+      id: 'from-vs-live',
+      title: 'From and live in mean different things',
+      goal: 'The learner can distinguish origin from current residence and use the right frame for each meaning.',
+      teaching: {
+        explainInArabic: ["اشرح ببساطة: I'm from… = أنا منين، و I live in… = أنا عايش فين دلوقتي. استخدم مثال واحد ممكن فيه المكانين مختلفين."],
+        englishTargets: ["I'm from Alexandria.", 'I live in Cairo.'],
+        constraints: ['Meaning first. Do not teach preposition systems or travel history.'],
+      },
+      board: { type: 'compare', title: 'Origin ↔ now', left: { title: "I'm from ___", body: 'أنا منين' }, right: { title: 'I live in ___', body: 'عايش فين دلوقتي' } },
+      interaction: {
+        kind: 'micro_practice',
+        setup: 'Give one origin meaning and one current-residence meaning, then ask the learner for their own real or invented pair.',
+        learnerTask: 'Make one pair: I’m from X. I live in Y.',
+        supportLadder: ['Explain the Arabic meaning contrast once more.', 'Point to the two sides of the board.', 'Give the two starters and let the learner finish.'],
+      },
+    },
+    {
+      id: 'location-conversation',
+      title: 'Have a short location conversation',
+      goal: 'The learner can exchange origin and residence information with a new person using reduced support.',
+      teaching: {
+        explainInArabic: ['اعمل setup فقط: قابلت شخص جديد في الكورس. اتعرف عليه واعرف هو منين وعايش فين، وقوله نفس المعلومتين عنك.'],
+        englishTargets: ['Where are you from?', "I'm from ___.", 'Where do you live?', 'I live in ___.'],
+        constraints: ['No complete model before the first attempt.', 'Keep the conversation short and natural.', 'Do not add age, job, address, or family.'],
+      },
+      interaction: {
+        kind: 'fresh_transfer',
+        setup: 'Roleplay a new person at a simple course event and exchange origin and residence naturally.',
+        learnerTask: 'Find out where I am from and where I live, and tell me the same about you.',
+        teacherMoves: ['Respond naturally.', 'Create one conversational opening if an important lesson function is missing.'],
+        supportLadder: ['Give a short Arabic functional cue.', 'Give the first word or two of the needed chunk.', 'Model one missing phrase, then reopen that moment with a fresh place.'],
+      },
+    },
+  ],
+};

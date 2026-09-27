@@ -1,0 +1,523 @@
+/*
+ * Live lesson stage v2
+ *
+ * The layout follows the new lesson reference: a warm classroom stage, a clipped
+ * teacher portrait, a persistent teaching board, and a large voice control area.
+ * This file intentionally only changes presentation. The live audio/runtime,
+ * authored boards, progress and lesson state remain the source of truth.
+ */
+
+.is-scene-lesson,
+.is-scene-lesson .v2-scene-main {
+  background: #fffaf7;
+}
+
+.premium-scene-lesson {
+  --lesson-pink: #ff3f68;
+  --lesson-pink-soft: #fff0f4;
+  --lesson-ink: #10203a;
+  --lesson-muted: #6f7788;
+  --lesson-wood: #efa866;
+  --lesson-wood-dark: #dd8c49;
+  --lesson-paper: #fffdfb;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  background: #fffaf7;
+}
+
+/* Header --------------------------------------------------------------- */
+.premium-lesson-topbar {
+  min-height: 74px;
+  padding: max(12px, env(safe-area-inset-top)) 15px 9px;
+  border-bottom: 0;
+  background: rgba(255, 255, 255, .985);
+}
+
+.premium-top-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #fff;
+  color: var(--lesson-ink);
+  box-shadow: 0 5px 16px rgba(25, 35, 52, .07);
+}
+
+.premium-lesson-title {
+  gap: 1px;
+}
+
+.premium-lesson-title small {
+  color: #4e586a;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.premium-lesson-title strong {
+  color: var(--lesson-ink);
+  font-size: 15px;
+  font-weight: 950;
+}
+
+.premium-lesson-progress {
+  height: 20px;
+  padding: 5px 48px 8px;
+  gap: 5px;
+  background: #fff;
+}
+
+.premium-lesson-progress span {
+  height: 7px;
+  background: #e6e7ea;
+}
+
+.premium-lesson-progress span.is-current,
+.premium-lesson-progress span.is-complete {
+  background: var(--lesson-pink);
+}
+
+/* Stage ---------------------------------------------------------------- */
+.premium-lesson-stage {
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 72% 30%, rgba(255, 255, 255, .92) 0 7%, transparent 7.5%),
+    linear-gradient(90deg, transparent 0 7%, rgba(255, 255, 255, .72) 7% 28%, transparent 28% 100%),
+    linear-gradient(180deg, rgba(255, 231, 216, .48), rgba(255, 241, 231, .2)),
+    #f8ddc8;
+}
+
+/* Soft classroom geometry. It stays decorative and never carries lesson data. */
+.premium-lesson-stage::before {
+  content: '';
+  position: absolute;
+  z-index: -2;
+  inset: 0;
+  background:
+    linear-gradient(#d7ecfa, #f9fcff) 7% 12% / 22% 35% no-repeat,
+    linear-gradient(#efd1bb, #efd1bb) 34% 14% / 2px 32% no-repeat,
+    linear-gradient(90deg, #efc4a7, #f6dac5) 78% 20% / 18% 5px no-repeat,
+    linear-gradient(90deg, #efc4a7, #f6dac5) 78% 35% / 18% 5px no-repeat,
+    radial-gradient(ellipse at 11% 56%, #8fc37e 0 6%, transparent 6.5%),
+    radial-gradient(ellipse at 17% 52%, #75b26d 0 7%, transparent 7.5%),
+    linear-gradient(#efb18c, #efb18c) 12% 58% / 11% 10% no-repeat,
+    linear-gradient(#f5d8c4, #f7e3d5) 0 77% / 100% 23% no-repeat;
+  filter: saturate(.88);
+  opacity: .94;
+}
+
+/* Persistent wooden board shell. The authored ConversationBoard is placed on
+ * top of the exact same footprint when the runtime has board content. */
+.premium-lesson-stage::after {
+  content: '';
+  position: absolute;
+  z-index: 2;
+  left: 5.5%;
+  right: 5.5%;
+  bottom: 15px;
+  height: clamp(190px, 35%, 270px);
+  border: 8px solid var(--lesson-wood);
+  border-bottom-color: var(--lesson-wood-dark);
+  border-radius: 28px;
+  background: linear-gradient(180deg, #fffefd 0%, #fffaf7 100%);
+  box-shadow:
+    inset 0 0 0 3px rgba(255, 255, 255, .75),
+    0 15px 30px rgba(128, 73, 35, .14);
+  pointer-events: none;
+}
+
+/* Keep the dynamic teacher inside a portrait crop. The SVG remains animated;
+ * overflow clipping prevents arms/hands from leaking outside the circle. */
+.premium-lesson-character {
+  z-index: 1;
+  inset: 18px auto auto 50%;
+  width: clamp(220px, 64vw, 355px);
+  height: clamp(220px, 64vw, 355px);
+  padding: 0;
+  overflow: hidden;
+  place-items: center;
+  border: 7px solid rgba(255, 255, 255, .94);
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 35%, #fff6f8 0, #ffe8ed 72%, #ffdce5 100%);
+  box-shadow:
+    0 0 0 4px rgba(255, 205, 218, .58),
+    0 16px 34px rgba(119, 72, 49, .13);
+  transform: translateX(-50%);
+  transform-origin: center center;
+  opacity: 1;
+}
+
+.premium-lesson-character .character-host,
+.premium-lesson-character > div {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.premium-lesson-character svg {
+  width: 142%;
+  height: 142%;
+  max-height: none;
+  transform: translateY(20%);
+  filter: drop-shadow(0 11px 12px rgba(74, 44, 28, .09));
+}
+
+.premium-lesson-stage.has-board .premium-lesson-character {
+  transform: translateX(-50%);
+  opacity: 1;
+}
+
+/* Before an authored board is available, reuse the scene caption as the board
+ * content so the frame never collapses/disappears. */
+.premium-scene-caption {
+  z-index: 4;
+  top: auto;
+  left: 10%;
+  right: 10%;
+  bottom: clamp(75px, 17%, 130px);
+  gap: 7px;
+  color: var(--lesson-ink);
+}
+
+.premium-scene-caption small {
+  color: var(--lesson-pink);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.premium-scene-caption strong {
+  max-width: 96%;
+  color: var(--lesson-ink);
+  font-size: clamp(25px, 7.2vw, 39px);
+  line-height: 1.08;
+  white-space: normal;
+  text-align: center;
+  text-overflow: initial;
+}
+
+.premium-lesson-stage.has-board .premium-scene-caption {
+  opacity: 0;
+}
+
+.premium-board-layer {
+  z-index: 6;
+  left: 5.5%;
+  right: 5.5%;
+  bottom: 15px;
+  height: clamp(190px, 35%, 270px);
+  max-height: none;
+  overflow: hidden;
+  border: 8px solid var(--lesson-wood);
+  border-bottom-color: var(--lesson-wood-dark);
+  border-radius: 28px;
+  background: var(--lesson-paper);
+  box-shadow:
+    inset 0 0 0 3px rgba(255, 255, 255, .75),
+    0 15px 30px rgba(128, 73, 35, .14);
+}
+
+.premium-board-layer .conversation-board {
+  height: 100%;
+  max-height: none;
+  padding: 24px 25px;
+  overflow: auto;
+  border: 0;
+  border-radius: 19px;
+  background: linear-gradient(180deg, #fffefd 0%, #fffaf7 100%);
+  box-shadow: none;
+  text-align: center;
+}
+
+.premium-board-layer .conversation-board > small {
+  color: var(--lesson-pink);
+  font-weight: 900;
+}
+
+.premium-board-layer .conversation-board h2 {
+  margin: 2px 0 11px;
+  color: var(--lesson-ink);
+  font-size: clamp(28px, 8vw, 43px);
+  line-height: 1.08;
+  text-align: center;
+}
+
+.premium-board-layer .conversation-board p {
+  color: #515b70;
+  font-size: 18px;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.premium-board-layer .board-item-list {
+  margin-top: 10px;
+  text-align: right;
+}
+
+.premium-board-layer .board-item-list article {
+  padding: 9px 0;
+}
+
+.premium-board-layer .board-reveal-item strong,
+.premium-board-layer .board-compare-grid strong {
+  color: var(--lesson-pink);
+  font-size: clamp(18px, 5.2vw, 25px);
+}
+
+.premium-live-error {
+  z-index: 12;
+  left: 8%;
+  right: 8%;
+  bottom: 24px;
+}
+
+/* Controls ------------------------------------------------------------- */
+.premium-lesson-footer {
+  position: relative;
+  z-index: 10;
+  min-height: 154px;
+  padding: 8px 16px max(14px, env(safe-area-inset-bottom));
+  border-top: 0;
+  background: linear-gradient(180deg, rgba(255, 251, 247, .98), #fff 44%);
+  box-shadow: 0 -12px 30px rgba(113, 76, 49, .055);
+}
+
+/* This is the existing runtime note/status; it now takes the speech-bubble
+ * position directly above the microphone, matching the new reference. */
+.premium-live-status {
+  width: min(92%, 390px);
+  min-height: 54px;
+  margin: -25px auto 3px;
+  padding: 8px 16px;
+  position: relative;
+  z-index: 14;
+  border: 1px solid rgba(255, 210, 220, .82);
+  border-radius: 25px;
+  background: rgba(255, 255, 255, .965);
+  box-shadow: 0 9px 22px rgba(102, 63, 45, .10);
+}
+
+.premium-live-status::before {
+  content: '';
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  background:
+    linear-gradient(90deg,
+      transparent 0 3px,
+      var(--lesson-pink) 3px 7px,
+      transparent 7px 11px,
+      var(--lesson-pink) 11px 15px,
+      transparent 15px 19px,
+      var(--lesson-pink) 19px 23px,
+      transparent 23px);
+  border-radius: 6px;
+  opacity: .95;
+}
+
+.premium-status-dot {
+  display: none;
+}
+
+.premium-live-status > div {
+  gap: 1px;
+}
+
+.premium-live-status strong {
+  color: var(--lesson-ink);
+  font-size: 14px;
+}
+
+.premium-live-status small {
+  color: var(--lesson-muted);
+  font-size: 11px;
+}
+
+.premium-control-row {
+  min-height: 91px;
+  grid-template-columns: 78px 1fr 78px;
+}
+
+.premium-secondary-control {
+  width: 70px;
+  height: 58px;
+  border-color: #ece8e4;
+  border-radius: 23px;
+  background: rgba(255, 255, 255, .98);
+  color: var(--lesson-ink);
+  box-shadow: 0 8px 20px rgba(39, 47, 60, .07);
+}
+
+.premium-secondary-control span {
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.premium-main-control {
+  min-width: 92px;
+  width: 92px;
+  height: 92px;
+  border: 7px solid rgba(255, 255, 255, .92);
+  background: linear-gradient(145deg, #ff5f83, #ff285b);
+  box-shadow:
+    0 0 0 10px rgba(255, 63, 104, .10),
+    0 10px 26px rgba(255, 63, 104, .28);
+}
+
+.premium-main-control svg {
+  width: 34px;
+  height: 34px;
+}
+
+.premium-main-control span {
+  font-size: 10px;
+}
+
+.premium-main-control.is-mic:not(.is-open) {
+  border-color: rgba(255, 255, 255, .92);
+  background: #bfc3ca;
+  box-shadow: 0 0 0 10px rgba(170, 175, 184, .11);
+}
+
+.premium-main-control.is-interrupt {
+  background: #1d2736;
+}
+
+.premium-main-control.is-finish {
+  background: #2aa56a;
+}
+
+.premium-mic-meter {
+  width: 7px;
+  height: 50px;
+  background: #ece7e3;
+}
+
+.premium-mic-meter span {
+  background: var(--lesson-pink);
+}
+
+/* Desktop keeps the same composition instead of turning into an admin-like
+ * two-column layout. The lesson is intentionally a focused phone/tablet stage. */
+@media (min-width: 821px) {
+  .premium-scene-lesson {
+    max-width: 760px;
+    box-shadow: 0 0 70px rgba(35, 28, 23, .09);
+  }
+
+  .premium-lesson-character {
+    width: min(320px, 40vh);
+    height: min(320px, 40vh);
+  }
+
+  .premium-lesson-character svg {
+    width: 138%;
+    height: 138%;
+  }
+}
+
+@media (max-width: 520px) {
+  .premium-lesson-topbar {
+    grid-template-columns: 42px minmax(0, 1fr) 42px;
+    padding-inline: 12px;
+  }
+
+  .premium-top-icon {
+    width: 42px;
+    height: 42px;
+  }
+
+  .premium-lesson-progress {
+    padding-inline: 18px;
+  }
+
+  .premium-lesson-character {
+    top: 14px;
+    width: min(62vw, 250px);
+    height: min(62vw, 250px);
+    border-width: 6px;
+  }
+
+  .premium-lesson-character svg {
+    width: 146%;
+    height: 146%;
+    transform: translateY(21%);
+  }
+
+  .premium-lesson-stage::after,
+  .premium-board-layer {
+    left: 4%;
+    right: 4%;
+    bottom: 12px;
+    height: clamp(185px, 34%, 245px);
+    border-width: 6px;
+    border-radius: 24px;
+  }
+
+  .premium-board-layer .conversation-board {
+    padding: 20px 18px;
+    border-radius: 17px;
+  }
+
+  .premium-board-layer .conversation-board h2 {
+    font-size: clamp(25px, 8vw, 34px);
+  }
+
+  .premium-board-layer .conversation-board p {
+    font-size: 16px;
+  }
+
+  .premium-scene-caption {
+    left: 8%;
+    right: 8%;
+    bottom: clamp(70px, 16%, 105px);
+  }
+
+  .premium-scene-caption strong {
+    font-size: clamp(23px, 7vw, 31px);
+  }
+
+  .premium-lesson-footer {
+    min-height: 148px;
+    padding-inline: 12px;
+  }
+
+  .premium-live-status {
+    width: min(94%, 360px);
+    min-height: 52px;
+    margin-top: -22px;
+  }
+
+  .premium-control-row {
+    grid-template-columns: 72px 1fr 72px;
+    min-height: 88px;
+  }
+
+  .premium-secondary-control {
+    width: 66px;
+    height: 56px;
+  }
+
+  .premium-main-control {
+    width: 86px;
+    min-width: 86px;
+    height: 86px;
+    border-width: 6px;
+    box-shadow:
+      0 0 0 9px rgba(255, 63, 104, .10),
+      0 10px 24px rgba(255, 63, 104, .25);
+  }
+}
+
+@media (max-height: 720px) {
+  .premium-lesson-character {
+    width: min(54vw, 205px);
+    height: min(54vw, 205px);
+  }
+
+  .premium-lesson-stage::after,
+  .premium-board-layer {
+    height: 190px;
+  }
+
+  .premium-lesson-footer {
+    min-height: 140px;
+  }
+}

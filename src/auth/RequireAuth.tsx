@@ -1,0 +1,97 @@
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
+import { OttiMark } from '../character/otti/OttiMark';
+import { hydrateCloudLearnerState, isCloudHydratedForUser } from '../cloud/bootstrap';
+import { readLearnerProfile, type LearnerProfile } from '../product/profile';
+import { authClient } from './client';
+
+function EnglottiLoader({ label = 'جاري التحميل' }: { label?: string }) {
+  return (
+    <section className="englotti-cloud-loader" dir="rtl" role="status" aria-label={label}>
+      <div className="englotti-cloud-loader-mark" aria-hidden="true"><OttiMark /></div>
+      <div className="englotti-cloud-loader-dots" aria-hidden="true"><span /><span /><span /></div>
+    </section>
+  );
+}
+
+function AuthenticatedGate({ children, requireProfile }: { children: ReactNode; requireProfile: boolean }) {
+  const location = useLocation();
+  const session = authClient.useSession();
+  const userId = session.data?.user?.id ?? null;
+  const [hydratedUserId, setHydratedUserId] = useState<string | null>(null);
+  const [profile, setProfile] = useState<LearnerProfile | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [retryNonce, setRetryNonce] = useState(0);
+
+  const next = useMemo(() => `${location.pathname}${location.search}`, [location.pathname, location.search]);
+
+  useEffect(() => {
+    if (!userId) {
+      setHydratedUserId(null);
+      setProfile(null);
+      setError(null);
+      return;
+    }
+    if (isCloudHydratedForUser(userId)) {
+      setProfile(readLearnerProfile());
+      setHydratedUserId(userId);
+      setError(null);
+      return;
+    }
+    let cancelled = false;
+    setError(null);
+    setHydratedUserId(null);
+    hydrateCloudLearnerState(userId)
+      .then((result) => {
+        if (cancelled) return;
+        setProfile(result.profile);
+        setHydratedUserId(userId);
+      })
+      .catch((reason) => {
+        if (cancelled) return;
+        setError(reason instanceof Error ? reason.message : 'تعذر تحميل بيانات الحساب.');
+      });
+    return () => { cancelled = true; };
+  }, [userId, retryNonce]);
+
+  if (session.isPending) {
+    return <EnglottiLoader label="بنفتح حسابك" />;
+  }
+
+  if (!session.data?.user) {
+    return <Navigate replace to={`/auth/sign-in?next=${encodeURIComponent(next)}`} />;
+  }
+
+  if (error) {
+    return (
+      <section className="v2-empty-screen" dir="rtl">
+        <h1>مش قادرين نحمل حسابك دلوقتي</h1>
+        <p>{error}</p>
+        <button type="button" className="v2-primary-button" onClick={() => setRetryNonce((value) => value + 1)}>حاول تاني</button>
+      </section>
+    );
+  }
+
+  if (hydratedUserId !== userId) {
+    return <EnglottiLoader label="بنجهز بياناتك" />;
+  }
+
+  // React Router can keep this gate mounted while switching from onboarding
+  // (where a profile is optional) to the first protected lesson. The state above
+  // may still contain the pre-onboarding `null` profile even though onboarding
+  // has just persisted the profile and refreshed the local cloud cache. Read the
+  // authenticated user's hydrated cache at decision time so we never bounce a
+  // successfully onboarded learner back to step one.
+  const effectiveProfile = profile ?? (userId && isCloudHydratedForUser(userId) ? readLearnerProfile() : null);
+
+  if (requireProfile && !effectiveProfile && location.pathname !== '/onboarding') {
+    return <Navigate replace to="/onboarding" />;
+  }
+
+  return children;
+}
+
+export function RequireAuth({ children, requireProfile = true }: { children: ReactNode; requireProfile?: boolean }) {
+  if (import.meta.env.VITE_VISUAL_QA === '1') return children;
+  return <AuthenticatedGate requireProfile={requireProfile}>{children}</AuthenticatedGate>;
+}

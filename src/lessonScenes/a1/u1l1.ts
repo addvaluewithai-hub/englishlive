@@ -1,0 +1,130 @@
+import type { SceneLessonDefinition } from '../types';
+
+export const A1_U1_L01_SCENE_LESSON: SceneLessonDefinition = {
+  id: 'a1-u1-l01-hello-im',
+  levelId: 'a1',
+  unitId: 'a1-u1-first-contact',
+  unitTitle: 'First Contact: Me and You',
+  order: 1,
+  title: "Hello. I'm …",
+  subtitle: 'Greet someone, exchange names and handle a simple “How are you?” exchange.',
+  performance: 'Greet, exchange names, and handle basic wellbeing/politeness in a first-contact exchange.',
+  coreLanguage: ['Hello / Hi', 'Good morning', "I'm …", 'My name is …', "What's your name?", 'How are you?', "I'm good, thanks."],
+  boundaries: [
+    'Use only the minimum first-/second-person be needed for this exchange; do not teach a full verb-to-be table.',
+    'Do not introduce spelling, country, job, age, or contact details.',
+    'The final scene should feel like a real first meeting, not a checklist.',
+  ],
+  source: {
+    repository: 'addvaluewithai-hub/english-course',
+    branch: 'curriculum/level-source-of-truth-v1',
+    path: 'curriculum/levels/a1/design-review/07-lesson-briefs/lesson-briefs.md',
+    sourceLessonId: 'U1-L01',
+  },
+  scenes: [
+    {
+      id: 'greet',
+      title: 'Say hello',
+      goal: 'The learner can use a simple greeting naturally.',
+      teaching: {
+        explainInArabic: ['اشرح ببساطة إن Hi وHello تحيتان عاديتان، وإن Good morning للصباح.'],
+        englishTargets: ['Hi.', 'Hello.', 'Good morning.'],
+        constraints: ['Keep this very short. Do not explain grammar.'],
+      },
+      board: { type: 'examples', title: 'Say hello', items: [{ title: 'Hi' }, { title: 'Hello' }, { title: 'Good morning', body: 'in the morning' }] },
+      interaction: {
+        kind: 'elicitation',
+        setup: 'Greet the learner and ask them to greet you back naturally.',
+        learnerTask: 'Greet me.',
+        teacherMoves: ['Model once if needed, then let the learner answer.'],
+        supportLadder: ['قل بالعربي: سلّم عليا بالإنجليزي.', 'Point to one greeting on the board.', 'Model one greeting and ask for a fresh reply.'],
+      },
+    },
+    {
+      id: 'say-name-im',
+      title: "Say your name with I'm",
+      goal: "The learner can introduce themself using I'm + name.",
+      teaching: {
+        explainInArabic: ["اشرح إن I'm + الاسم طريقة طبيعية وسريعة للتعريف بنفسك، وإن I'm هي I am بشكل مختصر من غير شرح قواعد طويل."],
+        englishTargets: ["I'm Reem."],
+        constraints: ['Use the teacher name in your example, never the learner profile name.'],
+      },
+      board: { type: 'note', title: "I'm ___", body: 'I am → I’m' },
+      interaction: {
+        kind: 'micro_practice',
+        setup: 'Introduce yourself with your own teacher name, then ask the learner to do the same.',
+        learnerTask: 'Tell me your name using I’m.',
+        supportLadder: ['قل بالعربي: قول أنا + اسمك.', "Give only the starter 'I'm…'", 'Model once with the teacher name, then retry.'],
+      },
+    },
+    {
+      id: 'say-name-my-name-is',
+      title: 'Another way to say your name',
+      goal: 'The learner can recognise and use My name is + name as an alternative introduction.',
+      teaching: {
+        explainInArabic: ['اشرح إن My name is… طريقة تانية طبيعية لقول الاسم، ومش لازم يفضلها عن I’m.'],
+        englishTargets: ['My name is Reem.'],
+        constraints: ['Do not compare grammar structures beyond the practical meaning.'],
+      },
+      board: { type: 'note', title: 'My name is ___' },
+      interaction: {
+        kind: 'micro_practice',
+        setup: 'Ask the learner to introduce themself once with My name is.',
+        learnerTask: 'Say your name with My name is.',
+        supportLadder: ['Point to the board.', "Give 'My name is…' and pause.", 'Model once, then ask for their own name.'],
+      },
+    },
+    {
+      id: 'ask-name',
+      title: "Ask the other person's name",
+      goal: "The learner can ask What's your name? as a real question.",
+      teaching: {
+        explainInArabic: ["اشرح إن What's your name? هي الجملة الأساسية هنا لما تسأل حد عن اسمه."],
+        englishTargets: ["What's your name?"],
+        constraints: ['Do not introduce surname or spelling questions.'],
+      },
+      board: { type: 'note', title: "What's your name?" },
+      interaction: {
+        kind: 'elicitation',
+        setup: 'Tell the learner that this time they ask you, then wait.',
+        learnerTask: 'Ask me my name.',
+        teacherMoves: ['When they ask successfully, answer naturally with your teacher name.'],
+        supportLadder: ['قل بالعربي: اسألني أنا اسمي إيه.', "Give only 'What's…'", 'Model the question once, then create an immediate retry.'],
+      },
+    },
+    {
+      id: 'how-are-you',
+      title: 'Handle “How are you?”',
+      goal: 'The learner can answer How are you? with a simple wellbeing answer and basic politeness.',
+      teaching: {
+        explainInArabic: ['اشرح إن How are you? سؤال بسيط عن الحال، وقدّم إجابة واحدة أو اتنين فقط مع thanks.'],
+        englishTargets: ['How are you?', "I'm good, thanks.", "I'm fine, thank you."],
+        constraints: ['Do not open a feelings vocabulary list.', 'Accept another simple natural wellbeing answer.'],
+      },
+      board: { type: 'examples', title: 'How are you?', items: [{ title: "I'm good, thanks." }, { title: "I'm fine, thank you." }] },
+      interaction: {
+        kind: 'micro_practice',
+        setup: 'Ask How are you? naturally and let the learner answer as themself.',
+        learnerTask: 'Answer How are you? politely.',
+        supportLadder: ['Repeat the question slowly.', "Give only 'I'm…'", 'Model one answer, then ask again.'],
+      },
+    },
+    {
+      id: 'first-meeting',
+      title: 'Have a short first meeting',
+      goal: 'The learner can use the lesson language in one short first-contact conversation with reduced support.',
+      teaching: {
+        explainInArabic: ['اعمل setup قصير فقط: تخيل إننا بنتقابل لأول مرة. اتكلم معايا بشكل طبيعي باستخدام اللي اتعلمناه.'],
+        englishTargets: ['Greeting', 'Self-introduction', "What's your name?", 'How are you?', 'Polite answer'],
+        constraints: ['No complete model before the first attempt.', 'Do not add new topics.', 'Let the conversation breathe.'],
+      },
+      interaction: {
+        kind: 'fresh_transfer',
+        setup: 'Roleplay a new person meeting the learner before class. Keep it short and believable.',
+        learnerTask: 'Have a simple first meeting with me.',
+        teacherMoves: ['Respond naturally.', 'Create a natural opening for any important lesson function that has not appeared yet.'],
+        supportLadder: ['Give a short Arabic functional cue.', 'Give the first word of the needed chunk.', 'Model one missing phrase, then reopen that moment naturally.'],
+      },
+    },
+  ],
+};

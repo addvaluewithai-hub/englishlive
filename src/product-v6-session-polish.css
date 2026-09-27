@@ -1,0 +1,353 @@
+/* Screenshot-driven finishing pass for live lesson and Free Speak session. */
+
+/* Keep lesson controls in familiar mobile positions: close left, overflow right. */
+.premium-lesson-topbar,
+.premium-lesson-progress {
+  direction: ltr;
+}
+
+.premium-lesson-title {
+  direction: rtl;
+}
+
+.premium-scene-caption strong {
+  unicode-bidi: plaintext;
+}
+
+/* Completion must always have scroll clearance above the persistent nav. */
+.v2-complete-screen {
+  padding: 18px 18px 132px;
+}
+
+/* Free Speak should feel like the same product, not the old dark developer shell. */
+.is-free-speak-session,
+.is-free-speak-session .app-main-session {
+  background: #fffaf7;
+}
+
+.is-free-speak-session .app-header {
+  min-height: 68px;
+  padding: max(10px, env(safe-area-inset-top)) max(18px, calc((100vw - 1120px) / 2 + 18px)) 10px;
+  border-bottom: 1px solid #ebe7e3;
+  background: rgba(255, 253, 251, .97);
+  color: #111827;
+  backdrop-filter: blur(16px);
+}
+
+.is-free-speak-session .brand {
+  color: #111827;
+  font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 19px;
+  font-weight: 900;
+}
+
+.is-free-speak-session .brand-mark {
+  width: 38px;
+  height: 38px;
+  border-radius: 13px;
+  background: #ff3f68;
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(255, 63, 104, .2);
+  font-family: inherit;
+  font-size: 18px;
+}
+
+.is-free-speak-session .quiet-link {
+  color: #6f7480;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.free-speak-session {
+  width: min(100%, 1120px);
+  min-height: calc(100dvh - 68px);
+  margin: 0 auto;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  background: #fffaf7;
+  color: #111827;
+  font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.free-speak-session .session-stage {
+  min-height: calc(100dvh - 68px);
+  border-right: 1px solid #ebe7e3;
+  background: #fff4ee;
+}
+
+.free-speak-session .session-stage::before {
+  width: 4px;
+  background: #ff3f68;
+  opacity: .8;
+}
+
+.free-speak-session .session-stage-meta {
+  min-height: 74px;
+  padding: 18px clamp(20px, 4vw, 36px);
+  align-items: center;
+  border-bottom: 1px solid #eee6e0;
+  background: rgba(255, 253, 251, .76);
+}
+
+.free-speak-session .session-stage-meta span {
+  color: #8b7e76;
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.free-speak-session .session-stage-meta strong {
+  color: #111827;
+  font-family: inherit;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.free-speak-session .session-stage-body {
+  background: #fff4ee;
+}
+
+.free-speak-session .session-character-host {
+  padding: 24px 24px 8px;
+}
+
+.free-speak-session .session-character-host svg {
+  width: min(72%, 420px);
+  height: min(94%, 620px);
+  max-height: 620px;
+  filter: drop-shadow(0 18px 22px rgba(68, 45, 30, .11));
+}
+
+.free-speak-session .session-stage-footer {
+  min-height: 104px;
+  padding: 16px clamp(20px, 4vw, 34px) max(16px, env(safe-area-inset-bottom));
+  grid-template-columns: minmax(130px, auto) minmax(260px, 390px);
+  gap: 24px;
+  border-top: 1px solid #ebe7e3;
+  background: rgba(255, 255, 255, .97);
+  color: #111827;
+}
+
+.free-speak-session .session-partner {
+  gap: 9px;
+}
+
+.free-speak-session .session-partner > strong {
+  color: #111827;
+  font-family: inherit;
+  font-size: 19px;
+  font-weight: 900;
+}
+
+.free-speak-session .live-status {
+  color: #777c85;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.free-speak-session .status-listening { color: #21845a; }
+.free-speak-session .status-speaking { color: #e72f59; }
+
+.free-speak-session .session-control-dock {
+  grid-template-columns: minmax(90px, 1fr) auto;
+  gap: 13px;
+}
+
+.free-speak-session .mic-meter {
+  height: 5px;
+  background: #f0e7e3;
+}
+
+.free-speak-session .mic-meter span {
+  background: #ff3f68;
+}
+
+.free-speak-session .session-control-dock .button.primary,
+.free-speak-session .stop-conversation {
+  min-height: 50px;
+  padding: 0 20px;
+  border-radius: 16px;
+  font-family: inherit;
+  font-weight: 900;
+}
+
+.free-speak-session .session-control-dock .button.primary {
+  border-color: #ff3f68;
+  background: #ff3f68;
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(255, 63, 104, .2);
+}
+
+.free-speak-session .stop-conversation {
+  border-color: #f1cbd4;
+  background: #fff5f7;
+  color: #e72f59;
+}
+
+.free-speak-session .conversation-sidebar {
+  min-height: calc(100dvh - 68px);
+  padding: 28px 24px max(28px, env(safe-area-inset-bottom));
+  gap: 20px;
+  border-left: 0;
+  background: #fffdfb;
+  color: #111827;
+}
+
+.free-speak-session .conversation-sidebar .eyebrow {
+  color: #f72f5b;
+  font-size: 11px;
+  letter-spacing: .04em;
+}
+
+.free-speak-session .conversation-sidebar-heading h2 {
+  margin: 7px 0 7px;
+  color: #111827;
+  font-family: inherit;
+  font-size: 30px;
+  font-weight: 900;
+  line-height: 1.08;
+  letter-spacing: -.035em;
+}
+
+.free-speak-session .conversation-sidebar-heading > p:last-child {
+  color: #6f7480;
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.free-speak-session .transcript-stack {
+  gap: 10px;
+}
+
+.free-speak-session .transcript-card {
+  padding: 15px 16px;
+  border: 1px solid #ebe7e3;
+  border-radius: 17px;
+  background: #fff;
+  box-shadow: 0 6px 18px rgba(35, 28, 23, .035);
+}
+
+.free-speak-session .transcript-card small {
+  color: #9297a1;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .04em;
+}
+
+.free-speak-session .transcript-card p {
+  margin: 6px 0 0;
+  color: #30343b;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.free-speak-session .partner-transcript {
+  border-left: 1px solid #ebe7e3;
+  border-right: 3px solid #ff9ab0;
+}
+
+.free-speak-session .live-error,
+.free-speak-session .session-next-step,
+.free-speak-session .memory-consent-card {
+  border: 1px solid #f0dfe3;
+  border-radius: 18px;
+  background: #fff7f8;
+  color: #30343b;
+}
+
+.free-speak-session .session-next-step {
+  padding: 16px;
+}
+
+.free-speak-session .session-next-step > p,
+.free-speak-session .memory-consent-card > p {
+  color: #6f7480;
+  line-height: 1.55;
+}
+
+.free-speak-session .session-next-step .button.primary {
+  background: #ff3f68;
+  color: #fff;
+}
+
+@media (max-width: 820px) {
+  .is-free-speak-session .app-header {
+    min-height: 64px;
+    padding-inline: 16px;
+  }
+
+  .free-speak-session {
+    min-height: calc(100dvh - 64px);
+    grid-template-columns: 1fr;
+  }
+
+  .free-speak-session .session-stage {
+    min-height: calc(100dvh - 64px);
+    height: calc(100dvh - 64px);
+    border-right: 0;
+  }
+
+  .free-speak-session .session-stage-meta {
+    min-height: 64px;
+    padding: 12px 18px;
+  }
+
+  .free-speak-session .session-stage-meta span {
+    max-width: 62%;
+  }
+
+  .free-speak-session .session-character-host {
+    padding: 12px 20px 4px;
+  }
+
+  .free-speak-session .session-character-host svg {
+    width: min(82vw, 360px);
+    height: min(94%, 520px);
+  }
+
+  .free-speak-session .session-stage-footer {
+    min-height: 124px;
+    padding: 13px 18px max(14px, env(safe-area-inset-bottom));
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .free-speak-session .session-partner {
+    justify-content: space-between;
+  }
+
+  .free-speak-session .session-control-dock {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .free-speak-session .session-control-dock .button {
+    width: 100%;
+  }
+
+  .free-speak-session .conversation-sidebar {
+    min-height: 0;
+    padding: 28px 18px 40px;
+    border-top: 1px solid #ebe7e3;
+  }
+
+  .free-speak-session .conversation-sidebar-heading h2 {
+    font-size: 27px;
+  }
+}
+
+@media (max-width: 520px) {
+  .v2-complete-screen {
+    padding-inline: 14px;
+  }
+
+  .free-speak-session .session-stage-meta {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .free-speak-session .session-character-host svg {
+    width: min(88vw, 340px);
+  }
+}

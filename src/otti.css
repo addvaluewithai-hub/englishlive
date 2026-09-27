@@ -1,0 +1,282 @@
+/* Otti is the PixiLive `octo` character vendored from feat/character-engine @ c0fa7ca.
+   Keep this file presentation-only: anatomy and motion live in the pinned engine files. */
+
+.otti-svg,
+.otti-mark,
+.otti-mark .otti-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.otti-character-portrait {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: end center;
+  overflow: visible;
+}
+
+.otti-character-portrait .otti-svg {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 16px 18px rgba(77, 37, 52, .08));
+}
+
+/* Brand mark: still the real Octo render, simply framed as a tiny mark. */
+.v2-brand-mark,
+.brand-mark,
+.v2-onboarding-brand > span,
+.qa-landing-brand > span,
+.is-free-speak-session .brand-mark {
+  padding: 2px;
+  overflow: hidden;
+  border: 1px solid #f6dbe2;
+  background: #fff3f6;
+  color: inherit;
+  box-shadow: 0 7px 18px rgba(255, 63, 104, .12);
+}
+
+.v2-brand-mark .otti-mark,
+.brand-mark .otti-mark,
+.v2-onboarding-brand .otti-mark,
+.qa-landing-brand .otti-mark {
+  width: 100%;
+  height: 100%;
+}
+
+.v2-empty-mark {
+  padding: 8px;
+  background: #fff3f6;
+  border: 1px solid #f5d8e0;
+}
+
+.v2-empty-mark .otti-mark { width: 100%; height: 100%; }
+
+/* Landing: full mascot silhouette, not a human head crop. */
+.qa-landing-otti-card .qa-landing-teacher-art {
+  height: 350px;
+  padding: 18px 34px 0;
+  place-items: end center;
+  background: #fff1ed;
+}
+
+.qa-landing-otti-card .otti-character-portrait,
+.qa-landing-otti-card .otti-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.qa-landing-final-mark {
+  width: 58px;
+  height: 58px;
+  filter: drop-shadow(0 8px 16px rgba(255,63,104,.2));
+}
+
+/* Otti gets the primary slot; alternative human teachers stay available. */
+.v2-teacher-card.is-otti,
+.v2-character-card.is-otti {
+  grid-column: 1 / -1;
+  border-color: #f4ccd6;
+  background: #fff8fa;
+}
+
+.v2-teacher-card.is-otti {
+  grid-template-columns: minmax(126px, .72fr) minmax(0, 1.28fr);
+  grid-template-rows: auto auto;
+  align-items: center;
+  min-height: 184px;
+  padding: 10px 18px 14px;
+  text-align: right;
+}
+
+.v2-teacher-card.is-otti .v2-teacher-check { z-index: 4; }
+
+.v2-teacher-card.is-otti .otti-character-portrait {
+  grid-row: 1 / span 2;
+  height: 164px;
+  place-items: center;
+}
+
+.v2-teacher-card.is-otti .otti-svg {
+  width: min(100%, 190px);
+  height: 100%;
+}
+
+.v2-teacher-card.is-otti > strong {
+  align-self: end;
+  font-size: 24px;
+}
+
+.v2-teacher-card.is-otti > small {
+  align-self: start;
+  max-width: 330px;
+}
+
+.v2-character-card.is-otti {
+  display: grid;
+  grid-template-columns: minmax(170px, .72fr) minmax(0, 1.28fr);
+  grid-template-rows: 1fr auto;
+  align-items: center;
+  min-height: 220px;
+  text-align: right;
+}
+
+.v2-character-card.is-otti .v2-character-art {
+  grid-row: 1 / span 2;
+  height: 220px;
+  background: #fff2f5;
+}
+
+.v2-character-card.is-otti .otti-character-portrait {
+  width: 100%;
+  height: 100%;
+  padding: 10px 8px 0;
+}
+
+.v2-character-card.is-otti .otti-svg {
+  width: min(100%, 230px);
+  height: 100%;
+}
+
+.v2-character-card.is-otti > strong {
+  align-self: end;
+  margin: 0;
+  padding: 20px 20px 0;
+  font-size: 27px;
+}
+
+.v2-character-card.is-otti > span:not(.v2-character-check) {
+  align-self: start;
+  min-height: 0;
+  padding: 6px 20px 20px;
+  font-size: 14px;
+}
+
+/* Home companion. */
+.v2-welcome-panel.has-otti {
+  grid-template-columns: minmax(0, 1fr) 178px;
+  background: radial-gradient(circle at 18% 10%, #fff 0, #fff7f9 46%, #ffe8ee 100%);
+}
+
+.v2-welcome-panel.has-otti .v2-home-character {
+  height: 184px;
+  overflow: visible;
+}
+
+.v2-welcome-panel.has-otti .otti-character-portrait,
+.v2-welcome-panel.has-otti .otti-svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* Live lesson / Free Speak: only these surfaces mount OctopusMotion. */
+.character-host[data-renderer="otti-svg"] {
+  overflow: visible;
+}
+
+.character-host[data-renderer="otti-svg"] > svg {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 20px 18px rgba(75, 38, 50, .11));
+}
+
+.premium-lesson-character[data-renderer="otti-svg"] {
+  padding: 30px 24px 6px;
+}
+
+.premium-lesson-character[data-renderer="otti-svg"] > svg {
+  width: min(80vw, 460px);
+  height: min(96%, 570px);
+  max-height: none;
+}
+
+.free-speak-session .session-character-host[data-renderer="otti-svg"] {
+  padding: 26px 28px 6px;
+}
+
+.free-speak-session .session-character-host[data-renderer="otti-svg"] > svg,
+.session-character-host[data-renderer="otti-svg"] > svg {
+  width: min(88%, 460px);
+  height: auto;
+  max-height: 96%;
+}
+
+/* Lesson complete: the real OctopusMotion rig runs the authored celebrate pose. */
+.has-otti-celebration .v2-complete-celebration {
+  height: 240px;
+  overflow: visible;
+}
+
+.has-otti-celebration .v2-complete-character {
+  width: min(280px, 72vw);
+  height: 225px;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.has-otti-celebration .v2-complete-character .otti-character-portrait,
+.has-otti-celebration .v2-complete-character .otti-svg {
+  width: 100% !important;
+  height: 100% !important;
+  overflow: visible;
+}
+
+.has-otti-celebration .v2-complete-character .otti-svg {
+  filter: drop-shadow(0 14px 16px rgba(76, 39, 51, .09));
+}
+
+@media (max-width: 620px) {
+  .qa-landing-otti-card .qa-landing-teacher-art {
+    height: 278px;
+    padding: 10px 22px 0;
+  }
+
+  .v2-teacher-card.is-otti {
+    grid-template-columns: 120px minmax(0, 1fr);
+    min-height: 162px;
+    padding-inline: 13px;
+  }
+
+  .v2-teacher-card.is-otti .otti-character-portrait { height: 142px; }
+
+  .v2-character-card.is-otti {
+    grid-template-columns: 138px minmax(0, 1fr);
+    min-height: 180px;
+  }
+
+  .v2-character-card.is-otti .v2-character-art { height: 180px; }
+  .v2-character-card.is-otti > strong { padding-inline: 14px; font-size: 23px; }
+  .v2-character-card.is-otti > span:not(.v2-character-check) { padding-inline: 14px; font-size: 12.5px; }
+
+  .v2-welcome-panel.has-otti {
+    grid-template-columns: minmax(0, 1fr) 142px;
+    padding-left: 14px;
+  }
+
+  .v2-welcome-panel.has-otti .v2-home-character { height: 160px; }
+
+  .premium-lesson-character[data-renderer="otti-svg"] {
+    padding: 38px 18px 4px;
+  }
+
+  .premium-lesson-character[data-renderer="otti-svg"] > svg {
+    width: min(94vw, 420px);
+    height: min(94%, 540px);
+  }
+
+  .free-speak-session .session-character-host[data-renderer="otti-svg"] {
+    padding: 20px 18px 4px;
+  }
+
+  .free-speak-session .session-character-host[data-renderer="otti-svg"] > svg {
+    width: min(94vw, 400px);
+    max-height: 94%;
+  }
+
+  .has-otti-celebration .v2-complete-celebration { height: 205px; }
+  .has-otti-celebration .v2-complete-character { width: min(238px, 68vw); height: 192px; }
+}
