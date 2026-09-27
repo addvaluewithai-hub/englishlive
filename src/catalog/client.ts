@@ -128,6 +128,10 @@ function catalogFromSessionCache() {
 }
 
 export async function loadProductCatalog(): Promise<ProductCatalog> {
+  if (import.meta.env.VITE_VISUAL_QA === '1') {
+    memoryCatalog = localFallbackCatalog();
+    return memoryCatalog;
+  }
   if (memoryCatalog?.source === 'neon') return memoryCatalog;
   const cached = catalogFromSessionCache();
   if (cached) {
