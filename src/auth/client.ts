@@ -10,6 +10,7 @@ export const authClient = createAuthClient(NEON_AUTH_URL, {
 });
 
 export async function getAuthJwt() {
-  const token = await authClient.getJwtToken();
+  const session = await authClient.getSession();
+  const token = session.data?.session?.token;
   return typeof token === 'string' && token.length > 0 ? token : null;
 }
