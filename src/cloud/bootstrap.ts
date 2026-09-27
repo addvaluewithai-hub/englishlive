@@ -1,6 +1,8 @@
-import { fetchCloudProfile, fetchCloudProgress } from './userData';
+import { hasCachedPublishedCatalog } from '../catalog/cache';
+import { loadProductCatalog } from '../catalog/client';
 import { replaceLearnerProfileCache, type LearnerProfile } from '../product/profile';
 import { replaceProductCourseProgressCache } from '../productV2/progress';
+import { fetchCloudProfile, fetchCloudProgress } from './userData';
 
 const HYDRATED_USER_KEY = 'englishlive.cloud-hydrated-user.v1';
 
@@ -9,7 +11,9 @@ export interface CloudBootstrapResult {
 }
 
 export function isCloudHydratedForUser(userId: string) {
-  return typeof window !== 'undefined' && window.sessionStorage.getItem(HYDRATED_USER_KEY) === userId;
+  return typeof window !== 'undefined'
+    && window.sessionStorage.getItem(HYDRATED_USER_KEY) === userId
+    && hasCachedPublishedCatalog();
 }
 
 export function markCloudHydratedForUser(userId: string) {
@@ -21,7 +25,11 @@ export function clearCloudHydrationMarker() {
 }
 
 export async function hydrateCloudLearnerState(userId?: string): Promise<CloudBootstrapResult> {
-  const profile = await fetchCloudProfile();
+  const [, profile] = await Promise.all([
+    loadProductCatalog(),
+    fetchCloudProfile(),
+  ]);
+
   if (!profile) {
     replaceLearnerProfileCache(null);
     replaceProductCourseProgressCache(null);
