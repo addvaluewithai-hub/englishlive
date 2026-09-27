@@ -44,7 +44,7 @@ export const onRequestGet = async ({ env }: PagesContext) => {
         revisionNumber: Number(row.revision_number),
         content: row.content,
       })),
-    }, 200, 'public, max-age=15, stale-while-revalidate=120');
+    }, 200, 'no-store');
   } catch (reason) {
     console.error('[content/characters]', reason);
     return jsonResponse({ error: 'Unable to load published characters.' }, 500);
