@@ -95,9 +95,14 @@ export function saveLearnerProfile(profile: LearnerProfile) {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
 }
 
-export function clearLearnerProfile() {
+export function replaceLearnerProfileCache(profile: LearnerProfile | null) {
   if (typeof window === 'undefined') return;
-  window.localStorage.removeItem(STORAGE_KEY);
+  if (!profile) window.localStorage.removeItem(STORAGE_KEY);
+  else window.localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
+}
+
+export function clearLearnerProfile() {
+  replaceLearnerProfileCache(null);
 }
 
 export function goalLabel(goal: LearningGoal) {
