@@ -8,6 +8,8 @@ export interface ProductLessonProgress {
   startedAt?: string;
   completedAt?: string;
   updatedAt: string;
+  status?: 'not_started' | 'in_progress' | 'completed';
+  attemptCount?: number;
 }
 
 export interface ProductCourseProgress {
@@ -45,6 +47,16 @@ function save(progress: ProductCourseProgress) {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
 }
 
+export function replaceProductCourseProgressCache(progress: ProductCourseProgress | null) {
+  if (typeof window === 'undefined') return;
+  if (!progress) {
+    window.localStorage.removeItem(STORAGE_KEY);
+    window.sessionStorage.removeItem(COMPLETION_HANDOFF_KEY);
+    return;
+  }
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...progress, updatedAt: new Date().toISOString() }));
+}
+
 export function markProductLessonStarted(lessonId: string) {
   const progress = readProductCourseProgress();
   const previous = progress.lessons[lessonId];
@@ -52,6 +64,8 @@ export function markProductLessonStarted(lessonId: string) {
     lessonId,
     startedAt: previous?.startedAt ?? new Date().toISOString(),
     ...(previous?.completedAt ? { completedAt: previous.completedAt } : {}),
+    status: previous?.completedAt ? 'completed' : 'in_progress',
+    attemptCount: previous?.attemptCount,
     updatedAt: new Date().toISOString(),
   };
   save(progress);
@@ -65,6 +79,8 @@ export function markProductLessonCompleted(lessonId: string) {
     lessonId,
     startedAt: previous?.startedAt ?? new Date().toISOString(),
     completedAt: previous?.completedAt ?? new Date().toISOString(),
+    status: 'completed',
+    attemptCount: previous?.attemptCount,
     updatedAt: new Date().toISOString(),
   };
   save(progress);
