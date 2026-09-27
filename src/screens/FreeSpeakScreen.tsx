@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { CharacterPortrait } from '../character/CharacterPortrait';
-import { getCharacterDefinition } from '../character/registry';
+import { publishedCharacterById, usePublishedCharacters } from '../character/catalog';
 import { ProductIcon } from '../components/ProductIcon';
 import { FREE_SPEAK_MODES } from '../freeSpeak/modes';
 import { readLearnerProfile } from '../product/profile';
@@ -14,6 +14,7 @@ const modeCopy: Record<string, { title: string; body: string }> = {
 
 export function FreeSpeakScreen() {
   const profile = readLearnerProfile();
+  const { characters } = usePublishedCharacters();
 
   if (!profile) {
     return (
@@ -25,7 +26,7 @@ export function FreeSpeakScreen() {
     );
   }
 
-  const character = getCharacterDefinition(profile.characterId);
+  const character = publishedCharacterById(characters, profile.characterId);
 
   return (
     <section className="v2-speak-screen" dir="rtl">
