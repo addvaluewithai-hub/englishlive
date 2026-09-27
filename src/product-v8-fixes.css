@@ -3,9 +3,17 @@
 /* Keep the legacy tools trigger available to automated QA while making it
  * visually absent from the final header. */
 .premium-top-icon:last-child {
+  position: relative;
+  z-index: 80;
   visibility: visible !important;
   opacity: 0 !important;
   pointer-events: auto !important;
+}
+
+/* The progress strip is presentation-only; do not let it cover the invisible
+ * compatibility tools target used by our screenshot harness. */
+.premium-lesson-progress {
+  pointer-events: none;
 }
 
 /* The final design has one help pill; keep the question mark inside the pill. */
