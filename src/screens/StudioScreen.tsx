@@ -1,48 +1,34 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ProductIcon } from '../components/ProductIcon';
-import {
-  createStudioDraft,
-  duplicateStudioEntity,
-  loadStudioOverview,
-  publishStudioDraft,
-  saveStudioDraft,
-} from '../studio/client';
-import type { StudioEntity, StudioOverview, StudioRevision } from '../studio/types';
+import { createStudioDraft, loadStudioOverview, publishStudioDraft, saveStudioDraft } from '../studio/client';
+import type { StudioEntity, StudioEntityType, StudioOverview, StudioRevision } from '../studio/types';
 
 type StudioTab = 'lesson' | 'character' | 'policy';
 
 function entityLabel(entity: StudioEntity) {
   const content = entity.draft?.content ?? entity.published?.content ?? {};
-  if (entity.type === 'lesson') return typeof content.title === 'string' && content.title.trim() ? content.title : entity.code;
-  if (entity.type === 'character') return typeof content.displayName === 'string' && content.displayName.trim() ? content.displayName : entity.slug;
+  if (entity.type === 'lesson') {
+    return typeof content.title === 'string' && content.title.trim() ? content.title : `${entity.code} · ${entity.slug}`;
+  }
+  if (entity.type === 'character') {
+    return typeof content.displayName === 'string' && content.displayName.trim() ? content.displayName : entity.slug;
+  }
   return entity.key;
 }
 
 function entitySubline(entity: StudioEntity) {
   if (entity.type === 'lesson') return `${entity.levelCode} · ${entity.unitCode} · ${entity.code}`;
-  if (entity.type === 'character') return entity.slug;
+  if (entity.type === 'character') return entity.rendererKey;
   return 'Global teaching policy';
+}
+
+function revisionLabel(revision: StudioRevision | null) {
+  return revision ? `r${revision.revisionNumber}` : '—';
 }
 
 function pretty(value: unknown) {
   return JSON.stringify(value ?? {}, null, 2);
-}
-
-function asRecord(value: unknown): Record<string, unknown> {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
-}
-
-function text(value: unknown) {
-  return typeof value === 'string' ? value : '';
-}
-
-function listText(value: unknown) {
-  return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string').join('\n') : '';
-}
-
-function splitLines(value: string) {
-  return value.split('\n').map((item) => item.trim()).filter(Boolean);
 }
 
 function previewBlock(entity: StudioEntity, content: Record<string, unknown>) {
@@ -50,22 +36,28 @@ function previewBlock(entity: StudioEntity, content: Record<string, unknown>) {
     const scenes = Array.isArray(content.scenes) ? content.scenes : [];
     return (
       <div className="studio-preview-card">
-        <span className="studio-preview-kicker">معاينة الدرس</span>
-        <h3>{text(content.title) || entity.code}</h3>
-        {text(content.subtitle) ? <p>{text(content.subtitle)}</p> : null}
-        <div className="studio-preview-stats"><span><strong>{scenes.length}</strong> مشاهد</span></div>
+        <span className="studio-preview-kicker">Lesson preview</span>
+        <h3>{typeof content.title === 'string' ? content.title : entity.code}</h3>
+        {typeof content.subtitle === 'string' ? <p>{content.subtitle}</p> : null}
+        <div className="studio-preview-stats">
+          <span><strong>{scenes.length}</strong> scenes</span>
+          <span><strong>{typeof content.performance === 'string' ? content.performance.length : 0}</strong> performance chars</span>
+        </div>
         <div className="studio-preview-scenes">
           {scenes.map((scene, index) => {
-            const record = asRecord(scene);
+            const record = scene && typeof scene === 'object' && !Array.isArray(scene) ? scene as Record<string, unknown> : {};
             return (
               <div key={`${String(record.id ?? index)}-${index}`}>
                 <span>{index + 1}</span>
-                <div><strong>{text(record.title) || text(record.id) || `Scene ${index + 1}`}</strong>{text(record.goal) ? <small>{text(record.goal)}</small> : null}</div>
+                <div>
+                  <strong>{String(record.title ?? record.id ?? `Scene ${index + 1}`)}</strong>
+                  {typeof record.goal === 'string' ? <small>{record.goal}</small> : null}
+                </div>
               </div>
             );
           })}
         </div>
-        {entity.published ? <Link className="studio-secondary-link" to={`/scene-lesson/${entity.slug}`}>فتح النسخة المنشورة في التطبيق</Link> : null}
+        <Link className="studio-secondary-link" to={`/scene-lesson/${entity.slug}`}>افتح النسخة المنشورة في الـruntime</Link>
       </div>
     );
   }
@@ -73,71 +65,25 @@ function previewBlock(entity: StudioEntity, content: Record<string, unknown>) {
   if (entity.type === 'character') {
     return (
       <div className="studio-preview-card">
-        <span className="studio-preview-kicker">معاينة الشخصية</span>
-        <h3>{text(content.displayName) || entity.slug}</h3>
-        {text(content.tagline) ? <p>{text(content.tagline)}</p> : null}
+        <span className="studio-preview-kicker">Character preview</span>
+        <h3>{String(content.displayName ?? entity.slug)}</h3>
+        {typeof content.tagline === 'string' ? <p>{content.tagline}</p> : null}
         <dl className="studio-preview-dl">
-          <div><dt>Accent</dt><dd>{text(content.accent) || '—'}</dd></div>
-          <div><dt>Voice</dt><dd>{text(content.voiceName) || 'default'}</dd></div>
+          <div><dt>Accent</dt><dd>{String(content.accent ?? '—')}</dd></div>
+          <div><dt>Voice</dt><dd>{String(content.voiceName ?? 'default')}</dd></div>
         </dl>
-        {text(content.personaPrompt) ? <pre>{text(content.personaPrompt)}</pre> : null}
+        {typeof content.personaPrompt === 'string' ? <pre>{content.personaPrompt.slice(0, 900)}</pre> : null}
       </div>
     );
   }
 
   return (
     <div className="studio-preview-card">
-      <span className="studio-preview-kicker">معاينة سياسة التدريس</span>
+      <span className="studio-preview-kicker">Teaching policy preview</span>
       <h3>{entity.key}</h3>
-      {text(content.prompt) ? <pre>{text(content.prompt)}</pre> : null}
-      {text(content.openingPrompt) ? <><h4>Opening</h4><pre>{text(content.openingPrompt)}</pre></> : null}
-    </div>
-  );
-}
-
-function SimpleFields({
-  entity,
-  content,
-  editable,
-  onChange,
-}: {
-  entity: StudioEntity;
-  content: Record<string, unknown>;
-  editable: boolean;
-  onChange: (key: string, value: unknown) => void;
-}) {
-  if (entity.type === 'character') {
-    return (
-      <div className="studio-form-grid">
-        <label><span>الاسم الظاهر</span><input disabled={!editable} value={text(content.displayName)} onChange={(event) => onChange('displayName', event.target.value)} /></label>
-        <label><span>اللون</span><input disabled={!editable} value={text(content.accent)} onChange={(event) => onChange('accent', event.target.value)} placeholder="#AE96CD" /></label>
-        <label className="is-wide"><span>الوصف القصير</span><input disabled={!editable} value={text(content.tagline)} onChange={(event) => onChange('tagline', event.target.value)} /></label>
-        <label className="is-wide"><span>الوصف</span><textarea disabled={!editable} value={text(content.description)} onChange={(event) => onChange('description', event.target.value)} /></label>
-        <label className="is-wide"><span>شخصية المدرس / Persona</span><textarea disabled={!editable} value={text(content.personaPrompt)} onChange={(event) => onChange('personaPrompt', event.target.value)} /></label>
-        <label className="is-wide"><span>Teaching style (اختياري)</span><textarea disabled={!editable} value={text(content.teachingStylePrompt)} onChange={(event) => onChange('teachingStylePrompt', event.target.value)} /></label>
-        <label><span>Voice name (اختياري)</span><input disabled={!editable} value={text(content.voiceName)} onChange={(event) => onChange('voiceName', event.target.value || null)} /></label>
-      </div>
-    );
-  }
-
-  if (entity.type === 'policy') {
-    return (
-      <div className="studio-form-grid">
-        <label className="is-wide"><span>القواعد العامة للمدرس</span><textarea className="is-tall" disabled={!editable} value={text(content.prompt)} onChange={(event) => onChange('prompt', event.target.value)} /></label>
-        <label className="is-wide"><span>رسالة البداية</span><textarea disabled={!editable} value={text(content.openingPrompt)} onChange={(event) => onChange('openingPrompt', event.target.value)} /></label>
-        <label className="is-wide"><span>Decision nudge</span><textarea disabled={!editable} value={text(content.decisionNudgePrompt)} onChange={(event) => onChange('decisionNudgePrompt', event.target.value)} /></label>
-      </div>
-    );
-  }
-
-  return (
-    <div className="studio-form-grid">
-      <label className="is-wide"><span>عنوان الدرس</span><input disabled={!editable} value={text(content.title)} onChange={(event) => onChange('title', event.target.value)} /></label>
-      <label className="is-wide"><span>العنوان الفرعي</span><input disabled={!editable} value={text(content.subtitle)} onChange={(event) => onChange('subtitle', event.target.value)} /></label>
-      <label className="is-wide"><span>الهدف العملي للدرس</span><textarea disabled={!editable} value={text(content.performance)} onChange={(event) => onChange('performance', event.target.value)} /></label>
-      <label><span>Core language — سطر لكل عنصر</span><textarea disabled={!editable} value={listText(content.coreLanguage)} onChange={(event) => onChange('coreLanguage', splitLines(event.target.value))} /></label>
-      <label><span>Boundaries — سطر لكل عنصر</span><textarea disabled={!editable} value={listText(content.boundaries)} onChange={(event) => onChange('boundaries', splitLines(event.target.value))} /></label>
-      <div className="studio-scenes-note is-wide"><strong>{Array.isArray(content.scenes) ? content.scenes.length : 0} مشاهد</strong><span>تعديل بناء المشاهد نفسه متاح تحت Advanced JSON حاليًا؛ هنحوّله بعد كده لـScene Builder بصري بدل JSON.</span></div>
+      {typeof content.prompt === 'string' ? <pre>{content.prompt}</pre> : null}
+      {typeof content.openingPrompt === 'string' ? <><h4>Opening prompt</h4><pre>{content.openingPrompt}</pre></> : null}
+      {typeof content.decisionNudgePrompt === 'string' ? <><h4>Decision nudge</h4><pre>{content.decisionNudgePrompt}</pre></> : null}
     </div>
   );
 }
@@ -159,9 +105,8 @@ export function StudioScreen() {
     try {
       const next = await loadStudioOverview();
       setOverview(next);
-      const targetType = preferred?.type ?? tab;
-      const pool = targetType === 'lesson' ? next.lessons : targetType === 'character' ? next.characters : next.policies;
-      const target = preferred ? pool.find((item) => item.id === preferred.id) : pool.find((item) => item.id === selectedId) ?? pool[0];
+      const pool = preferred?.type === 'lesson' ? next.lessons : preferred?.type === 'character' ? next.characters : preferred?.type === 'policy' ? next.policies : next.lessons;
+      const target = preferred ? pool.find((item) => item.id === preferred.id) : pool[0];
       if (preferred) setTab(preferred.type);
       setSelectedId(target?.id ?? null);
     } catch (reason) {
@@ -182,7 +127,7 @@ export function StudioScreen() {
 
   const selected = useMemo(() => entities.find((item) => item.id === selectedId) ?? entities[0] ?? null, [entities, selectedId]);
   const editableRevision = selected?.draft ?? null;
-  const sourceRevision: StudioRevision | null = editableRevision ?? selected?.published ?? null;
+  const sourceRevision = editableRevision ?? selected?.published ?? null;
 
   useEffect(() => {
     setEditor(pretty(sourceRevision?.content ?? {}));
@@ -197,164 +142,185 @@ export function StudioScreen() {
     setSelectedId(pool?.[0]?.id ?? null);
   }
 
+  async function createDraft() {
+    if (!selected || busy) return;
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    try {
+      await createStudioDraft(selected.type, selected.id);
+      await refresh({ type: selected.type, id: selected.id });
+      setNotice('اتعمل Draft جديد من النسخة المنشورة.');
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'تعذر إنشاء Draft.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
   function parsedEditor() {
     const value = JSON.parse(editor) as unknown;
     if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('المحتوى لازم يكون JSON object صالح.');
     return value as Record<string, unknown>;
   }
 
-  function updateField(key: string, value: unknown) {
+  async function saveDraft() {
+    if (!selected || !editableRevision || busy) return;
+    setBusy(true);
+    setError(null);
+    setNotice(null);
     try {
-      const next = { ...parsedEditor(), [key]: value };
-      setEditor(pretty(next));
-      setError(null);
-    } catch {
-      setError('صلّح Advanced JSON الأول قبل تعديل الحقول.');
+      const content = parsedEditor();
+      await saveStudioDraft({
+        entityType: selected.type,
+        entityId: selected.id,
+        revisionId: editableRevision.id,
+        content,
+        changeNote,
+      });
+      await refresh({ type: selected.type, id: selected.id });
+      setNotice('Draft اتحفظ في Neon.');
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'تعذر حفظ Draft.');
+    } finally {
+      setBusy(false);
     }
   }
 
-  async function beginEdit() {
-    if (!selected || busy || editableRevision) return;
-    setBusy(true); setError(null); setNotice(null);
-    try {
-      await createStudioDraft(selected.type, selected.id);
-      await refresh({ type: selected.type, id: selected.id });
-      setNotice('جاهز للتعديل. النسخة الحالية محفوظة تلقائيًا في السجل.');
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'تعذر بدء التعديل.');
-    } finally { setBusy(false); }
-  }
-
-  async function saveChanges() {
-    if (!selected || !editableRevision || busy) return;
-    setBusy(true); setError(null); setNotice(null);
-    try {
-      await saveStudioDraft({ entityType: selected.type, entityId: selected.id, revisionId: editableRevision.id, content: parsedEditor(), changeNote });
-      await refresh({ type: selected.type, id: selected.id });
-      setNotice('اتحفظت التغييرات من غير نشرها للمتعلمين.');
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'تعذر حفظ التغييرات.');
-    } finally { setBusy(false); }
-  }
-
-  async function publishChanges() {
+  async function publishDraft() {
     if (!selected || !editableRevision || busy) return;
     let content: Record<string, unknown>;
-    try { content = parsedEditor(); } catch (reason) { setError(reason instanceof Error ? reason.message : 'JSON غير صالح.'); return; }
-    if (!window.confirm(`نشر التغييرات على ${entityLabel(selected)} الآن؟`)) return;
-    setBusy(true); setError(null); setNotice(null);
     try {
-      await saveStudioDraft({ entityType: selected.type, entityId: selected.id, revisionId: editableRevision.id, content, changeNote });
+      content = parsedEditor();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'JSON غير صالح.');
+      return;
+    }
+
+    if (!window.confirm(`نشر ${entityLabel(selected)} revision ${editableRevision.revisionNumber}؟ النسخة المنشورة هتبقى immutable.`)) return;
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    try {
+      await saveStudioDraft({
+        entityType: selected.type,
+        entityId: selected.id,
+        revisionId: editableRevision.id,
+        content,
+        changeNote,
+      });
       await publishStudioDraft({ entityType: selected.type, entityId: selected.id, revisionId: editableRevision.id });
       await refresh({ type: selected.type, id: selected.id });
-      setNotice('تم النشر. التطبيق هيقرأ النسخة الجديدة، والنسخة السابقة محفوظة في الخلفية.');
+      setNotice('تم النشر. الـpublished pointer اتحرك للـrevision الجديدة.');
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'تعذر نشر التغييرات.');
-    } finally { setBusy(false); }
+      setError(reason instanceof Error ? reason.message : 'تعذر نشر Draft.');
+    } finally {
+      setBusy(false);
+    }
   }
 
-  async function addFromTemplate() {
-    if (!selected || !selected.published || selected.type === 'policy' || busy) return;
-    const slug = window.prompt(selected.type === 'lesson' ? 'Slug للدرس الجديد (مثال: a1-u1-l04-coffee-order)' : 'Slug للشخصية الجديدة (مثال: taylor)', '');
-    if (!slug) return;
-    setBusy(true); setError(null); setNotice(null);
-    try {
-      if (selected.type === 'character') {
-        const displayName = window.prompt('اسم الشخصية الظاهر', '')?.trim();
-        if (!displayName) return;
-        const created = await duplicateStudioEntity({ entityType: 'character', sourceEntityId: selected.id, slug: slug.trim(), displayName });
-        await refresh({ type: 'character', id: created.entityId });
-        setNotice('اتضافت شخصية جديدة كتغييرات غير منشورة. عدّلها وبعدها انشرها لما تكون جاهزة.');
-      } else {
-        const code = window.prompt('كود الدرس الجديد (مثال: U1-L04)', '')?.trim();
-        if (!code) return;
-        const title = window.prompt('عنوان الدرس الجديد', '')?.trim();
-        if (!title) return;
-        const created = await duplicateStudioEntity({ entityType: 'lesson', sourceEntityId: selected.id, slug: slug.trim(), code, title });
-        await refresh({ type: 'lesson', id: created.entityId });
-        setNotice('اتضاف درس جديد من نفس القالب. عدّل المحتوى والمشاهد قبل النشر.');
-      }
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'تعذر إضافة عنصر جديد.');
-    } finally { setBusy(false); }
+  if (loading && !overview) {
+    return <section className="studio-gate" dir="rtl"><h1>بنفتح Englotti Studio…</h1><p>بنحمّل الـpublished content والـdrafts من Neon.</p></section>;
   }
-
-  if (loading && !overview) return <section className="studio-gate" dir="rtl"><h1>بنفتح Englotti Studio…</h1><p>بنحمّل المحتوى المنشور والتغييرات غير المنشورة من Neon.</p></section>;
 
   if (error && !overview) {
-    return <section className="studio-gate" dir="rtl"><span className="studio-mark">Studio</span><h1>الدخول للـStudio مش متاح للحساب ده</h1><p>{error}</p><div className="studio-config-note">في Cloudflare أضف <code>STUDIO_ADMIN_EMAILS</code> كـserver-side variable في Preview + Production.</div><Link className="v2-secondary-button" to="/home">الرجوع للتطبيق</Link></section>;
+    return (
+      <section className="studio-gate" dir="rtl">
+        <span className="studio-mark">Studio</span>
+        <h1>الدخول للـStudio مش متاح للحساب ده</h1>
+        <p>{error}</p>
+        <div className="studio-config-note">في Cloudflare أضف <code>STUDIO_ADMIN_EMAILS</code> كـserver-side variable في Preview + Production، والقيمة تكون إيميل الأدمن المسموح له. ممكن تضيف أكتر من إيميل بفاصلة.</div>
+        <Link className="v2-secondary-button" to="/home">الرجوع للتطبيق</Link>
+      </section>
+    );
   }
 
   if (!overview) return null;
 
-  let currentContent = sourceRevision?.content ?? {};
-  try { currentContent = parsedEditor(); } catch { /* keep last valid content */ }
+  let previewContent: Record<string, unknown> = sourceRevision?.content ?? {};
+  try { previewContent = parsedEditor(); } catch { /* keep last valid source revision */ }
 
   return (
     <section className="studio-shell" dir="rtl">
       <header className="studio-header">
-        <div><span className="studio-mark">Englotti Studio</span><h1>عدّل المحتوى ببساطة</h1><p>تعديل → مراجعة → نشر. النسخ والتاريخ بيتحفظوا تلقائيًا في الخلفية.</p></div>
-        <div className="studio-admin"><small>مفتوح كـ</small><strong>{overview.admin.email ?? overview.admin.name ?? 'Admin'}</strong><Link to="/home">فتح تطبيق المتعلم</Link></div>
+        <div>
+          <span className="studio-mark">Englotti Studio</span>
+          <h1>Authoring & Publishing</h1>
+          <p>Draft → Preview → Publish، والنسخ المنشورة immutable.</p>
+        </div>
+        <div className="studio-admin">
+          <small>مفتوح كـ</small>
+          <strong>{overview.admin.email ?? overview.admin.name ?? 'Admin'}</strong>
+          <Link to="/home">فتح تطبيق المتعلم</Link>
+        </div>
       </header>
 
       <nav className="studio-tabs" aria-label="Studio sections">
-        <button type="button" className={tab === 'lesson' ? 'is-active' : ''} onClick={() => switchTab('lesson')}><ProductIcon name="learn" size={19} /> الدروس <span>{overview.lessons.length}</span></button>
-        <button type="button" className={tab === 'character' ? 'is-active' : ''} onClick={() => switchTab('character')}><ProductIcon name="profile" size={19} /> الشخصيات <span>{overview.characters.length}</span></button>
-        <button type="button" className={tab === 'policy' ? 'is-active' : ''} onClick={() => switchTab('policy')}><ProductIcon name="check" size={19} /> سياسة التدريس <span>{overview.policies.length}</span></button>
+        <button type="button" className={tab === 'lesson' ? 'is-active' : ''} onClick={() => switchTab('lesson')}><ProductIcon name="learn" size={19} /> Lessons <span>{overview.lessons.length}</span></button>
+        <button type="button" className={tab === 'character' ? 'is-active' : ''} onClick={() => switchTab('character')}><ProductIcon name="profile" size={19} /> Characters <span>{overview.characters.length}</span></button>
+        <button type="button" className={tab === 'policy' ? 'is-active' : ''} onClick={() => switchTab('policy')}><ProductIcon name="check" size={19} /> Teaching Policy <span>{overview.policies.length}</span></button>
       </nav>
 
       <div className="studio-workspace">
         <aside className="studio-library">
-          <div className="studio-library-heading">
-            <div><strong>{tab === 'lesson' ? 'الدروس' : tab === 'character' ? 'الشخصيات' : 'السياسات'}</strong><small>{entities.length} عناصر</small></div>
-            {tab !== 'policy' ? <button type="button" className="studio-add-button" disabled={!selected?.published || busy} onClick={() => void addFromTemplate()}>＋ إضافة</button> : null}
-          </div>
+          <div className="studio-library-heading"><strong>{tab === 'lesson' ? 'الدروس' : tab === 'character' ? 'الشخصيات' : 'السياسات'}</strong><small>{entities.length} records</small></div>
           <div className="studio-library-list">
             {entities.map((entity) => (
               <button key={entity.id} type="button" className={selected?.id === entity.id ? 'is-selected' : ''} onClick={() => setSelectedId(entity.id)}>
                 <span className="studio-library-main"><strong>{entityLabel(entity)}</strong><small>{entitySubline(entity)}</small></span>
-                <span className="studio-revision-pills"><em className="is-published">Live</em>{entity.draft ? <em className="is-draft">تغييرات</em> : null}</span>
+                <span className="studio-revision-pills">
+                  <em className="is-published">P {revisionLabel(entity.published)}</em>
+                  {entity.draft ? <em className="is-draft">D {revisionLabel(entity.draft)}</em> : null}
+                </span>
               </button>
             ))}
           </div>
         </aside>
 
         <main className="studio-editor">
-          {selected ? <>
-            <div className="studio-editor-head">
-              <div><span className="studio-type-label">{selected.type}</span><h2>{entityLabel(selected)}</h2><p>{entitySubline(selected)}</p></div>
-              <div className="studio-editor-status"><span>{editableRevision ? 'فيه تغييرات غير منشورة' : 'النسخة المعروضة منشورة'}</span></div>
-            </div>
+          {selected ? (
+            <>
+              <div className="studio-editor-head">
+                <div>
+                  <span className="studio-type-label">{selected.type}</span>
+                  <h2>{entityLabel(selected)}</h2>
+                  <p>{entitySubline(selected)}</p>
+                </div>
+                <div className="studio-editor-status">
+                  <span>Published <strong>{revisionLabel(selected.published)}</strong></span>
+                  <span>Draft <strong>{revisionLabel(selected.draft)}</strong></span>
+                </div>
+              </div>
 
-            <div className="studio-actions">
-              {!editableRevision ? <button type="button" className="studio-primary" disabled={busy || !selected.published} onClick={() => void beginEdit()}>تعديل</button> : null}
-              {editableRevision ? <button type="button" className="studio-secondary" disabled={busy} onClick={() => void saveChanges()}>حفظ بدون نشر</button> : null}
-              {editableRevision ? <button type="button" className="studio-publish" disabled={busy} onClick={() => void publishChanges()}>نشر التغييرات</button> : null}
-              {busy ? <span className="studio-busy">جارِ التنفيذ…</span> : null}
-            </div>
+              <div className="studio-actions">
+                {!editableRevision ? <button type="button" className="studio-primary" disabled={busy || !selected.published} onClick={createDraft}>Create draft</button> : null}
+                {editableRevision ? <button type="button" className="studio-secondary" disabled={busy} onClick={saveDraft}>Save draft</button> : null}
+                {editableRevision ? <button type="button" className="studio-publish" disabled={busy} onClick={publishDraft}>Publish {revisionLabel(editableRevision)}</button> : null}
+                {busy ? <span className="studio-busy">جارِ التنفيذ…</span> : null}
+              </div>
 
-            {notice ? <div className="studio-notice is-success">{notice}</div> : null}
-            {error ? <div className="studio-notice is-error">{error}</div> : null}
+              {notice ? <div className="studio-notice is-success">{notice}</div> : null}
+              {error ? <div className="studio-notice is-error">{error}</div> : null}
 
-            <div className="studio-edit-grid">
-              <section className="studio-simple-panel">
-                <div className="studio-panel-title"><div><strong>{editableRevision ? 'التغييرات' : 'المحتوى المنشور'}</strong><small>{editableRevision ? 'عدّل الحقول وانشر لما تكون جاهز.' : 'اضغط تعديل لو محتاج تغيّر حاجة.'}</small></div></div>
-                <SimpleFields entity={selected} content={currentContent} editable={Boolean(editableRevision)} onChange={updateField} />
-                {editableRevision ? <label className="studio-change-note"><span>ملاحظة اختيارية عن التغيير</span><input value={changeNote} onChange={(event) => setChangeNote(event.target.value)} maxLength={500} placeholder="مثال: تحديث اسم الشخصية ونبرة الحوار" /></label> : null}
-                <details className="studio-advanced">
-                  <summary>Advanced JSON</summary>
-                  <p>للحالات المتقدمة فقط. أغلب التعديلات اليومية اعملها من الحقول اللي فوق.</p>
+              <div className="studio-edit-grid">
+                <section className="studio-json-panel">
+                  <div className="studio-panel-title">
+                    <div><strong>{editableRevision ? 'Draft JSON' : 'Published JSON'}</strong><small>{editableRevision ? 'قابل للتعديل' : 'اعمل Draft الأول عشان تعدّل'}</small></div>
+                    <span>schema v{sourceRevision?.schemaVersion ?? 1}</span>
+                  </div>
                   <textarea value={editor} onChange={(event) => setEditor(event.target.value)} readOnly={!editableRevision} spellCheck={false} aria-label="Revision JSON editor" />
-                </details>
-                <details className="studio-history">
-                  <summary>السجل التقني</summary>
-                  <p>النسخة المنشورة: {selected.published ? `r${selected.published.revisionNumber}` : 'لا يوجد'} · التغييرات غير المنشورة: {selected.draft ? `r${selected.draft.revisionNumber}` : 'لا يوجد'}</p>
-                </details>
-              </section>
+                  {editableRevision ? (
+                    <label className="studio-change-note"><span>Change note</span><input value={changeNote} onChange={(event) => setChangeNote(event.target.value)} maxLength={500} placeholder="إيه اللي اتغير في الـrevision دي؟" /></label>
+                  ) : null}
+                </section>
 
-              <section className="studio-preview-panel"><div className="studio-panel-title"><div><strong>Preview</strong><small>الشكل المقروء قبل النشر</small></div><span>{editableRevision ? 'غير منشور' : 'منشور'}</span></div>{previewBlock(selected, currentContent)}</section>
-            </div>
-          </> : <div className="studio-empty">اختار عنصر من القائمة.</div>}
+                <section className="studio-preview-panel">
+                  <div className="studio-panel-title"><div><strong>Preview</strong><small>قراءة منظمة للـJSON الحالي قبل النشر</small></div><span>{editableRevision ? 'draft' : 'published'}</span></div>
+                  {previewBlock(selected, previewContent)}
+                </section>
+              </div>
+            </>
+          ) : <div className="studio-empty">مفيش records في القسم ده.</div>}
         </main>
       </div>
     </section>
