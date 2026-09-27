@@ -2,8 +2,9 @@ import { useMemo, useState, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { firstPublishedLesson } from '../catalog/client';
 import { CharacterPortrait } from '../character/CharacterPortrait';
+import { publishedCharacterById, usePublishedCharacters } from '../character/catalog';
 import { OttiMark } from '../character/otti/OttiMark';
-import { characterRegistry, DEFAULT_CHARACTER_ID } from '../character/registry';
+import { DEFAULT_CHARACTER_ID } from '../character/registry';
 import { saveCloudProfile } from '../cloud/userData';
 import { ProductIcon } from '../components/ProductIcon';
 import {
@@ -34,6 +35,7 @@ const comfortCopy: Record<SpeakingComfort, { title: string; body: string }> = {
 export function OnboardingScreen() {
   const navigate = useNavigate();
   const existing = useMemo(() => readLearnerProfile(), []);
+  const { characters } = usePublishedCharacters();
   const [step, setStep] = useState(0);
   const [firstName, setFirstName] = useState(existing?.firstName ?? '');
   const [goals, setGoals] = useState<LearningGoal[]>(existing?.goals ?? []);
@@ -77,7 +79,7 @@ export function OnboardingScreen() {
   }
 
   const canContinue = step === 0 || (step === 1 && goals.length > 0) || (step === 2 && comfort !== null);
-  const selectedCharacter = characterRegistry.find((character) => character.id === characterId) ?? characterRegistry[0];
+  const selectedCharacter = publishedCharacterById(characters, characterId);
 
   return (
     <section className="v2-onboarding" dir="rtl">
@@ -144,10 +146,10 @@ export function OnboardingScreen() {
         {step === 3 ? (
           <div className="v2-onboarding-step">
             <span className="v2-kicker">قابل مدرسك</span>
-            <h1>Otti هيبدأ معاك</h1>
-            <p>Otti هو مدرس Englotti الأساسي ورفيق الرحلة. لو تفضّل شخصية تانية، تقدر تختار واحدة من المدرسين الموجودين تحت.</p>
+            <h1>اختار المدرس اللي يناسبك</h1>
+            <p>تقدر تغيّر الشخصية في أي وقت. الاسم والوصف وطريقة المدرس هنا جاية من النسخة المنشورة.</p>
             <div className="v2-teacher-grid">
-              {characterRegistry.map((character) => (
+              {characters.map((character) => (
                 <button
                   key={character.id}
                   type="button"
