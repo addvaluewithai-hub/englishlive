@@ -62,6 +62,14 @@ function parseTeachingBundle(value: unknown): TeachingBundleResponse | null {
   return value as unknown as TeachingBundleResponse;
 }
 
+function fallbackCharacter(character: CharacterDefinition): CharacterAuthoringContent {
+  return {
+    displayName: character.name,
+    personaPrompt: character.persona.style,
+    voiceName: null,
+  };
+}
+
 function fallbackBundle(
   lesson: SceneLessonDefinition,
   character: CharacterDefinition,
@@ -70,15 +78,60 @@ function fallbackBundle(
     source: 'local-fallback',
     lesson,
     lessonRevisionId: null,
-    character: {
-      displayName: character.name,
-      personaPrompt: character.persona.style,
-      voiceName: null,
-    },
+    character: fallbackCharacter(character),
     characterRevisionId: null,
     teachingPolicy: DEFAULT_TEACHING_POLICY,
     teachingPolicyRevisionId: null,
   };
+}
+
+async function fetchJsonWithTimeout(path: string, timeoutMs = 3500) {
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(apiUrl(path), {
+      method: 'GET',
+      headers: { accept: 'application/json' },
+      signal: controller.signal,
+    });
+    return { response, payload: await response.json().catch(() => null) as unknown };
+  } finally {
+    window.clearTimeout(timer);
+  }
+}
+
+export async function loadPublishedCharacter(character: CharacterDefinition): Promise<{
+  source: 'neon' | 'local-fallback';
+  content: CharacterAuthoringContent;
+  revisionId: string | null;
+}> {
+  const fallback = {
+    source: 'local-fallback' as const,
+    content: fallbackCharacter(character),
+    revisionId: null,
+  };
+  try {
+    const query = new URLSearchParams({ characterId: character.id });
+    const { response, payload } = await fetchJsonWithTimeout(`/api/content/character?${query.toString()}`);
+    if (!response.ok || !isRecord(payload) || payload.source !== 'neon' || !isRecord(payload.character)) {
+      console.warn(`[Englotti content] character API returned ${response.status}; using local fallback.`);
+      return fallback;
+    }
+    const row = payload.character;
+    if (row.slug !== character.id || typeof row.revisionId !== 'string' || !isCharacterContent(row.content)) {
+      console.warn('[Englotti content] invalid character payload; using local fallback.');
+      return fallback;
+    }
+    return {
+      source: 'neon',
+      content: row.content,
+      revisionId: row.revisionId,
+    };
+  } catch (reason) {
+    const message = reason instanceof Error ? reason.message : String(reason);
+    console.warn(`[Englotti content] could not load published character (${message}); using local fallback.`);
+    return fallback;
+  }
 }
 
 export async function loadTeachingBundle(
@@ -86,20 +139,14 @@ export async function loadTeachingBundle(
   character: CharacterDefinition,
 ): Promise<LoadedTeachingBundle> {
   const fallback = fallbackBundle(lesson, character);
-  const controller = new AbortController();
-  const timer = window.setTimeout(() => controller.abort(), 3500);
   try {
     const query = new URLSearchParams({ lessonId: lesson.id, characterId: character.id });
-    const response = await fetch(apiUrl(`/api/content/bundle?${query.toString()}`), {
-      method: 'GET',
-      headers: { accept: 'application/json' },
-      signal: controller.signal,
-    });
+    const { response, payload } = await fetchJsonWithTimeout(`/api/content/bundle?${query.toString()}`);
     if (!response.ok) {
       console.warn(`[Englotti content] bundle API returned ${response.status}; using local fallback.`);
       return fallback;
     }
-    const parsed = parseTeachingBundle(await response.json().catch(() => null));
+    const parsed = parseTeachingBundle(payload);
     if (!parsed) {
       console.warn('[Englotti content] invalid bundle payload; using local fallback.');
       return fallback;
@@ -121,7 +168,5 @@ export async function loadTeachingBundle(
     const message = reason instanceof Error ? reason.message : String(reason);
     console.warn(`[Englotti content] could not load published bundle (${message}); using local fallback.`);
     return fallback;
-  } finally {
-    window.clearTimeout(timer);
   }
 }
