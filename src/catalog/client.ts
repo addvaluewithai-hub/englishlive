@@ -132,18 +132,14 @@ export async function loadProductCatalog(): Promise<ProductCatalog> {
     memoryCatalog = localFallbackCatalog();
     return memoryCatalog;
   }
-  if (memoryCatalog?.source === 'neon') return memoryCatalog;
-  const cached = catalogFromSessionCache();
-  if (cached) {
-    memoryCatalog = cached;
-    return cached;
-  }
   if (inFlight) return inFlight;
 
+  const fallback = memoryCatalog ?? catalogFromSessionCache() ?? localFallbackCatalog();
   inFlight = (async () => {
     try {
       const response = await fetch(apiUrl('/api/content/catalog'), {
         headers: { accept: 'application/json' },
+        cache: 'no-store',
       });
       const payload = await response.json().catch(() => null) as unknown;
       if (!response.ok || !isPublishedCatalog(payload)) throw new Error(`Catalog API returned ${response.status}.`);
@@ -151,9 +147,8 @@ export async function loadProductCatalog(): Promise<ProductCatalog> {
       memoryCatalog = toProductCatalog(payload);
       return memoryCatalog;
     } catch (reason) {
-      console.warn('[Englotti catalog] using local fallback', reason instanceof Error ? reason.message : String(reason));
-      memoryCatalog = localFallbackCatalog();
-      return memoryCatalog;
+      console.warn('[Englotti catalog] using cached/local fallback', reason instanceof Error ? reason.message : String(reason));
+      return fallback;
     } finally {
       inFlight = null;
     }
