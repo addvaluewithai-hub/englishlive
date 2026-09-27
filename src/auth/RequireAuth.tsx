@@ -4,7 +4,7 @@ import { hydrateCloudLearnerState } from '../cloud/bootstrap';
 import type { LearnerProfile } from '../product/profile';
 import { authClient } from './client';
 
-export function RequireAuth({ children, requireProfile = true }: { children: ReactNode; requireProfile?: boolean }) {
+function AuthenticatedGate({ children, requireProfile }: { children: ReactNode; requireProfile: boolean }) {
   const location = useLocation();
   const session = authClient.useSession();
   const userId = session.data?.user?.id ?? null;
@@ -65,4 +65,9 @@ export function RequireAuth({ children, requireProfile = true }: { children: Rea
   }
 
   return children;
+}
+
+export function RequireAuth({ children, requireProfile = true }: { children: ReactNode; requireProfile?: boolean }) {
+  if (import.meta.env.VITE_VISUAL_QA === '1') return children;
+  return <AuthenticatedGate requireProfile={requireProfile}>{children}</AuthenticatedGate>;
 }
