@@ -36,18 +36,21 @@ export class SceneLessonRuntime {
   private activeBoard: SupportBoard | null = null;
   private readonly listeners = new Set<(state: SceneLessonState) => void>();
   private readonly onBoardChange?: (board: SupportBoard | null) => void;
+  private readonly policyPrompt: string;
 
   constructor(
     readonly lesson: SceneLessonDefinition,
     options: {
       onStateChange?: (state: SceneLessonState) => void;
       onBoardChange?: (board: SupportBoard | null) => void;
+      policyPrompt?: string;
     } = {},
   ) {
     if (!lesson.scenes.length) throw new Error('Scene lesson requires at least one scene.');
     this.state = this.createInitialState();
     if (options.onStateChange) this.listeners.add(options.onStateChange);
     this.onBoardChange = options.onBoardChange;
+    this.policyPrompt = options.policyPrompt?.trim() ?? '';
     markProductLessonStarted(lesson.id);
     this.tools = [this.completeSceneTool(), this.showBoardTool()];
   }
@@ -66,9 +69,12 @@ export class SceneLessonRuntime {
   }
 
   get systemPrompt() {
+    const publishedPolicy = this.policyPrompt
+      ? `\nPUBLISHED TEACHING POLICY\n${this.policyPrompt}\n`
+      : '';
     return `
 You are delivering one authored Englotti lesson as a natural live lesson with very small application-owned scenes.
-
+${publishedPolicy}
 LESSON
 ${this.lesson.levelId.toUpperCase()} · ${this.lesson.unitTitle} · ${this.lesson.title}
 Primary learner performance: ${this.lesson.performance}
@@ -130,7 +136,6 @@ ${JSON.stringify(this.scenePayload(this.currentScene), null, 2)}
     this.persistAndEmit();
   }
 
-  /** Called only after the welcome was actually played to the learner. */
   markLessonOpeningComplete() {
     if (this.lessonOpeningComplete) return;
     this.lessonOpeningComplete = true;
@@ -138,7 +143,6 @@ ${JSON.stringify(this.scenePayload(this.currentScene), null, 2)}
     this.persistAndEmit();
   }
 
-  /** Presentation timing only; no curriculum transition happens on playback completion. */
   markPartnerTurnComplete() {}
 
   private createInitialState(): SceneLessonState {
