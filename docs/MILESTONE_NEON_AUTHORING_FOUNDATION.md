@@ -74,15 +74,17 @@ The browser does not receive a Neon connection string.
 
 ```text
 Englotti app
-  -> Cloudflare Pages Function /api/content/bundle
+  -> Cloudflare Pages Functions (/api/content/*)
   -> Neon Postgres
 ```
 
 Cloudflare receives `DATABASE_URL` as a server-side secret. It must never use a `VITE_*` prefix.
 
+Structured lessons load lesson + character + policy together. Free Speak loads the same published character persona/voice through the character endpoint.
+
 ## Temporary local fallback
 
-Until a Neon project is migrated, seeded and `DATABASE_URL` is configured, the app falls back to the current local first-three-lesson definitions and local character persona. The compact debug log records either:
+Until a Neon project is migrated, seeded and `DATABASE_URL` is configured, the app falls back to the current local first-three-lesson definitions and local character persona. Debug/technical output records either:
 
 - `Content source: neon`
 - `Content source: local-fallback`
@@ -91,7 +93,7 @@ This fallback is migration safety, not the intended long-term production source 
 
 ## Seed
 
-Run the migration first, then with a server-side `DATABASE_URL`:
+Apply every SQL file in `db/migrations/` in numeric order first, then with a server-side `DATABASE_URL`:
 
 ```bash
 npm run db:seed
@@ -108,7 +110,7 @@ The seed deliberately does not overwrite an identity that already has a publishe
 
 ## Learner-data schema status
 
-The migration also creates the intended relational tables for:
+The migrations also create the intended relational tables for:
 
 - learner profiles
 - lesson progress
@@ -116,6 +118,8 @@ The migration also creates the intended relational tables for:
 - scene results
 - learning observations
 - per-character relationship memories
+
+Learner-owned rows use foreign keys back to `learner_profiles`, with cascade deletion so profile removal does not leave orphaned progress, session or memory rows.
 
 These tables are schema-ready but the current app still stores profile, progress and memory locally. Remote learner writes should be connected together with authentication rather than inventing anonymous production identities in this milestone.
 
@@ -134,15 +138,16 @@ Authentication is intentionally separate from the learner profile. Neon Auth can
 ## Activation checklist
 
 1. choose/create the Neon project
-2. apply `db/migrations/0001_authoring_foundation.sql`
+2. apply every migration under `db/migrations/` in numeric order
 3. seed revision 1 content
 4. configure Cloudflare secret `DATABASE_URL`
-5. verify `/api/content/bundle` returns `source: neon`
-6. run a live lesson and confirm the compact log says `Content source: neon`
-7. only then begin building the Studio draft/edit/publish UI
+5. verify `/api/content/bundle` and `/api/content/character` return `source: neon`
+6. run a structured live lesson and confirm the compact log says `Content source: neon`
+7. start Free Speak and confirm the character config source is `neon`
+8. only then begin building the Studio draft/edit/publish UI
 
 ## Validation scope
 
-Current CI validates TypeScript and the production Vite build. Browser Visual QA validates the product shell using the local fallback when CI has no database secret.
+Current CI validates TypeScript, including TypeScript database seed scripts, and the production Vite build. Browser Visual QA validates the product shell using the local fallback when CI has no database secret.
 
 Neither CI nor browser QA proves physical-device microphone/audio behavior, and they do not validate a real Neon connection until the deployment secret is configured.
