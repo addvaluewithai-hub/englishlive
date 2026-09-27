@@ -1,0 +1,77 @@
+/* The supplied level-picker composes the header + intro very tightly.
+ * Keep the mascot expressive, but do not spend a full card-height on the intro.
+ */
+
+@media (max-width: 620px) {
+  body:has(.journey-levels) .v2-app-header {
+    min-height: 58px;
+    padding: 7px 16px;
+  }
+
+  body:has(.journey-levels) .v2-brand-mark {
+    width: 34px;
+    height: 34px;
+    border-radius: 12px;
+  }
+
+  body:has(.journey-levels) .v2-brand {
+    font-size: 19px;
+  }
+
+  body:has(.journey-levels) .v2-icon-button {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #fff8f7;
+  }
+
+  .journey-levels {
+    padding-top: 4px;
+  }
+
+  .journey-levels-hero {
+    height: 92px;
+    min-height: 92px;
+  }
+
+  .journey-levels-hero::after {
+    top: 3px;
+    height: 82px;
+  }
+
+  .journey-levels-hero-art {
+    height: 92px;
+  }
+
+  .journey-levels-hero-art img {
+    width: 150px;
+    max-height: 101px;
+    transform: translateY(4px);
+  }
+
+  .journey-hero-star.one {
+    top: 23%;
+  }
+
+  .journey-hero-star.two {
+    top: 14%;
+  }
+
+  .journey-levels-hero-copy {
+    padding-block: 0;
+  }
+
+  .journey-levels-hero-copy > span {
+    font-size: 10.5px;
+  }
+
+  .journey-levels-hero-copy h1 {
+    font-size: 24px;
+    line-height: 1.04;
+  }
+
+  .journey-levels-hero-copy p {
+    font-size: 10px;
+    line-height: 1.38;
+  }
+}
