@@ -29,6 +29,7 @@ import './product-v8-pixel-perfect.css';
 import './product-v8-fixes.css';
 import './product-v9-levels-polish.css';
 import './product-v9-levels-polish-mobile.css';
+import './product-v9-levels-hero-tight.css';
 
 const root = document.getElementById('root');
 if (!root) throw new Error('Englotti root element was not found.');
