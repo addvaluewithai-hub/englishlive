@@ -66,7 +66,15 @@ function AuthenticatedGate({ children, requireProfile }: { children: ReactNode; 
     return <section className="v2-empty-screen" dir="rtl"><h1>بنزامن تقدمك…</h1><p>بنجيب بياناتك من Englotti Cloud.</p></section>;
   }
 
-  if (requireProfile && !profile && location.pathname !== '/onboarding') {
+  // React Router can keep this gate mounted while switching from onboarding
+  // (where a profile is optional) to the first protected lesson. The state above
+  // may still contain the pre-onboarding `null` profile even though onboarding
+  // has just persisted the profile and refreshed the local cloud cache. Read the
+  // authenticated user's hydrated cache at decision time so we never bounce a
+  // successfully onboarded learner back to step one.
+  const effectiveProfile = profile ?? (userId && isCloudHydratedForUser(userId) ? readLearnerProfile() : null);
+
+  if (requireProfile && !effectiveProfile && location.pathname !== '/onboarding') {
     return <Navigate replace to="/onboarding" />;
   }
 
