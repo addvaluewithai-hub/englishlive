@@ -7,6 +7,10 @@ export interface LiveTokenResponse {
   model: string;
 }
 
+export interface LiveSessionConfig {
+  voiceName?: string;
+}
+
 export interface LiveCallbacks {
   onStatus(status: LiveStatus): void;
   onInputTranscript(text: string): void;
@@ -23,7 +27,7 @@ export interface LiveCallbacks {
 
 export interface LiveTransport {
   readonly connected: boolean;
-  connect(systemInstruction: string): Promise<void>;
+  connect(systemInstruction: string, config?: LiveSessionConfig): Promise<void>;
   sendAudio(base64Pcm16: string): void;
   endAudioStream(): void;
   sendText(text: string): void;
