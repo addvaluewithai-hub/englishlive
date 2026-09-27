@@ -1,3 +1,23 @@
+.studio-global-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding: 7px;
+  border: 1px solid var(--studio-line, #dfe6e2);
+  border-radius: 15px;
+  background: #fff;
+  width: fit-content;
+}
+.studio-global-nav a {
+  padding: 8px 11px;
+  border-radius: 10px;
+  color: #50605a;
+  font-weight: 900;
+  text-decoration: none;
+}
+.studio-global-nav a.is-active { background: #182a23; color: #fff; }
+
 .studio-curriculum-shell { display: grid; gap: 16px; }
 .studio-curriculum-nav { display: flex; gap: 12px; align-items: center; }
 .studio-curriculum-nav a { color: var(--studio-accent); font-weight: 900; }
