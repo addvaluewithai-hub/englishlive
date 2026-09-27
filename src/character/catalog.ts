@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { apiUrl } from '../config/api';
-import { characterRegistry } from './registry';
+import { characterRegistry, setPublishedCharacterDefinitions } from './registry';
 import type { CharacterDefinition } from './types';
 
 interface PublishedCharacterRow {
@@ -87,6 +87,10 @@ export function invalidatePublishedCharacters() {
   inFlight = null;
 }
 
+export function hasLoadedPublishedCharacters() {
+  return memoryCatalog?.source === 'neon';
+}
+
 export async function loadPublishedCharacters(): Promise<PublishedCharacterCatalog> {
   if (import.meta.env.VITE_VISUAL_QA === '1') {
     memoryCatalog = localFallback();
@@ -104,6 +108,7 @@ export async function loadPublishedCharacters(): Promise<PublishedCharacterCatal
       if (!response.ok || !isPayload(payload)) throw new Error(`Characters API returned ${response.status}.`);
       const characters = payload.characters.map(materialize);
       if (!characters.length) throw new Error('No published characters were returned.');
+      setPublishedCharacterDefinitions(characters);
       memoryCatalog = { source: 'neon', characters };
       return memoryCatalog;
     } catch (reason) {
