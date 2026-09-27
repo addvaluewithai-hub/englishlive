@@ -1,7 +1,8 @@
-import type { CSSProperties } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, type CSSProperties } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { CharacterPortrait } from '../character/CharacterPortrait';
 import { characterRegistry } from '../character/registry';
+import { saveCloudProfile } from '../cloud/userData';
 import { ProductIcon } from '../components/ProductIcon';
 import { readLearnerProfile, saveLearnerProfile } from '../product/profile';
 
@@ -14,12 +15,28 @@ const teacherCopy: Record<string, string> = {
 };
 
 export function CharacterSelectScreen() {
+  const navigate = useNavigate();
   const profile = readLearnerProfile();
-  const selectedId = profile?.characterId ?? characterRegistry[0].id;
+  const [selectedId, setSelectedId] = useState(profile?.characterId ?? characterRegistry[0].id);
+  const [savingId, setSavingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  function rememberPartner(characterId: string) {
-    if (!profile) return;
-    saveLearnerProfile({ ...profile, characterId });
+  async function rememberPartner(characterId: string) {
+    if (!profile || savingId) return;
+    const next = { ...profile, characterId };
+    setSelectedId(characterId);
+    setSavingId(characterId);
+    setError(null);
+    try {
+      const cloud = await saveCloudProfile(next);
+      saveLearnerProfile({ ...next, createdAt: cloud.createdAt || next.createdAt });
+      navigate('/home');
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'تعذر حفظ المدرس. جرّب تاني.');
+      setSelectedId(profile.characterId);
+    } finally {
+      setSavingId(null);
+    }
   }
 
   return (
@@ -30,24 +47,27 @@ export function CharacterSelectScreen() {
         <p>Otti هو مدرس Englotti الأساسي، وتقدر تبدّل لشخصية تانية في أي وقت من غير ما يتغير ترتيب دروسك أو تقدمك.</p>
       </header>
 
+      {error ? <div className="v2-auth-error" role="alert">{error}</div> : null}
+
       <div className="v2-character-grid">
         {characterRegistry.map((character) => {
           const selected = character.id === selectedId;
           const isOtti = character.id === 'otti';
           return (
-            <Link
+            <button
               key={character.id}
+              type="button"
               className={`v2-character-card${isOtti ? ' is-otti' : ''}${selected ? ' is-selected' : ''}`}
               data-character={character.id}
               style={{ '--character-accent': character.accent } as CSSProperties}
-              to="/home"
-              onClick={() => rememberPartner(character.id)}
+              onClick={() => void rememberPartner(character.id)}
+              disabled={savingId !== null}
             >
               <span className="v2-character-check">{selected ? <ProductIcon name="check" size={21} /> : null}</span>
               <div className="v2-character-art"><CharacterPortrait character={character} pose={isOtti ? 'wave' : 'idle'} /></div>
               <strong>{character.name}</strong>
-              <span>{teacherCopy[character.id] ?? character.tagline}</span>
-            </Link>
+              <span>{savingId === character.id ? 'بنحفظ اختيارك…' : teacherCopy[character.id] ?? character.tagline}</span>
+            </button>
           );
         })}
       </div>
