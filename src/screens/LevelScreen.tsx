@@ -123,6 +123,7 @@ export function LevelScreen() {
                   const current = lesson.id === nextLesson?.id && !completed;
                   const side = localIndex % 2 === 0 ? 'left' : 'right';
                   const lessonNumber = lesson.order || localIndex + 1;
+                  const rowStyle = { gridRow: localIndex + 1 };
 
                   const content = (
                     <>
@@ -139,11 +140,11 @@ export function LevelScreen() {
                   );
 
                   return unlocked ? (
-                    <Link key={lesson.id} className={`journey-lesson-card is-${side}${current ? ' is-current' : ''}${completed ? ' is-complete' : ''}`} to={`/scene-lesson/${lesson.id}?character=${character.id}`}>
+                    <Link key={lesson.id} style={rowStyle} className={`journey-lesson-card is-${side}${current ? ' is-current' : ''}${completed ? ' is-complete' : ''}`} to={`/scene-lesson/${lesson.id}?character=${character.id}`}>
                       {content}
                     </Link>
                   ) : (
-                    <div key={lesson.id} className={`journey-lesson-card is-${side} is-locked`} aria-disabled="true">{content}</div>
+                    <div key={lesson.id} style={rowStyle} className={`journey-lesson-card is-${side} is-locked`} aria-disabled="true">{content}</div>
                   );
                 })}
               </div>
