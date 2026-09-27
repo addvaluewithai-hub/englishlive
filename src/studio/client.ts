@@ -2,10 +2,10 @@ import { getAuthJwt } from '../auth/client';
 import { apiUrl } from '../config/api';
 import type { StudioEntityType, StudioOverview, StudioRevision } from './types';
 
-async function studioRequest(init: RequestInit = {}) {
+async function authorizedStudioRequest(path: string, init: RequestInit = {}) {
   const token = await getAuthJwt();
   if (!token) throw new Error('AUTH_REQUIRED');
-  const response = await fetch(apiUrl('/api/studio'), {
+  const response = await fetch(apiUrl(path), {
     ...init,
     headers: {
       accept: 'application/json',
@@ -20,6 +20,10 @@ async function studioRequest(init: RequestInit = {}) {
     throw new Error(message);
   }
   return payload ?? {};
+}
+
+function studioRequest(init: RequestInit = {}) {
+  return authorizedStudioRequest('/api/studio', init);
 }
 
 export async function loadStudioOverview(): Promise<StudioOverview> {
@@ -58,4 +62,17 @@ export async function publishStudioDraft(input: {
     body: JSON.stringify({ action: 'publish', ...input }),
   });
   return payload.revision as StudioRevision;
+}
+
+export async function duplicateStudioEntity(input:
+  | { entityType: 'character'; sourceEntityId: string; slug: string; displayName: string }
+  | { entityType: 'lesson'; sourceEntityId: string; slug: string; code: string; title: string }
+) {
+  const payload = await authorizedStudioRequest('/api/studio/duplicate', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+  const entityId = typeof payload.entityId === 'string' ? payload.entityId : '';
+  if (!entityId) throw new Error('Studio created the item but did not return its id.');
+  return { entityId };
 }
