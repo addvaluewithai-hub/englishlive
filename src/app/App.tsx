@@ -19,6 +19,7 @@ import { ReviewScreen } from '../screens/ReviewScreen';
 import { SceneLessonCompleteScreen } from '../screens/SceneLessonCompleteScreen';
 import { SceneLessonScreen } from '../screens/SceneLessonScreen';
 import { SessionScreen } from '../screens/SessionScreen';
+import { StudioCurriculumScreen } from '../screens/StudioCurriculumScreen';
 import { StudioScreen } from '../screens/StudioScreen';
 import { UnitScreen } from '../screens/UnitScreen';
 
@@ -79,6 +80,7 @@ export function App() {
           <Route path="/auth/sign-up" element={<AuthScreen mode="sign-up" />} />
           <Route path="/onboarding" element={<RequireAuth requireProfile={false}><OnboardingScreen /></RequireAuth>} />
           <Route path="/studio" element={<RequireAuth requireProfile={false}><StudioScreen /></RequireAuth>} />
+          <Route path="/studio/curriculum" element={<RequireAuth requireProfile={false}><StudioCurriculumScreen /></RequireAuth>} />
           <Route path="/home" element={<RequireAuth><HomeScreen /></RequireAuth>} />
           <Route path="/learn" element={<RequireAuth><LearnScreen /></RequireAuth>} />
           <Route path="/learn/level/:levelId" element={<RequireAuth><LevelScreen /></RequireAuth>} />
