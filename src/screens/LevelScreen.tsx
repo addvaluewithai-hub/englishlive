@@ -92,6 +92,9 @@ export function LevelScreen() {
           const unitStartIndex = globalLessonIndex;
           const firstLesson = unit.lessons[0];
           const unitUnlocked = firstLesson ? isUnlocked(unitStartIndex, firstLesson.id) : false;
+          const unitCompletion = unitSummary.totalCount > 0
+            ? Math.round((unitSummary.completedCount / unitSummary.totalCount) * 100)
+            : 0;
 
           return (
             <section key={unit.id} id={`unit-${unit.id}`} className={`journey-unit${unitUnlocked ? '' : ' is-locked'}`}>
@@ -105,7 +108,11 @@ export function LevelScreen() {
               </header>
 
               <div className="journey-path-wrap">
-                <div className="journey-path-line" aria-hidden="true" />
+                <div
+                  className="journey-path-line"
+                  aria-hidden="true"
+                  style={{ background: `linear-gradient(#ff9fb8 0 ${unitCompletion}%, #dedede ${unitCompletion}% 100%)` }}
+                />
                 <img className={`journey-path-decor decor-${unitIndex % 2 ? 'left' : 'right'}`} src={decoration} alt="" aria-hidden="true" />
 
                 {unit.lessons.map((lesson, localIndex) => {
