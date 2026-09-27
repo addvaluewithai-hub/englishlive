@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authClient } from '../auth/client';
+import { clearCloudHydrationMarker } from '../cloud/bootstrap';
 import { clearLearnerProfile } from '../product/profile';
 import { replaceProductCourseProgressCache } from '../productV2/progress';
 
@@ -14,6 +15,7 @@ export function AccountScreen() {
     setBusy(true);
     try {
       await authClient.signOut();
+      clearCloudHydrationMarker();
       clearLearnerProfile();
       replaceProductCourseProgressCache(null);
       navigate('/', { replace: true });
