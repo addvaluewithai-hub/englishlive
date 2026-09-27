@@ -1,11 +1,11 @@
 import { useMemo, useState, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { firstPublishedLesson } from '../catalog/client';
 import { CharacterPortrait } from '../character/CharacterPortrait';
 import { OttiMark } from '../character/otti/OttiMark';
 import { characterRegistry, DEFAULT_CHARACTER_ID } from '../character/registry';
 import { saveCloudProfile } from '../cloud/userData';
 import { ProductIcon } from '../components/ProductIcon';
-import { A1_UNIT_1_PRODUCT } from '../productV2/course';
 import {
   learningGoals,
   readLearnerProfile,
@@ -63,9 +63,11 @@ export function OnboardingScreen() {
     setSaving(true);
     setSaveError(null);
     try {
-      const cloudProfile = await saveCloudProfile(draft);
+      const [cloudProfile, firstLesson] = await Promise.all([
+        saveCloudProfile(draft),
+        firstPublishedLesson(),
+      ]);
       saveLearnerProfile({ ...draft, createdAt: cloudProfile.createdAt || draft.createdAt });
-      const firstLesson = A1_UNIT_1_PRODUCT.lessons[0];
       navigate(`/scene-lesson/${firstLesson.id}?character=${characterId}&onboarding=1`);
     } catch (reason) {
       setSaveError(reason instanceof Error ? reason.message : 'تعذر حفظ إعدادات حسابك. جرّب تاني.');
