@@ -19,11 +19,11 @@ import './product-v5-final-polish.css';
 import './product-v6-session-polish.css';
 import './product-v7-final-qa.css';
 import './learn-journey.css';
-import './lesson-stage-v2.css';
-import './lesson-stage-v2-tuning.css';
 import './studio.css';
 import './studio-curriculum.css';
 import './otti.css';
+import './lesson-stage-v2.css';
+import './lesson-stage-v2-tuning.css';
 
 const root = document.getElementById('root');
 if (!root) throw new Error('Englotti root element was not found.');
