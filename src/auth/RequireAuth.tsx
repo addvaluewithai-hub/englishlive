@@ -1,8 +1,18 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
+import { OttiMark } from '../character/otti/OttiMark';
 import { hydrateCloudLearnerState, isCloudHydratedForUser } from '../cloud/bootstrap';
 import { readLearnerProfile, type LearnerProfile } from '../product/profile';
 import { authClient } from './client';
+
+function EnglottiLoader({ label = 'جاري التحميل' }: { label?: string }) {
+  return (
+    <section className="englotti-cloud-loader" dir="rtl" role="status" aria-label={label}>
+      <div className="englotti-cloud-loader-mark" aria-hidden="true"><OttiMark /></div>
+      <div className="englotti-cloud-loader-dots" aria-hidden="true"><span /><span /><span /></div>
+    </section>
+  );
+}
 
 function AuthenticatedGate({ children, requireProfile }: { children: ReactNode; requireProfile: boolean }) {
   const location = useLocation();
@@ -45,7 +55,7 @@ function AuthenticatedGate({ children, requireProfile }: { children: ReactNode; 
   }, [userId, retryNonce]);
 
   if (session.isPending) {
-    return <section className="v2-empty-screen" dir="rtl"><h1>بنفتح حسابك…</h1><p>ثواني ونرجعك لمكانك.</p></section>;
+    return <EnglottiLoader label="بنفتح حسابك" />;
   }
 
   if (!session.data?.user) {
@@ -63,7 +73,7 @@ function AuthenticatedGate({ children, requireProfile }: { children: ReactNode; 
   }
 
   if (hydratedUserId !== userId) {
-    return <section className="v2-empty-screen" dir="rtl"><h1>بنزامن تقدمك…</h1><p>بنجيب بياناتك من Englotti Cloud.</p></section>;
+    return <EnglottiLoader label="بنجهز بياناتك" />;
   }
 
   // React Router can keep this gate mounted while switching from onboarding

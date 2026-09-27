@@ -1,0 +1,777 @@
+@import url('https://fonts.googleapis.com/css2?family=Alexandria:wght@400;500;600;700;800;900&display=swap');
+
+/* Final learner-facing typography + lesson composition pass.
+ * Keep the runtime and authored boards untouched; this file only changes presentation.
+ */
+
+html,
+body,
+button,
+input,
+textarea,
+select {
+  font-family: 'Alexandria', 'Noto Sans Arabic', Tahoma, Arial, sans-serif;
+}
+
+/* --------------------------------------------------------------------------
+   Lightweight authenticated loading state
+   -------------------------------------------------------------------------- */
+.englotti-cloud-loader {
+  min-height: 72dvh;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 18px;
+  background: #fffdfb;
+}
+
+.englotti-cloud-loader-mark {
+  width: 112px;
+  height: 112px;
+  padding: 10px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid #ffd9e2;
+  border-radius: 34px;
+  background: radial-gradient(circle at 35% 25%, #fff 0 14%, #fff1f5 48%, #ffe4eb 100%);
+  box-shadow: 0 18px 45px rgba(255, 63, 104, .14);
+  animation: englottiLoaderFloat 1.7s ease-in-out infinite;
+}
+
+.englotti-cloud-loader-mark .otti-mark,
+.englotti-cloud-loader-mark .otti-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.englotti-cloud-loader-dots {
+  direction: ltr;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.englotti-cloud-loader-dots span {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #ff3f68;
+  opacity: .25;
+  animation: englottiLoaderDot 1.05s ease-in-out infinite;
+}
+
+.englotti-cloud-loader-dots span:nth-child(2) { animation-delay: .14s; }
+.englotti-cloud-loader-dots span:nth-child(3) { animation-delay: .28s; }
+
+@keyframes englottiLoaderFloat {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-9px) scale(1.025); }
+}
+
+@keyframes englottiLoaderDot {
+  0%, 70%, 100% { transform: scale(.78); opacity: .22; }
+  35% { transform: scale(1.15); opacity: 1; }
+}
+
+/* --------------------------------------------------------------------------
+   Live lesson — pixel-focused composition based on the supplied final design
+   -------------------------------------------------------------------------- */
+.is-scene-lesson,
+.is-scene-lesson .v2-scene-main {
+  background: #fffaf7;
+}
+
+.premium-scene-lesson {
+  --lesson-pink: #ff3f68;
+  --lesson-pink-dark: #f72d5c;
+  --lesson-pink-soft: #fff0f4;
+  --lesson-ink: #10203a;
+  --lesson-muted: #6b7280;
+  --lesson-wood: #f1ad6d;
+  --lesson-wood-dark: #df9250;
+  position: relative;
+  width: min(100%, 760px);
+  min-height: 100dvh;
+  margin: 0 auto;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  overflow: hidden;
+  background: #fffaf7;
+}
+
+/* Header: close, Englotti mark, centered lesson identity, progress, count pill. */
+.premium-lesson-topbar {
+  position: relative;
+  min-height: 82px;
+  padding: max(14px, env(safe-area-inset-top)) 18px 7px;
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) 48px;
+  align-items: center;
+  direction: ltr;
+  border: 0;
+  background: rgba(255, 255, 255, .985);
+  box-shadow: 0 1px 0 rgba(18, 28, 42, .045);
+}
+
+.premium-lesson-topbar::before {
+  content: 'Englotti';
+  position: absolute;
+  left: 70px;
+  top: 50%;
+  min-height: 42px;
+  padding-left: 47px;
+  display: flex;
+  align-items: center;
+  transform: translateY(-46%);
+  direction: ltr;
+  color: var(--lesson-ink);
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: -.035em;
+  background-image: url('https://res.cloudinary.com/as9o12al/image/upload/c_crop,x_50,y_30,w_280,h_210/f_auto,q_auto/v1790511309/englotti-learn-assets/englotti-assets-sprite.png');
+  background-repeat: no-repeat;
+  background-position: left center;
+  background-size: 42px 32px;
+  pointer-events: none;
+}
+
+.premium-top-icon {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  color: var(--lesson-ink);
+  background: #fff;
+  box-shadow: none;
+}
+
+.premium-top-icon:last-child {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.premium-lesson-title {
+  width: min(48vw, 280px);
+  margin: 0 auto;
+  display: grid;
+  place-items: center;
+  gap: 1px;
+  direction: rtl;
+  text-align: center;
+}
+
+.premium-lesson-title small {
+  color: var(--lesson-ink);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.premium-lesson-title strong {
+  max-width: 230px;
+  color: #344054;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.premium-lesson-progress {
+  position: relative;
+  width: min(44%, 330px);
+  height: 19px;
+  margin: 0 auto;
+  padding: 3px 0 8px;
+  gap: 4px;
+  direction: ltr;
+  background: #fff;
+  counter-reset: sceneCurrent 0 sceneTotal 0;
+}
+
+.premium-lesson-progress span {
+  height: 7px;
+  border-radius: 999px;
+  background: #e3e4e7;
+  counter-increment: sceneTotal;
+}
+
+.premium-lesson-progress span.is-complete,
+.premium-lesson-progress span.is-current {
+  counter-increment: sceneTotal sceneCurrent;
+}
+
+.premium-lesson-progress span.is-current,
+.premium-lesson-progress span.is-complete {
+  background: linear-gradient(90deg, #ff4c73, #ff2f61);
+}
+
+.premium-lesson-progress::after {
+  content: counter(sceneCurrent) ' / ' counter(sceneTotal);
+  position: absolute;
+  right: calc(-30vw - 8px);
+  top: -50px;
+  min-width: 72px;
+  height: 46px;
+  padding: 0 14px;
+  display: grid;
+  place-items: center;
+  border-radius: 25px;
+  background: #fff0f3;
+  color: var(--lesson-ink);
+  font-size: 15px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+/* Actual supplied classroom background. No generated pseudo-room geometry. */
+.premium-lesson-stage {
+  isolation: isolate;
+  min-height: 0;
+  overflow: hidden;
+  background-color: #f9e1d2;
+  background-image: linear-gradient(rgba(255,255,255,.02), rgba(255,255,255,.02)), url('https://res.cloudinary.com/as9o12al/image/upload/v1790521871/englotti-ui/lesson-classroom-background.png');
+  background-repeat: no-repeat;
+  background-position: center 18%;
+  background-size: cover;
+}
+
+.premium-lesson-stage::before {
+  display: none !important;
+  content: none !important;
+}
+
+/* Persistent board footprint. */
+.premium-lesson-stage::after {
+  content: '';
+  position: absolute;
+  z-index: 4;
+  left: 4.4%;
+  right: 4.4%;
+  bottom: 13px;
+  height: clamp(205px, 42%, 330px);
+  border: 7px solid var(--lesson-wood);
+  border-bottom-color: var(--lesson-wood-dark);
+  border-radius: 28px;
+  background: rgba(255, 253, 251, .985);
+  box-shadow:
+    inset 0 0 0 3px rgba(255, 255, 255, .72),
+    0 16px 34px rgba(118, 68, 35, .16);
+  pointer-events: none;
+}
+
+/* Teacher crop — deliberately contained, no arm/hand overflow. */
+.premium-lesson-character {
+  z-index: 3;
+  inset: 12px auto auto 50%;
+  width: clamp(230px, 67vw, 360px);
+  height: clamp(230px, 67vw, 360px);
+  padding: 0;
+  overflow: hidden !important;
+  place-items: center;
+  border: 6px solid rgba(255,255,255,.96);
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 36%, #fff7fa 0, #ffeaf0 74%, #ffdce5 100%);
+  box-shadow:
+    0 0 0 4px rgba(255, 214, 224, .58),
+    0 15px 34px rgba(119, 72, 49, .11);
+  transform: translateX(-50%);
+}
+
+.premium-lesson-character > svg,
+.premium-lesson-character svg {
+  width: 142%;
+  height: 142%;
+  max-height: none;
+  transform: translateY(-10%);
+  filter: drop-shadow(0 10px 12px rgba(74, 44, 28, .08));
+}
+
+.premium-lesson-character[data-renderer='otti-svg'] {
+  padding: 28px 18px 2px;
+}
+
+.premium-lesson-character[data-renderer='otti-svg'] > svg {
+  width: min(92vw, 430px);
+  height: min(95%, 560px);
+  transform: none;
+}
+
+/* The board is always there. Before authored support appears, the scene caption
+ * occupies the same surface instead of collapsing the layout. */
+.premium-scene-caption {
+  z-index: 7;
+  top: auto;
+  left: 9%;
+  right: 9%;
+  bottom: clamp(72px, 18%, 128px);
+  display: grid;
+  place-items: center;
+  gap: 8px;
+  color: var(--lesson-ink);
+  text-align: center;
+}
+
+.premium-scene-caption small {
+  color: var(--lesson-pink);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.premium-scene-caption strong {
+  max-width: 96%;
+  color: var(--lesson-ink);
+  font-size: clamp(28px, 8vw, 43px);
+  line-height: 1.16;
+  font-weight: 900;
+  white-space: normal;
+  text-align: center;
+  text-overflow: initial;
+}
+
+.premium-lesson-stage.has-board .premium-scene-caption {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.premium-board-layer {
+  z-index: 8;
+  left: 4.4%;
+  right: 4.4%;
+  bottom: 13px;
+  height: clamp(205px, 42%, 330px);
+  max-height: none;
+  overflow: hidden;
+  border: 7px solid var(--lesson-wood);
+  border-bottom-color: var(--lesson-wood-dark);
+  border-radius: 28px;
+  background: rgba(255,253,251,.99);
+  box-shadow:
+    inset 0 0 0 3px rgba(255,255,255,.72),
+    0 16px 34px rgba(118, 68, 35, .16);
+}
+
+.premium-board-layer .conversation-board {
+  height: 100%;
+  max-height: none;
+  padding: 30px 28px 24px;
+  overflow: auto;
+  border: 0;
+  border-radius: 19px;
+  background: transparent;
+  box-shadow: none;
+  text-align: center;
+}
+
+.premium-board-layer .conversation-board > small {
+  color: var(--lesson-pink);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.premium-board-layer .conversation-board h2 {
+  margin: 4px 0 12px;
+  color: var(--lesson-ink);
+  font-size: clamp(29px, 8.2vw, 46px);
+  line-height: 1.18;
+  font-weight: 900;
+  text-align: center;
+}
+
+.premium-board-layer .conversation-board p {
+  color: #566176;
+  font-size: clamp(15px, 4vw, 20px);
+  line-height: 1.65;
+  text-align: center;
+}
+
+.premium-board-layer .board-item-list {
+  margin-top: 12px;
+  text-align: right;
+}
+
+.premium-board-layer .board-reveal-item strong,
+.premium-board-layer .board-compare-grid strong {
+  color: var(--lesson-pink-dark);
+  font-size: clamp(18px, 5.2vw, 27px);
+  font-weight: 850;
+}
+
+/* Runtime note sits between teacher and board, like the supplied design. */
+.premium-lesson-footer {
+  position: static;
+  z-index: 20;
+  min-height: 140px;
+  padding: 10px 14px max(14px, env(safe-area-inset-bottom));
+  border: 0;
+  background: linear-gradient(180deg, rgba(255,250,247,.985), #fff 44%);
+  box-shadow: 0 -10px 28px rgba(113, 76, 49, .045);
+}
+
+.premium-live-status {
+  position: absolute;
+  z-index: 30;
+  top: clamp(315px, 45dvh, 410px);
+  left: 50%;
+  width: min(66%, 350px);
+  min-height: 62px;
+  margin: 0;
+  padding: 8px 20px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 13px;
+  border: 1px solid rgba(255, 210, 220, .9);
+  border-radius: 30px;
+  background: rgba(255,255,255,.98);
+  box-shadow: 0 11px 26px rgba(102, 63, 45, .11);
+}
+
+.premium-live-status::before {
+  content: '';
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  border-radius: 8px;
+  background:
+    linear-gradient(90deg,
+      transparent 0 4px,
+      var(--lesson-pink) 4px 9px,
+      transparent 9px 13px,
+      var(--lesson-pink) 13px 18px,
+      transparent 18px 22px,
+      var(--lesson-pink) 22px 27px,
+      transparent 27px);
+}
+
+.premium-status-dot { display: none; }
+
+.premium-live-status > div {
+  display: grid;
+  gap: 1px;
+  text-align: right;
+}
+
+.premium-live-status strong {
+  color: var(--lesson-ink);
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.premium-live-status small {
+  color: var(--lesson-muted);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.premium-control-row {
+  position: relative;
+  min-height: 114px;
+  display: grid;
+  grid-template-columns: 92px minmax(112px, 1fr) 92px;
+  align-items: center;
+  gap: 10px;
+  direction: rtl;
+}
+
+/* One visible help action, matching the design. It keeps opening the existing
+ * help/text sheet, while duplicate quick actions are hidden below. */
+.premium-secondary-control {
+  width: 90px;
+  height: 62px;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid #ebe7e3;
+  border-radius: 29px;
+  background: rgba(255,255,255,.99);
+  color: var(--lesson-ink);
+  box-shadow: 0 9px 24px rgba(39,47,60,.07);
+}
+
+.premium-secondary-control svg {
+  display: none;
+}
+
+.premium-secondary-control::before {
+  content: '?';
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  display: grid;
+  place-items: center;
+  border: 3px solid var(--lesson-ink);
+  border-radius: 50%;
+  color: var(--lesson-ink);
+  font-size: 17px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.premium-secondary-control span {
+  font-size: 0;
+}
+
+.premium-secondary-control span::after {
+  content: 'مش فاهم';
+  font-size: 12px;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.premium-main-control {
+  min-width: 104px;
+  width: 104px;
+  height: 104px;
+  justify-self: center;
+  border: 7px solid rgba(255,255,255,.96);
+  background: linear-gradient(145deg, #ff6386, #ff285b);
+  box-shadow:
+    0 0 0 11px rgba(255,63,104,.10),
+    0 13px 31px rgba(255,63,104,.29);
+}
+
+.premium-main-control svg {
+  width: 40px;
+  height: 40px;
+}
+
+.premium-main-control span {
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.premium-main-control.is-mic:not(.is-open) {
+  border-color: rgba(255,255,255,.96);
+  background: #c3c7ce;
+  box-shadow: 0 0 0 11px rgba(170,175,184,.11);
+}
+
+.premium-main-control.is-interrupt { background: #1d2736; }
+.premium-main-control.is-finish { background: #2aa56a; }
+
+/* Re-use the old mic-meter footprint as the design's keyboard affordance. */
+.premium-mic-meter {
+  width: 62px;
+  height: 62px;
+  justify-self: center;
+  display: grid;
+  place-items: center;
+  border: 1px solid #ebe7e3;
+  border-radius: 50%;
+  background: #fff;
+  color: var(--lesson-ink);
+  box-shadow: 0 9px 24px rgba(39,47,60,.07);
+}
+
+.premium-mic-meter::before {
+  content: '⌨';
+  font-size: 27px;
+  line-height: 1;
+}
+
+.premium-mic-meter span { display: none; }
+
+/* The design exposes one help action, not a grid of competing quick actions. */
+.premium-quick-actions {
+  grid-template-columns: 1fr !important;
+}
+
+.premium-quick-actions button:not(:first-child) {
+  display: none;
+}
+
+.premium-tools-sheet {
+  font-family: inherit;
+}
+
+.premium-live-error {
+  z-index: 40;
+}
+
+@media (min-width: 821px) {
+  .premium-scene-lesson {
+    max-width: 760px;
+    box-shadow: 0 0 70px rgba(35,28,23,.09);
+  }
+
+  .premium-live-status {
+    top: clamp(330px, 43dvh, 420px);
+  }
+}
+
+@media (max-width: 620px) {
+  .premium-lesson-topbar {
+    min-height: 78px;
+    padding-inline: 12px;
+    grid-template-columns: 44px minmax(0, 1fr) 44px;
+  }
+
+  .premium-lesson-topbar::before {
+    left: 58px;
+    min-height: 38px;
+    padding-left: 39px;
+    font-size: 15px;
+    background-size: 36px 28px;
+  }
+
+  .premium-lesson-title {
+    width: min(42vw, 205px);
+  }
+
+  .premium-lesson-title small,
+  .premium-lesson-title strong {
+    font-size: 10px;
+  }
+
+  .premium-lesson-progress {
+    width: 49%;
+  }
+
+  .premium-lesson-progress::after {
+    right: calc(-24vw - 13px);
+    top: -47px;
+    min-width: 62px;
+    height: 40px;
+    padding-inline: 10px;
+    font-size: 13px;
+  }
+
+  .premium-lesson-character {
+    top: 11px;
+    width: min(67vw, 270px);
+    height: min(67vw, 270px);
+    border-width: 5px;
+  }
+
+  .premium-lesson-stage::after,
+  .premium-board-layer {
+    left: 4%;
+    right: 4%;
+    bottom: 10px;
+    height: clamp(205px, 42%, 285px);
+    border-width: 6px;
+    border-radius: 24px;
+  }
+
+  .premium-board-layer .conversation-board {
+    padding: 27px 20px 21px;
+  }
+
+  .premium-board-layer .conversation-board h2 {
+    font-size: clamp(27px, 8vw, 37px);
+  }
+
+  .premium-scene-caption {
+    left: 8%;
+    right: 8%;
+    bottom: clamp(74px, 18%, 112px);
+  }
+
+  .premium-scene-caption strong {
+    font-size: clamp(25px, 7.5vw, 34px);
+  }
+
+  .premium-live-status {
+    top: clamp(300px, 44dvh, 370px);
+    width: min(70%, 315px);
+    min-height: 58px;
+    padding: 7px 15px;
+  }
+
+  .premium-live-status::before {
+    width: 30px;
+    height: 30px;
+    flex-basis: 30px;
+  }
+
+  .premium-live-status strong { font-size: 13px; }
+  .premium-live-status small { font-size: 10px; }
+
+  .premium-lesson-footer {
+    min-height: 132px;
+    padding-inline: 10px;
+  }
+
+  .premium-control-row {
+    min-height: 104px;
+    grid-template-columns: 86px minmax(104px, 1fr) 86px;
+    gap: 4px;
+  }
+
+  .premium-secondary-control {
+    width: 82px;
+    height: 58px;
+  }
+
+  .premium-main-control {
+    width: 94px;
+    min-width: 94px;
+    height: 94px;
+    border-width: 6px;
+    box-shadow:
+      0 0 0 10px rgba(255,63,104,.10),
+      0 11px 27px rgba(255,63,104,.27);
+  }
+
+  .premium-mic-meter {
+    width: 58px;
+    height: 58px;
+  }
+}
+
+@media (max-width: 420px) {
+  .premium-lesson-topbar::before {
+    content: '';
+    width: 35px;
+    padding: 0;
+    background-size: contain;
+  }
+
+  .premium-lesson-title {
+    width: min(48vw, 190px);
+  }
+
+  .premium-lesson-character {
+    width: min(69vw, 260px);
+    height: min(69vw, 260px);
+  }
+
+  .premium-live-status {
+    width: min(73%, 292px);
+  }
+}
+
+@media (max-height: 720px) {
+  .premium-lesson-character {
+    width: min(55vw, 215px);
+    height: min(55vw, 215px);
+  }
+
+  .premium-live-status {
+    top: 276px;
+  }
+
+  .premium-lesson-stage::after,
+  .premium-board-layer {
+    height: 202px;
+  }
+
+  .premium-lesson-footer {
+    min-height: 124px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .englotti-cloud-loader-mark,
+  .englotti-cloud-loader-dots span {
+    animation: none;
+  }
+}
