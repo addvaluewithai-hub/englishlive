@@ -1,6 +1,9 @@
 import { Link, NavLink, Route, Routes, useLocation } from 'react-router-dom';
+import { RequireAuth } from '../auth/RequireAuth';
 import { OttiMark } from '../character/otti/OttiMark';
 import { ProductIcon } from '../components/ProductIcon';
+import { AccountScreen } from '../screens/AccountScreen';
+import { AuthScreen } from '../screens/AuthScreen';
 import { CharacterSelectScreen } from '../screens/CharacterSelectScreen';
 import { FreeSpeakScreen } from '../screens/FreeSpeakScreen';
 import { FreeSpeakSessionScreen } from '../screens/FreeSpeakSessionScreen';
@@ -24,6 +27,7 @@ const navClass = ({ isActive }: { isActive: boolean }) =>
 export function App() {
   const location = useLocation();
   const isLanding = location.pathname === '/';
+  const isAuth = location.pathname.startsWith('/auth/');
   const isOnboarding = location.pathname.startsWith('/onboarding');
   const isCompletion = location.pathname.startsWith('/lesson-complete/');
   const isLegacySession = location.pathname.startsWith('/session/');
@@ -32,10 +36,10 @@ export function App() {
   const isFreeSpeakSession = /^\/speak\/[^/]+/.test(location.pathname);
   const isSession = isLegacySession || isLesson || isSceneLesson || isFreeSpeakSession;
   const isReview = location.pathname.startsWith('/review/') || location.pathname.startsWith('/lesson-review/');
-  const isApp = !isLanding && !isOnboarding && !isSession && !isReview;
-  const usesProductV2 = isApp || isOnboarding || isSceneLesson;
+  const isApp = !isLanding && !isAuth && !isOnboarding && !isSession && !isReview;
+  const usesProductV2 = isApp || isAuth || isOnboarding || isSceneLesson;
   const showProductHeader = isApp && !isCompletion;
-  const hideGlobalHeader = isLanding || isOnboarding || isCompletion || isSceneLesson;
+  const hideGlobalHeader = isLanding || isAuth || isOnboarding || isCompletion || isSceneLesson;
   const showBottomNav = isApp && !isCompletion;
 
   return (
@@ -46,7 +50,7 @@ export function App() {
             <span className="v2-brand-mark" aria-hidden="true"><OttiMark /></span>
             <span>Englotti</span>
           </Link>
-          <Link className="v2-icon-button" to="/characters" aria-label="اختيار المدرس">
+          <Link className="v2-icon-button" to="/account" aria-label="حسابي">
             <ProductIcon name="profile" size={24} />
           </Link>
         </header>
@@ -69,21 +73,24 @@ export function App() {
       <main className={isSceneLesson ? 'app-main app-main-session v2-scene-main' : isSession ? 'app-main app-main-session' : usesProductV2 ? 'v2-app-main' : 'app-main'}>
         <Routes>
           <Route path="/" element={<LandingScreen />} />
-          <Route path="/onboarding" element={<OnboardingScreen />} />
-          <Route path="/home" element={<HomeScreen />} />
-          <Route path="/learn" element={<LearnScreen />} />
-          <Route path="/learn/level/:levelId" element={<LevelScreen />} />
-          <Route path="/learn/unit/:unitId" element={<UnitScreen />} />
-          <Route path="/lesson/:lessonId" element={<LessonScreen />} />
-          <Route path="/scene-lesson/:lessonId" element={<SceneLessonScreen />} />
-          <Route path="/lesson-complete/:lessonId" element={<SceneLessonCompleteScreen />} />
-          <Route path="/lesson-review/:runId" element={<LessonReviewScreen />} />
-          <Route path="/speak" element={<FreeSpeakScreen />} />
-          <Route path="/speak/:modeId" element={<FreeSpeakSessionScreen />} />
-          <Route path="/progress" element={<ProgressScreen />} />
-          <Route path="/characters" element={<CharacterSelectScreen />} />
-          <Route path="/session/:missionId" element={<SessionScreen />} />
-          <Route path="/review/:sessionId" element={<ReviewScreen />} />
+          <Route path="/auth/sign-in" element={<AuthScreen mode="sign-in" />} />
+          <Route path="/auth/sign-up" element={<AuthScreen mode="sign-up" />} />
+          <Route path="/onboarding" element={<RequireAuth requireProfile={false}><OnboardingScreen /></RequireAuth>} />
+          <Route path="/home" element={<RequireAuth><HomeScreen /></RequireAuth>} />
+          <Route path="/learn" element={<RequireAuth><LearnScreen /></RequireAuth>} />
+          <Route path="/learn/level/:levelId" element={<RequireAuth><LevelScreen /></RequireAuth>} />
+          <Route path="/learn/unit/:unitId" element={<RequireAuth><UnitScreen /></RequireAuth>} />
+          <Route path="/lesson/:lessonId" element={<RequireAuth><LessonScreen /></RequireAuth>} />
+          <Route path="/scene-lesson/:lessonId" element={<RequireAuth><SceneLessonScreen /></RequireAuth>} />
+          <Route path="/lesson-complete/:lessonId" element={<RequireAuth><SceneLessonCompleteScreen /></RequireAuth>} />
+          <Route path="/lesson-review/:runId" element={<RequireAuth><LessonReviewScreen /></RequireAuth>} />
+          <Route path="/speak" element={<RequireAuth><FreeSpeakScreen /></RequireAuth>} />
+          <Route path="/speak/:modeId" element={<RequireAuth><FreeSpeakSessionScreen /></RequireAuth>} />
+          <Route path="/progress" element={<RequireAuth><ProgressScreen /></RequireAuth>} />
+          <Route path="/characters" element={<RequireAuth><CharacterSelectScreen /></RequireAuth>} />
+          <Route path="/account" element={<RequireAuth><AccountScreen /></RequireAuth>} />
+          <Route path="/session/:missionId" element={<RequireAuth><SessionScreen /></RequireAuth>} />
+          <Route path="/review/:sessionId" element={<RequireAuth><ReviewScreen /></RequireAuth>} />
           <Route path="*" element={<LandingScreen />} />
         </Routes>
       </main>
