@@ -27,6 +27,7 @@ import './lesson-stage-v2.css';
 import './lesson-stage-v2-tuning.css';
 import './product-v8-pixel-perfect.css';
 import './product-v8-fixes.css';
+import './product-v9-levels-polish.css';
 
 const root = document.getElementById('root');
 if (!root) throw new Error('Englotti root element was not found.');
