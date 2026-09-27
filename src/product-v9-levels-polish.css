@@ -1,0 +1,440 @@
+/* Final screenshot-driven polish for the landing display type and level chooser.
+ * This stays presentation-only: catalog/progress truth remains dynamic.
+ */
+
+/* Arabic display typography: Alexandria is fine, but the old display leading and
+ * negative tracking made connected Arabic forms visually collide. */
+.qa-landing-copy h1,
+.qa-landing-section-heading h2,
+.qa-landing-split h2,
+.qa-landing-final h2 {
+  letter-spacing: 0 !important;
+  text-wrap: balance;
+}
+
+.qa-landing-copy h1 {
+  line-height: 1.08 !important;
+}
+
+.qa-landing-copy h1 em {
+  display: inline-block;
+  line-height: 1.08;
+}
+
+.qa-landing-section-heading h2,
+.qa-landing-split h2,
+.qa-landing-final h2 {
+  line-height: 1.18 !important;
+}
+
+/* --------------------------------------------------------------------------
+   Levels chooser — match the supplied final composition.
+   -------------------------------------------------------------------------- */
+
+.v2-app-main:has(.journey-levels) {
+  padding-inline: 0;
+}
+
+.journey-levels {
+  width: min(100%, 760px);
+  margin: 0 auto;
+  padding: 16px 18px 112px;
+  gap: 12px;
+}
+
+.journey-levels-hero {
+  min-height: 146px;
+  grid-template-columns: 42% 58%;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.journey-levels-hero::after {
+  inset: 22px auto auto -24px;
+  width: 48%;
+  height: 106px;
+  border-radius: 52% 48% 46% 54%;
+  background: rgba(255, 232, 239, .72);
+  filter: none;
+}
+
+.journey-levels-hero-art {
+  align-items: end;
+  justify-items: center;
+  overflow: visible;
+}
+
+.journey-levels-hero-art img {
+  width: min(175px, 118%);
+  max-height: 142px;
+  object-position: bottom center;
+  filter: drop-shadow(0 14px 18px rgba(209, 59, 102, .13));
+}
+
+.journey-hero-star.one {
+  left: 7%;
+  top: 33%;
+}
+
+.journey-hero-star.two {
+  right: 5%;
+  top: 24%;
+}
+
+.journey-levels-hero-copy {
+  padding: 13px 2px 10px 12px;
+}
+
+.journey-levels-hero-copy > span {
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.journey-levels-hero-copy h1 {
+  margin: 3px 0 5px;
+  font-size: clamp(29px, 7.7vw, 39px);
+  line-height: 1.12;
+  letter-spacing: 0;
+}
+
+.journey-levels-hero-copy p {
+  max-width: 370px;
+  color: #72798d;
+  font-size: 12.5px;
+  line-height: 1.65;
+}
+
+.journey-level-card-list {
+  gap: 9px;
+}
+
+.journey-level-card {
+  border-radius: 21px;
+}
+
+/* Published level: two-row layout, with the stats treatment from the design. */
+.journey-level-card.is-live {
+  min-height: 158px;
+  grid-template-columns: 102px minmax(0, 1fr) 46px;
+  grid-template-areas:
+    'badge copy copy'
+    'stats stats go';
+  grid-template-rows: minmax(76px, auto) 48px;
+  column-gap: 10px;
+  row-gap: 8px;
+  padding: 13px 12px 12px;
+  border: 1.5px solid #ff7e9f;
+  background: rgba(255, 255, 255, .985);
+  box-shadow: 0 11px 26px rgba(255, 53, 104, .075);
+}
+
+.journey-level-card.is-live::before {
+  background: linear-gradient(105deg, rgba(255, 241, 245, .82), rgba(255, 255, 255, .98) 55%);
+}
+
+.journey-level-card.is-live .journey-level-badge {
+  grid-area: badge;
+  min-height: 76px;
+  align-self: stretch;
+  border-radius: 18px;
+}
+
+.journey-level-card.is-live .journey-level-badge strong {
+  font-size: 38px;
+}
+
+.journey-level-card.is-live .journey-level-badge span {
+  font-size: 12px;
+}
+
+.journey-level-card.is-live .journey-level-copy {
+  grid-area: copy;
+  align-self: center;
+  padding-inline-start: 2px;
+}
+
+.journey-level-card.is-live .journey-level-copy h2 {
+  margin: 3px 0 3px;
+  font-size: 20px;
+  line-height: 1.25;
+}
+
+.journey-level-card.is-live .journey-level-copy p {
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+
+.journey-level-card.is-live .journey-level-progress {
+  display: none;
+}
+
+.journey-now-pill {
+  padding: 4px 9px;
+  gap: 5px;
+  font-size: 10.5px;
+}
+
+.journey-level-card.is-live .journey-level-stats {
+  grid-area: stats;
+  position: relative;
+  z-index: 4;
+  height: 48px;
+  margin: 0;
+  padding: 0 8px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  align-items: center;
+  border-radius: 17px;
+  background: rgba(255, 255, 255, .92);
+  color: #777d8f;
+  box-shadow: 0 5px 14px rgba(50, 37, 31, .025);
+  direction: rtl;
+}
+
+.journey-level-card.is-live .journey-level-stats > span {
+  position: relative;
+  min-width: 0;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 1px;
+  text-align: center;
+}
+
+.journey-level-card.is-live .journey-level-stats > span + span::before {
+  content: '';
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  right: 0;
+  width: 1px;
+  background: #f3dce3;
+}
+
+.journey-level-card.is-live .journey-level-stats strong {
+  color: #101b37;
+  font-size: 14px;
+  line-height: 1.05;
+  font-weight: 900;
+}
+
+.journey-level-card.is-live .journey-level-stats small {
+  overflow: hidden;
+  color: #777d8f;
+  font-size: 9px;
+  line-height: 1.25;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.journey-level-card.is-live .journey-level-go {
+  grid-area: go;
+  align-self: center;
+  justify-self: center;
+  width: 44px;
+  height: 44px;
+}
+
+.journey-level-card.is-live .journey-level-art {
+  left: 43px;
+  bottom: 37px;
+  width: 110px;
+  height: 78px;
+  opacity: .88;
+}
+
+/* Locked levels are intentionally compact in the supplied design. */
+.journey-level-card.is-locked {
+  min-height: 88px;
+  grid-template-columns: 88px minmax(0, 1fr) 42px;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 20px;
+  opacity: 1;
+  box-shadow: 0 7px 19px rgba(25, 22, 21, .035);
+}
+
+.journey-level-card.is-locked .journey-level-badge {
+  min-height: 70px;
+  border-radius: 17px;
+}
+
+.journey-level-card.is-locked .journey-level-badge strong {
+  font-size: 35px;
+}
+
+.journey-level-card.is-locked .journey-level-badge span {
+  font-size: 10.5px;
+}
+
+.journey-level-card.is-locked .journey-level-copy h2 {
+  margin: 0 0 2px;
+  font-size: 18px;
+  line-height: 1.28;
+}
+
+.journey-level-card.is-locked .journey-level-copy p {
+  display: -webkit-box;
+  overflow: hidden;
+  color: #7c8295;
+  font-size: 10.5px;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.journey-level-card.is-locked .journey-level-lock {
+  width: 40px;
+  height: 40px;
+  background: #f8f6f4;
+  color: #777e91;
+}
+
+.journey-level-card.is-locked .journey-level-art {
+  display: block;
+  left: 45px;
+  bottom: -17px;
+  width: 105px;
+  height: 72px;
+  opacity: .88;
+}
+
+@media (max-width: 620px) {
+  .journey-levels {
+    padding: 12px 18px 104px;
+  }
+
+  .journey-levels-hero {
+    min-height: 132px;
+    grid-template-columns: 42% 58%;
+  }
+
+  .journey-levels-hero-art img {
+    width: 148px;
+    max-height: 126px;
+  }
+
+  .journey-levels-hero-copy {
+    padding: 8px 0 7px 7px;
+  }
+
+  .journey-levels-hero-copy h1 {
+    font-size: 30px;
+  }
+
+  .journey-levels-hero-copy p {
+    font-size: 11.5px;
+    line-height: 1.58;
+  }
+
+  .journey-level-card.is-live {
+    min-height: 154px;
+    grid-template-columns: 94px minmax(0, 1fr) 44px;
+    grid-template-rows: minmax(74px, auto) 46px;
+  }
+
+  .journey-level-card.is-live .journey-level-badge {
+    min-height: 74px;
+  }
+
+  .journey-level-card.is-live .journey-level-badge strong {
+    font-size: 36px;
+  }
+
+  .journey-level-card.is-live .journey-level-art {
+    left: 38px;
+    bottom: 36px;
+    width: 104px;
+    height: 76px;
+  }
+
+  .journey-level-card.is-live .journey-level-stats {
+    height: 46px;
+  }
+
+  .journey-level-card.is-locked {
+    min-height: 84px;
+    grid-template-columns: 82px minmax(0, 1fr) 40px;
+    padding: 7px 9px;
+  }
+
+  .journey-level-card.is-locked .journey-level-badge {
+    min-height: 66px;
+  }
+
+  .journey-level-card.is-locked .journey-level-badge strong {
+    font-size: 33px;
+  }
+
+  .journey-level-card.is-locked .journey-level-copy h2 {
+    font-size: 17px;
+  }
+
+  .journey-level-card.is-locked .journey-level-copy p {
+    font-size: 10px;
+  }
+
+  .journey-level-card.is-locked .journey-level-art {
+    left: 40px;
+    bottom: -18px;
+    width: 98px;
+    height: 70px;
+  }
+}
+
+@media (max-width: 390px) {
+  .journey-levels {
+    padding-inline: 14px;
+  }
+
+  .journey-levels-hero {
+    min-height: 128px;
+  }
+
+  .journey-levels-hero-art img {
+    width: 138px;
+  }
+
+  .journey-levels-hero-copy h1 {
+    font-size: 28px;
+  }
+
+  .journey-level-card.is-live {
+    grid-template-columns: 88px minmax(0, 1fr) 42px;
+    column-gap: 8px;
+  }
+
+  .journey-level-card.is-live .journey-level-badge strong {
+    font-size: 34px;
+  }
+
+  .journey-level-card.is-live .journey-level-copy h2 {
+    font-size: 18px;
+  }
+
+  .journey-level-card.is-live .journey-level-copy p {
+    font-size: 10.75px;
+  }
+
+  .journey-level-card.is-live .journey-level-art,
+  .journey-level-card.is-locked .journey-level-art {
+    display: block;
+  }
+
+  .journey-level-card.is-locked {
+    grid-template-columns: 76px minmax(0, 1fr) 38px;
+  }
+
+  .journey-level-card.is-locked .journey-level-badge strong {
+    font-size: 31px;
+  }
+
+  .journey-level-card.is-locked .journey-level-copy h2 {
+    font-size: 16px;
+  }
+}
