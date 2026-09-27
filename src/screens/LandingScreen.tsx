@@ -1,14 +1,15 @@
 import { Link } from 'react-router-dom';
+import { authClient } from '../auth/client';
 import { CharacterPortrait } from '../character/CharacterPortrait';
 import { OttiMark } from '../character/otti/OttiMark';
 import { getCharacterDefinition } from '../character/registry';
 import { ProductIcon } from '../components/ProductIcon';
-import { readLearnerProfile } from '../product/profile';
 
 export function LandingScreen() {
-  const profile = readLearnerProfile();
+  const session = authClient.useSession();
+  const signedIn = Boolean(session.data?.user);
   const featured = getCharacterDefinition('otti');
-  const primaryHref = profile ? '/home' : '/onboarding';
+  const primaryHref = signedIn ? '/home' : '/auth/sign-up';
 
   return (
     <div className="qa-landing" dir="rtl">
@@ -17,7 +18,7 @@ export function LandingScreen() {
           <span aria-hidden="true"><OttiMark /></span>
           <strong>Englotti</strong>
         </Link>
-        <Link className="qa-landing-header-cta" to={primaryHref}>{profile ? 'كمّل تعلمك' : 'ابدأ الآن'}</Link>
+        <Link className="qa-landing-header-cta" to={primaryHref}>{signedIn ? 'كمّل تعلمك' : 'ابدأ الآن'}</Link>
       </header>
 
       <main>
@@ -29,7 +30,7 @@ export function LandingScreen() {
             <div className="qa-landing-actions">
               <Link className="qa-landing-primary" to={primaryHref}>
                 <ProductIcon name="play" size={21} />
-                <span>{profile ? 'كمّل من مكانك' : 'ابدأ A1'}</span>
+                <span>{signedIn ? 'كمّل من مكانك' : 'ابدأ A1'}</span>
               </Link>
               <a className="qa-landing-secondary" href="#how">شوف التجربة</a>
             </div>
@@ -71,7 +72,7 @@ export function LandingScreen() {
           <OttiMark className="qa-landing-final-mark" />
           <h2>جاهز تبدأ أول محادثة مع Otti؟</h2>
           <p>A1 بيبدأ بخطوات صغيرة جدًا، وكل خطوة بتستخدمها فورًا بصوتك.</p>
-          <Link className="qa-landing-primary" to={primaryHref}>{profile ? 'افتح Englotti' : 'ابدأ أول درس'}</Link>
+          <Link className="qa-landing-primary" to={primaryHref}>{signedIn ? 'افتح Englotti' : 'ابدأ أول درس'}</Link>
         </section>
       </main>
     </div>
