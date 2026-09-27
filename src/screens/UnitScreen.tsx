@@ -1,31 +1,41 @@
 import { Link, useParams } from 'react-router-dom';
+import { useProductCatalog } from '../catalog/client';
+import { getCharacterDefinition } from '../character/registry';
 import { ProductIcon } from '../components/ProductIcon';
-import { A1_UNIT_1_LESSON_SLOTS, getProductUnit, lessonArabicTitle, lessonProductTitle } from '../productV2/course';
+import { lessonArabicTitle, lessonProductTitle } from '../productV2/course';
 import { isProductLessonUnlocked, productUnitProgress, readProductCourseProgress } from '../productV2/progress';
 import { readLearnerProfile } from '../product/profile';
-import { getCharacterDefinition } from '../character/registry';
 
 export function UnitScreen() {
   const { unitId } = useParams();
-  const unit = getProductUnit(unitId);
+  const catalog = useProductCatalog();
+  const unit = catalog.levels.flatMap((level) => level.connectedUnits).find((item) => item.id === unitId)
+    ?? catalog.levels[0]?.connectedUnits[0];
   const progress = readProductCourseProgress();
-  const summary = productUnitProgress(unit, progress);
   const profile = readLearnerProfile();
   const character = getCharacterDefinition(profile?.characterId);
+
+  if (!unit || unit.lessons.length === 0) {
+    return <section className="v2-empty-screen" dir="rtl"><h1>الوحدة مش متاحة</h1><p>مفيش دروس منشورة في الوحدة دي.</p><Link to="/learn">ارجع للمسار</Link></section>;
+  }
+
+  const summary = productUnitProgress(unit, progress);
+  const level = catalog.levels.find((item) => item.id === unit.levelId);
+  const levelLabel = level?.title ?? unit.levelId.toUpperCase();
 
   return (
     <section className="v3-unit-screen" dir="rtl">
       <div className="v3-page-topline">
         <Link className="v3-back-link" to={`/learn/level/${unit.levelId}`} aria-label="العودة لوحدات المستوى">
           <ProductIcon name="chevron" size={20} />
-          <span>وحدات A1</span>
+          <span>وحدات {levelLabel}</span>
         </Link>
       </div>
 
       <header className="v3-unit-hero">
-        <span className="v3-unit-orb">01</span>
+        <span className="v3-unit-orb">{String(unit.order).padStart(2, '0')}</span>
         <div>
-          <span className="v3-kicker">A1 · الوحدة 1</span>
+          <span className="v3-kicker">{levelLabel} · الوحدة {unit.order}</span>
           <h1>{unit.arabicTitle}</h1>
           <p>{unit.description}</p>
         </div>
@@ -34,8 +44,8 @@ export function UnitScreen() {
       <div className="v3-unit-progress-panel">
         <div>
           <small>تقدمك في الوحدة</small>
-          <strong>{summary.completedCount} من {summary.totalCount} دروس متاحة</strong>
-          <span>{summary.unitComplete ? 'خلصت كل الدروس المتاحة دلوقتي.' : `الدرس التالي: ${lessonProductTitle(summary.nextLesson)}`}</span>
+          <strong>{summary.completedCount} من {summary.totalCount} دروس منشورة</strong>
+          <span>{summary.unitComplete ? 'خلصت كل الدروس المنشورة دلوقتي.' : `الدرس التالي: ${lessonProductTitle(summary.nextLesson)}`}</span>
         </div>
         <Link className="v3-primary-cta" to={`/scene-lesson/${summary.nextLesson.id}?character=${character.id}`}>
           <ProductIcon name="play" size={21} />
@@ -45,36 +55,25 @@ export function UnitScreen() {
 
       <section className="v3-lessons-section">
         <div className="v3-section-heading">
-          <div><span className="v3-kicker">7 دروس في الوحدة</span><h2>الدروس</h2></div>
-          <small>3 دروس متاحة الآن، والباقي هيفتح تدريجيًا.</small>
+          <div><span className="v3-kicker">{unit.lessons.length} دروس منشورة</span><h2>الدروس</h2></div>
+          <small>أي درس جديد يتنشر من Englotti هيتضاف هنا تلقائيًا.</small>
         </div>
 
         <div className="v3-lesson-list">
-          {A1_UNIT_1_LESSON_SLOTS.map((slot) => {
-            const connectedLesson = unit.lessons.find((lesson) => lesson.id === slot.connectedLessonId);
-            if (!connectedLesson) {
-              return (
-                <div key={slot.sourceLessonId} className="v3-lesson-row is-coming" aria-disabled="true">
-                  <span className="v3-lesson-number">{slot.order}</span>
-                  <span className="v3-lesson-copy"><small>الدرس {slot.order}</small><strong>{slot.title}</strong><span>{slot.arabicTitle}</span></span>
-                  <span className="v3-lesson-status"><ProductIcon name="lock" size={18} /><small>قريبًا</small></span>
-                </div>
-              );
-            }
-
-            const saved = progress.lessons[connectedLesson.id];
+          {unit.lessons.map((lesson, index) => {
+            const saved = progress.lessons[lesson.id];
             const completed = Boolean(saved?.completedAt);
-            const current = connectedLesson.id === summary.nextLesson.id && !summary.unitComplete;
-            const unlocked = isProductLessonUnlocked(unit, connectedLesson.id, progress);
+            const current = lesson.id === summary.nextLesson.id && !summary.unitComplete;
+            const unlocked = isProductLessonUnlocked(unit, lesson.id, progress);
             const body = (
               <>
                 <span className={`v3-lesson-number${completed ? ' is-complete' : current ? ' is-current' : ''}`}>
-                  {completed ? <ProductIcon name="check" size={21} /> : slot.order}
+                  {completed ? <ProductIcon name="check" size={21} /> : lesson.order || index + 1}
                 </span>
                 <span className="v3-lesson-copy">
-                  <small>الدرس {slot.order}</small>
-                  <strong>{lessonProductTitle(connectedLesson)}</strong>
-                  <span>{lessonArabicTitle(connectedLesson)}</span>
+                  <small>الدرس {lesson.order || index + 1}</small>
+                  <strong>{lessonProductTitle(lesson)}</strong>
+                  <span>{lessonArabicTitle(lesson)}</span>
                 </span>
                 <span className="v3-lesson-status">
                   {!unlocked ? <ProductIcon name="lock" size={18} /> : <ProductIcon name="chevron" size={20} />}
@@ -83,11 +82,11 @@ export function UnitScreen() {
             );
 
             return unlocked ? (
-              <Link key={slot.sourceLessonId} className={`v3-lesson-row${current ? ' is-current' : ''}`} to={`/scene-lesson/${connectedLesson.id}?character=${character.id}`}>
+              <Link key={lesson.id} className={`v3-lesson-row${current ? ' is-current' : ''}`} to={`/scene-lesson/${lesson.id}?character=${character.id}`}>
                 {body}
               </Link>
             ) : (
-              <div key={slot.sourceLessonId} className="v3-lesson-row is-locked" aria-disabled="true">{body}</div>
+              <div key={lesson.id} className="v3-lesson-row is-locked" aria-disabled="true">{body}</div>
             );
           })}
         </div>
