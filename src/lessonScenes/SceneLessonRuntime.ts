@@ -1,3 +1,4 @@
+import { recordRuntimeSceneCompletion } from '../cloud/sessionBridge';
 import type { LiveClientTool } from '../live/tools';
 import type { SupportBoard } from '../presentation/types';
 import { markProductLessonCompleted, markProductLessonStarted } from '../productV2/progress';
@@ -242,6 +243,7 @@ ${JSON.stringify(this.scenePayload(this.currentScene), null, 2)}
         }
 
         const scene = this.currentScene;
+        const sceneIndex = this.lesson.scenes.findIndex((value) => value.id === scene.id);
         const evidence: SceneLessonEvidence = {
           id: crypto.randomUUID(),
           sceneId: scene.id,
@@ -256,6 +258,13 @@ ${JSON.stringify(this.scenePayload(this.currentScene), null, 2)}
         this.learnerAudioObserved = false;
 
         if (this.advanceFrom(scene.id)) {
+          recordRuntimeSceneCompletion({
+            lessonId: this.lesson.id,
+            sceneId: scene.id,
+            sceneIndex,
+            summary,
+            lessonComplete: false,
+          });
           this.persistAndEmit();
           return {
             result: 'Scene complete. Move directly into the next tiny scene and teach only that scene.',
@@ -269,6 +278,13 @@ ${JSON.stringify(this.scenePayload(this.currentScene), null, 2)}
         this.activeBoard = null;
         this.onBoardChange?.(null);
         markProductLessonCompleted(this.lesson.id);
+        recordRuntimeSceneCompletion({
+          lessonId: this.lesson.id,
+          sceneId: scene.id,
+          sceneIndex,
+          summary,
+          lessonComplete: true,
+        });
         this.persistAndEmit();
         return {
           result: 'Lesson complete. Give one short warm closing in Arabic that mentions the practical English win, then stop.',
@@ -324,7 +340,7 @@ ${JSON.stringify(this.scenePayload(this.currentScene), null, 2)}
             : { type: 'examples', title, items: items.map((item) => ({ title: item })) };
 
         this.activeBoard = board;
-        this.onBoardChange?.(clone(board));
+        this.onBoardChange?.(this.activeBoard ? clone(this.activeBoard) : null);
         return {
           result: 'Board replaced. Explain this visual support briefly, then continue the SAME current scene.',
           board,
