@@ -19,6 +19,7 @@ import './product-v5-final-polish.css';
 import './product-v6-session-polish.css';
 import './product-v7-final-qa.css';
 import './studio.css';
+import './studio-simple.css';
 import './otti.css';
 
 const root = document.getElementById('root');
