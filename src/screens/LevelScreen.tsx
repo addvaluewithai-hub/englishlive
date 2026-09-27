@@ -1,13 +1,19 @@
 import { Link, useParams } from 'react-router-dom';
+import { useProductCatalog } from '../catalog/client';
 import { ProductIcon } from '../components/ProductIcon';
-import { getProductLevel, A1_UNIT_1_PRODUCT } from '../productV2/course';
 import { productUnitProgress, readProductCourseProgress } from '../productV2/progress';
 
 export function LevelScreen() {
   const { levelId } = useParams();
-  const level = getProductLevel(levelId);
+  const catalog = useProductCatalog();
+  const level = catalog.levels.find((item) => item.id === levelId) ?? catalog.levels[0];
   const progress = readProductCourseProgress();
-  const unitOneProgress = productUnitProgress(A1_UNIT_1_PRODUCT, progress);
+
+  if (!level) {
+    return <section className="v2-empty-screen" dir="rtl"><h1>المستوى مش متاح</h1><p>مفيش مستوى منشور بالمعرّف ده.</p><Link to="/learn">ارجع للمسار</Link></section>;
+  }
+
+  const publishedCompleted = level.connectedUnits.reduce((sum, unit) => sum + productUnitProgress(unit, progress).completedCount, 0);
 
   return (
     <section className="v3-level-screen" dir="rtl">
@@ -27,43 +33,33 @@ export function LevelScreen() {
         </div>
       </header>
 
-      <div className="v3-level-stats" aria-label="A1 course structure">
-        <div><strong>{level.unitCount}</strong><span>وحدات</span></div>
-        <div><strong>{level.lessonSlotCount}</strong><span>دروس في الخطة</span></div>
-        <div><strong>{unitOneProgress.completedCount}/{unitOneProgress.totalCount}</strong><span>من الدروس المتاحة</span></div>
+      <div className="v3-level-stats" aria-label={`${level.title} course structure`}>
+        <div><strong>{level.unitCount}</strong><span>وحدات منشورة</span></div>
+        <div><strong>{level.lessonSlotCount}</strong><span>دروس متاحة</span></div>
+        <div><strong>{publishedCompleted}/{level.lessonSlotCount}</strong><span>دروس مكتملة</span></div>
       </div>
 
       <section className="v3-unit-browser">
         <div className="v3-section-heading">
           <div>
-            <span className="v3-kicker">خريطة A1</span>
+            <span className="v3-kicker">خريطة {level.title}</span>
             <h2>الوحدات</h2>
           </div>
-          <small>الوحدات التالية هتفتح تدريجيًا.</small>
+          <small>القائمة دي جاية من الوحدات المنشورة في Englotti Cloud.</small>
         </div>
 
         <div className="v3-unit-list">
-          {level.outline.map((unit) => {
-            const body = (
-              <>
-                <span className={`v3-unit-number${unit.connected ? ' is-live' : ''}`}>{unit.order}</span>
-                <span className="v3-unit-copy">
-                  <small>الوحدة {unit.order} · {unit.lessonCount} دروس</small>
-                  <strong>{unit.arabicTitle}</strong>
-                  <span>{unit.title}</span>
-                </span>
-                <span className="v3-unit-tail">
-                  {unit.connected ? <ProductIcon name="chevron" size={21} /> : <><ProductIcon name="lock" size={18} /><small>قريبًا</small></>}
-                </span>
-              </>
-            );
-
-            return unit.connected ? (
-              <Link key={unit.id} className="v3-unit-card is-live" to={`/learn/unit/${unit.id}`}>{body}</Link>
-            ) : (
-              <div key={unit.id} className="v3-unit-card is-locked" aria-disabled="true">{body}</div>
-            );
-          })}
+          {level.connectedUnits.map((unit) => (
+            <Link key={unit.id} className="v3-unit-card is-live" to={`/learn/unit/${unit.id}`}>
+              <span className="v3-unit-number is-live">{unit.order}</span>
+              <span className="v3-unit-copy">
+                <small>الوحدة {unit.order} · {unit.lessons.length} دروس</small>
+                <strong>{unit.arabicTitle}</strong>
+                <span>{unit.title}</span>
+              </span>
+              <span className="v3-unit-tail"><ProductIcon name="chevron" size={21} /></span>
+            </Link>
+          ))}
         </div>
       </section>
     </section>
