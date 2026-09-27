@@ -1,13 +1,15 @@
 import type { CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
+import { useProductCatalog } from '../catalog/client';
 import { getCharacterDefinition } from '../character/registry';
 import { ProductIcon } from '../components/ProductIcon';
-import { A1_UNIT_1_PRODUCT, lessonArabicTitle, lessonProductTitle } from '../productV2/course';
+import { lessonArabicTitle, lessonProductTitle } from '../productV2/course';
 import { isProductLessonUnlocked, productUnitProgress, readProductCourseProgress } from '../productV2/progress';
 import { readLearnerProfile } from '../product/profile';
 
 export function ProgressScreen() {
   const profile = readLearnerProfile();
+  const catalog = useProductCatalog();
 
   if (!profile) {
     return (
@@ -19,25 +21,31 @@ export function ProgressScreen() {
     );
   }
 
+  const level = catalog.levels[0];
+  const unit = level?.connectedUnits[0];
+  if (!level || !unit || unit.lessons.length === 0) {
+    return <section className="v2-empty-screen" dir="rtl"><h1>مفيش دروس منشورة</h1><p>التقدم هيظهر هنا أول ما يكون فيه درس متاح.</p></section>;
+  }
+
   const character = getCharacterDefinition(profile.characterId);
   const progress = readProductCourseProgress();
-  const summary = productUnitProgress(A1_UNIT_1_PRODUCT, progress);
+  const summary = productUnitProgress(unit, progress);
   const completionPercent = Math.round((summary.completedCount / summary.totalCount) * 100);
 
   return (
     <section className="v2-progress-screen" dir="rtl">
       <header className="v2-progress-heading">
         <span className="v2-kicker">تقدمي</span>
-        <h1>خطواتك في A1</h1>
-        <p>ده تقدمك في الدروس المؤلفة اللي خلصتها، مش درجة مستوى أو نسبة إتقان.</p>
+        <h1>خطواتك في {level.title}</h1>
+        <p>ده تقدمك في الدروس المنشورة اللي خلصتها، مش درجة مستوى أو نسبة إتقان.</p>
       </header>
 
       <section className="v2-progress-overview">
         <div>
           <strong>{summary.completedCount}/{summary.totalCount}</strong>
-          <span>دروس متاحة مكتملة</span>
+          <span>دروس منشورة مكتملة</span>
         </div>
-        <div className="v2-progress-ring" style={{ '--progress': `${completionPercent}%` } as CSSProperties} aria-label={`${summary.completedCount} of ${summary.totalCount} available lessons completed`}>
+        <div className="v2-progress-ring" style={{ '--progress': `${completionPercent}%` } as CSSProperties} aria-label={`${summary.completedCount} of ${summary.totalCount} published lessons completed`}>
           <span>{summary.completedCount}/{summary.totalCount}</span>
         </div>
       </section>
@@ -52,12 +60,12 @@ export function ProgressScreen() {
       </Link>
 
       <section className="v2-progress-lessons">
-        <h2>الوحدة 1 · {A1_UNIT_1_PRODUCT.arabicTitle}</h2>
-        {A1_UNIT_1_PRODUCT.lessons.map((lesson, index) => {
+        <h2>الوحدة {unit.order} · {unit.arabicTitle}</h2>
+        {unit.lessons.map((lesson, index) => {
           const saved = progress.lessons[lesson.id];
           const completed = Boolean(saved?.completedAt);
           const started = Boolean(saved?.startedAt);
-          const unlocked = isProductLessonUnlocked(A1_UNIT_1_PRODUCT, lesson.id, progress);
+          const unlocked = isProductLessonUnlocked(unit, lesson.id, progress);
           return (
             <article className="v2-progress-lesson" key={lesson.id}>
               <span className={`v2-progress-status${completed ? ' is-complete' : started ? ' is-started' : ''}`}>
@@ -74,7 +82,7 @@ export function ProgressScreen() {
       </section>
 
       <div className="v2-progress-note">
-        <strong>مهم:</strong> إكمال درس معناه إنك حققت عقد الدرس ده في الجلسة. مش معناه إننا بنقول إنك أتقنت A1 كله.
+        <strong>مهم:</strong> إكمال درس معناه إنك حققت عقد الدرس ده في الجلسة. مش معناه إننا بنقول إنك أتقنت المستوى كله.
       </div>
     </section>
   );
