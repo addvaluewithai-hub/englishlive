@@ -1,7 +1,7 @@
 import { apiUrl } from '../config/api';
 import { DEFAULT_LIVE_MODEL, isLiveModel, type LiveModel } from './models';
 import type { LiveClientTool } from './tools';
-import type { LiveCallbacks, LiveTokenResponse, LiveTransport } from './types';
+import type { LiveCallbacks, LiveSessionConfig, LiveTokenResponse, LiveTransport } from './types';
 
 const LIVE_ENDPOINT =
   'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContentConstrained';
@@ -73,6 +73,7 @@ export class GeminiLiveTransport implements LiveTransport {
   private connectGeneration = 0;
   private messageChain: Promise<void> = Promise.resolve();
   private systemInstruction = '';
+  private sessionConfig: LiveSessionConfig = {};
   private resumptionHandle: string | null = null;
   private reconnecting = false;
   private readonly acknowledgedCallIds = new Set<string>();
@@ -99,10 +100,13 @@ export class GeminiLiveTransport implements LiveTransport {
     return this.socket?.readyState === WebSocket.OPEN && this.setupComplete;
   }
 
-  async connect(systemInstruction: string) {
+  async connect(systemInstruction: string, config: LiveSessionConfig = {}) {
     if (this.socket && this.socket.readyState <= WebSocket.OPEN) return;
     const generation = ++this.connectGeneration;
     this.systemInstruction = systemInstruction.trim();
+    this.sessionConfig = {
+      voiceName: config.voiceName?.trim() || undefined,
+    };
     this.callbacks.onStatus('connecting');
     const issued = await this.tokenProvider();
     if (generation !== this.connectGeneration) throw new Error('Session was closed.');
@@ -179,9 +183,22 @@ export class GeminiLiveTransport implements LiveTransport {
         }, SETUP_TIMEOUT_MS);
 
         const functionDeclarations = this.toolDeclarations();
+        const generationConfig: Record<string, unknown> = {
+          responseModalities: ['AUDIO'],
+        };
+        if (this.sessionConfig.voiceName) {
+          generationConfig.speechConfig = {
+            voiceConfig: {
+              prebuiltVoiceConfig: {
+                voiceName: this.sessionConfig.voiceName,
+              },
+            },
+          };
+        }
+
         const setup: Record<string, unknown> = {
           model: `models/${this.model}`,
-          generationConfig: { responseModalities: ['AUDIO'] },
+          generationConfig,
           systemInstruction: {
             parts: [{
               text: this.systemInstruction || 'You are a warm English conversation partner. Keep the conversation natural and concise.',
