@@ -2,6 +2,7 @@ import { Link, Navigate } from 'react-router-dom';
 import { useProductCatalog } from '../catalog/client';
 import { getCharacterDefinition } from '../character/registry';
 import { ProductIcon } from '../components/ProductIcon';
+import { learnArt } from '../learn/assets';
 import { productUnitProgress, readProductCourseProgress, takePendingProductLessonCompletion } from '../productV2/progress';
 import { readLearnerProfile } from '../product/profile';
 
@@ -18,42 +19,42 @@ const LEVEL_PRESENTATION: readonly LevelPresentation[] = [
     code: 'A1',
     arabicTitle: 'المبتدئ',
     description: 'أساسيات التواصل في المواقف اليومية: التعارف، الناس، البيت، الوقت والمواقف العملية.',
-    art: '/learn-assets/mascot-reading.png',
+    art: learnArt.mascotReading,
     tone: 'pink',
   },
   {
     code: 'A2',
     arabicTitle: 'ما قبل المتوسط',
     description: 'بناء ثقتك في التحدث وفهم المواقف اليومية الأكثر تنوعًا.',
-    art: '/learn-assets/chat-cloud.png',
+    art: learnArt.chatCloud,
     tone: 'peach',
   },
   {
     code: 'B1',
     arabicTitle: 'المتوسط',
     description: 'التواصل بثقة في مواقف الحياة والعمل والدراسة.',
-    art: '/learn-assets/big-ben.png',
+    art: learnArt.bigBen,
     tone: 'blue',
   },
   {
     code: 'B2',
     arabicTitle: 'ما فوق المتوسط',
     description: 'التعبير عن الأفكار المعقدة ومناقشة مواضيع أوسع بوضوح وسلاسة.',
-    art: '/learn-assets/purple-note-cloud.png',
+    art: learnArt.purpleNoteCloud,
     tone: 'purple',
   },
   {
     code: 'C1',
     arabicTitle: 'المتقدم',
     description: 'التواصل بطلاقة ومرونة في المواقف المهنية والأكاديمية والاجتماعية.',
-    art: '/learn-assets/mountain-flag.png',
+    art: learnArt.mountainFlag,
     tone: 'mint',
   },
   {
     code: 'C2',
     arabicTitle: 'المتمكن',
     description: 'فهم وإتقان اللغة في سياقات واسعة بدقة وطلاقة عالية.',
-    art: '/learn-assets/trophy.png',
+    art: learnArt.trophy,
     tone: 'sky',
   },
 ];
@@ -85,7 +86,7 @@ export function LearnScreen() {
     <section className="journey-levels" dir="rtl">
       <header className="journey-levels-hero">
         <div className="journey-levels-hero-art" aria-hidden="true">
-          <img src="/learn-assets/mascot-reading.png" alt="" />
+          <img src={learnArt.mascotReading} alt="" />
           <span className="journey-hero-star one" />
           <span className="journey-hero-star two" />
         </div>
