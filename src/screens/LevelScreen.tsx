@@ -3,15 +3,16 @@ import { Link, useLocation, useParams } from 'react-router-dom';
 import { useProductCatalog } from '../catalog/client';
 import { getCharacterDefinition } from '../character/registry';
 import { ProductIcon } from '../components/ProductIcon';
+import { learnArt } from '../learn/assets';
 import { lessonArabicTitle, lessonProductTitle } from '../productV2/course';
 import { productUnitProgress, readProductCourseProgress } from '../productV2/progress';
 import { readLearnerProfile } from '../product/profile';
 
 const UNIT_DECOR = [
-  '/learn-assets/tree-bushes.png',
-  '/learn-assets/signpost.png',
-  '/learn-assets/cloud.png',
-  '/learn-assets/mountain-flag.png',
+  learnArt.treeBushes,
+  learnArt.signpost,
+  learnArt.cloud,
+  learnArt.mountainFlag,
 ] as const;
 
 function levelCode(id: string, title: string) {
@@ -72,7 +73,7 @@ export function LevelScreen() {
           </div>
         </div>
         <div className="journey-course-art" aria-hidden="true">
-          <img src="/learn-assets/mascot-reading.png" alt="" />
+          <img src={learnArt.mascotReading} alt="" />
         </div>
       </header>
 
@@ -145,7 +146,7 @@ export function LevelScreen() {
       </div>
 
       <footer className="journey-level-finish">
-        <img src="/learn-assets/mascot-bush-love.png" alt="" aria-hidden="true" />
+        <img src={learnArt.mascotBushLove} alt="" aria-hidden="true" />
         <div><strong>{completion === 100 ? 'خلصت كل المحتوى المنشور هنا 🎉' : 'كمّل خطوة بخطوة'}</strong><span>كل Lesson جديدة تتنشر هتدخل مكانها في الرحلة تلقائيًا.</span></div>
       </footer>
     </section>
