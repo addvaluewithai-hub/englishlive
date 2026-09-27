@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { CharacterPortrait } from '../character/CharacterPortrait';
 import { OttiMark } from '../character/otti/OttiMark';
 import { characterRegistry, DEFAULT_CHARACTER_ID } from '../character/registry';
+import { saveCloudProfile } from '../cloud/userData';
 import { ProductIcon } from '../components/ProductIcon';
 import { A1_UNIT_1_PRODUCT } from '../productV2/course';
 import {
@@ -10,6 +11,7 @@ import {
   readLearnerProfile,
   saveLearnerProfile,
   speakingComfortLevels,
+  type LearnerProfile,
   type LearningGoal,
   type SpeakingComfort,
 } from '../product/profile';
@@ -37,6 +39,8 @@ export function OnboardingScreen() {
   const [goals, setGoals] = useState<LearningGoal[]>(existing?.goals ?? []);
   const [comfort, setComfort] = useState<SpeakingComfort | null>(existing?.comfort ?? null);
   const [characterId, setCharacterId] = useState(existing?.characterId ?? DEFAULT_CHARACTER_ID);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   function toggleGoal(goal: LearningGoal) {
     setGoals((current) => {
@@ -46,18 +50,28 @@ export function OnboardingScreen() {
     });
   }
 
-  function finish() {
-    if (!comfort || goals.length === 0) return;
-    saveLearnerProfile({
+  async function finish() {
+    if (!comfort || goals.length === 0 || saving) return;
+    const draft: LearnerProfile = {
       version: 1,
       firstName: firstName.trim().slice(0, 40),
       goals,
       comfort,
       characterId,
       createdAt: existing?.createdAt ?? new Date().toISOString(),
-    });
-    const firstLesson = A1_UNIT_1_PRODUCT.lessons[0];
-    navigate(`/scene-lesson/${firstLesson.id}?character=${characterId}&onboarding=1`);
+    };
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const cloudProfile = await saveCloudProfile(draft);
+      saveLearnerProfile({ ...draft, createdAt: cloudProfile.createdAt || draft.createdAt });
+      const firstLesson = A1_UNIT_1_PRODUCT.lessons[0];
+      navigate(`/scene-lesson/${firstLesson.id}?character=${characterId}&onboarding=1`);
+    } catch (reason) {
+      setSaveError(reason instanceof Error ? reason.message : 'تعذر حفظ إعدادات حسابك. جرّب تاني.');
+    } finally {
+      setSaving(false);
+    }
   }
 
   const canContinue = step === 0 || (step === 1 && goals.length > 0) || (step === 2 && comfort !== null);
@@ -149,18 +163,19 @@ export function OnboardingScreen() {
               ))}
             </div>
             <div className="v2-onboarding-note">أول درس هيبدأ مع <strong>{selectedCharacter.name}</strong>. الميكروفون مش هيفتح إلا لما تضغط ابدأ.</div>
+            {saveError ? <div className="v2-auth-error" role="alert">{saveError}</div> : null}
           </div>
         ) : null}
 
         <footer className="v2-onboarding-actions">
-          {step > 0 ? <button type="button" className="v2-secondary-button" onClick={() => setStep((value) => value - 1)}>رجوع</button> : <span />}
+          {step > 0 ? <button type="button" className="v2-secondary-button" disabled={saving} onClick={() => setStep((value) => value - 1)}>رجوع</button> : <span />}
           {step < 3 ? (
             <button type="button" className="v2-primary-button" disabled={!canContinue} onClick={() => canContinue && setStep((value) => value + 1)}>
               متابعة <ProductIcon name="chevron" size={20} />
             </button>
           ) : (
-            <button type="button" className="v2-primary-button" onClick={finish}>
-              ابدأ أول درس <ProductIcon name="play" size={21} />
+            <button type="button" className="v2-primary-button" disabled={saving} onClick={finish}>
+              {saving ? 'بنحفظ حسابك…' : 'ابدأ أول درس'} {!saving ? <ProductIcon name="play" size={21} /> : null}
             </button>
           )}
         </footer>
