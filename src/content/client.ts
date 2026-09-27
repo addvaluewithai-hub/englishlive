@@ -1,5 +1,6 @@
 import { apiUrl } from '../config/api';
 import type { CharacterDefinition } from '../character/types';
+import { beginCloudLessonSession } from '../cloud/sessionBridge';
 import type { SceneLessonDefinition } from '../lessonScenes/types';
 import { DEFAULT_TEACHING_POLICY } from './defaultTeachingPolicy';
 import type {
@@ -186,7 +187,7 @@ export async function loadTeachingBundle(
       console.warn('[Englotti content] bundle identity mismatch; using local fallback.');
       return fallback;
     }
-    return {
+    const loaded: LoadedTeachingBundle = {
       source: 'neon',
       lesson: parsed.lesson.content,
       lessonRevisionId: parsed.lesson.revisionId,
@@ -195,6 +196,13 @@ export async function loadTeachingBundle(
       teachingPolicy: parsed.teachingPolicy.content,
       teachingPolicyRevisionId: parsed.teachingPolicy.revisionId,
     };
+    await beginCloudLessonSession({
+      lessonId: loaded.lesson.id,
+      lessonRevisionId: loaded.lessonRevisionId,
+      characterRevisionId: loaded.characterRevisionId,
+      teachingPolicyRevisionId: loaded.teachingPolicyRevisionId,
+    });
+    return loaded;
   } catch (reason) {
     const message = reason instanceof Error ? reason.message : String(reason);
     console.warn(`[Englotti content] could not load published bundle (${message}); using local fallback.`);
