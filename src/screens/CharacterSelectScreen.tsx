@@ -1,23 +1,17 @@
 import { useState, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CharacterPortrait } from '../character/CharacterPortrait';
-import { characterRegistry } from '../character/registry';
+import { publishedCharacterById, usePublishedCharacters } from '../character/catalog';
 import { saveCloudProfile } from '../cloud/userData';
 import { ProductIcon } from '../components/ProductIcon';
 import { readLearnerProfile, saveLearnerProfile } from '../product/profile';
 
-const teacherCopy: Record<string, string> = {
-  otti: 'مدرس Englotti الأساسي: خفيف، مشجّع، وبيفضل جنبك خطوة بخطوة.',
-  hakim: 'هادي، متفهم، وسهل في الكلام.',
-  reem: 'دافئة، فضولية، ومشجعة دايمًا.',
-  marwan: 'مريح، سريع البديهة، ويحب التحدي.',
-  amal: 'واضحة، مليانة طاقة، ومتفاعلة.',
-};
-
 export function CharacterSelectScreen() {
   const navigate = useNavigate();
   const profile = readLearnerProfile();
-  const [selectedId, setSelectedId] = useState(profile?.characterId ?? characterRegistry[0].id);
+  const { characters, source } = usePublishedCharacters();
+  const fallbackId = publishedCharacterById(characters, profile?.characterId).id;
+  const [selectedId, setSelectedId] = useState(profile?.characterId ?? fallbackId);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,13 +38,14 @@ export function CharacterSelectScreen() {
       <header className="v2-character-heading">
         <span className="v2-kicker">مدرسك</span>
         <h1>مين تحب يكمل معاك؟</h1>
-        <p>Otti هو مدرس Englotti الأساسي، وتقدر تبدّل لشخصية تانية في أي وقت من غير ما يتغير ترتيب دروسك أو تقدمك.</p>
+        <p>اختار الشخصية اللي ترتاح لها. الاسم والوصف وطريقة المدرس هنا جاية من النسخة المنشورة في Englotti.</p>
       </header>
 
+      {source === 'local-fallback' ? <div className="v2-character-hint">بنعرض النسخة المحلية مؤقتًا لحد ما المحتوى المنشور يوصل.</div> : null}
       {error ? <div className="v2-auth-error" role="alert">{error}</div> : null}
 
       <div className="v2-character-grid">
-        {characterRegistry.map((character) => {
+        {characters.map((character) => {
           const selected = character.id === selectedId;
           const isOtti = character.id === 'otti';
           return (
@@ -66,7 +61,7 @@ export function CharacterSelectScreen() {
               <span className="v2-character-check">{selected ? <ProductIcon name="check" size={21} /> : null}</span>
               <div className="v2-character-art"><CharacterPortrait character={character} pose={isOtti ? 'wave' : 'idle'} /></div>
               <strong>{character.name}</strong>
-              <span>{savingId === character.id ? 'بنحفظ اختيارك…' : teacherCopy[character.id] ?? character.tagline}</span>
+              <span>{savingId === character.id ? 'بنحفظ اختيارك…' : character.tagline}</span>
             </button>
           );
         })}
