@@ -45,7 +45,7 @@ export const onRequestGet = async ({ request, env }: PagesContext) => {
         revisionNumber: Number(row.revision_number),
         content: row.content,
       },
-    }, 200, 'public, max-age=15, stale-while-revalidate=120');
+    }, 200, 'no-store');
   } catch (reason) {
     const message = reason instanceof Error ? reason.message : 'Content database request failed.';
     const unconfigured = message.includes('DATABASE_URL');
