@@ -1,0 +1,105 @@
+/* Screenshot-driven fixes layered after product-v8-pixel-perfect.css. */
+
+/* Keep the legacy tools trigger available to automated QA while making it
+ * visually absent from the final header. */
+.premium-top-icon:last-child {
+  visibility: visible !important;
+  opacity: 0 !important;
+  pointer-events: auto !important;
+}
+
+/* The final design has one help pill; keep the question mark inside the pill. */
+.premium-secondary-control {
+  width: 118px !important;
+  padding-inline: 13px !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 30px !important;
+  direction: rtl;
+  gap: 8px !important;
+}
+
+.premium-secondary-control::before {
+  grid-column: 2;
+  width: 28px !important;
+  height: 28px !important;
+  margin: 0;
+}
+
+.premium-secondary-control span {
+  grid-column: 1;
+  min-width: 0;
+  text-align: center;
+}
+
+/* Use the final design copy for the live callout without touching runtime state. */
+.premium-live-status:has(.status-listening) strong,
+.premium-live-status:has(.status-listening) small,
+.premium-live-status:has(.status-speaking) strong,
+.premium-live-status:has(.status-speaking) small {
+  font-size: 0 !important;
+}
+
+.premium-live-status:has(.status-listening) strong::after {
+  content: 'دورك الآن';
+  color: var(--lesson-pink-dark);
+  font-size: 17px;
+  font-weight: 900;
+}
+
+.premium-live-status:has(.status-listening) small::after {
+  content: 'قل الجملة بصوتك';
+  color: var(--lesson-ink);
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.premium-live-status:has(.status-speaking) strong::after {
+  content: 'المعلمة تشرح الآن';
+  color: var(--lesson-ink);
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.premium-live-status:has(.status-speaking) small::after {
+  content: 'استمع جيدًا ثم تكلّم بعد ذلك';
+  color: var(--lesson-muted);
+  font-size: 10px;
+  font-weight: 550;
+}
+
+@media (max-width: 620px) {
+  .premium-control-row {
+    grid-template-columns: 118px minmax(100px, 1fr) 66px !important;
+    gap: 4px !important;
+  }
+
+  .premium-secondary-control {
+    width: 112px !important;
+    height: 58px !important;
+  }
+}
+
+@media (max-width: 420px) {
+  .premium-lesson-topbar::before {
+    content: 'Englotti' !important;
+    left: 55px !important;
+    width: auto !important;
+    min-height: 34px !important;
+    padding-left: 33px !important;
+    font-size: 12px !important;
+    background-size: 30px 24px !important;
+  }
+
+  .premium-control-row {
+    grid-template-columns: 111px minmax(94px, 1fr) 60px !important;
+  }
+
+  .premium-secondary-control {
+    width: 108px !important;
+    padding-inline: 10px !important;
+  }
+
+  .premium-secondary-control span::after {
+    font-size: 11px !important;
+  }
+}
