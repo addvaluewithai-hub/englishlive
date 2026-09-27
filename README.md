@@ -1,84 +1,116 @@
-# EnglishLive
+# Englotti
 
-EnglishLive is a structured English speaking course delivered through live AI characters.
+Englotti is an Arabic-first, mobile-first English speaking course taught through live AI characters.
 
-The primary experience is **not** a blank chatbot and it is not a traditional tap-through lesson app with voice bolted on. EnglishLive owns an authored course path — Level → Unit → Lesson → Lesson Beat — while a live character teaches that path naturally through speech, board moments, questions, guided practice and real conversation challenges.
+The repository name is still `englishlive`, but the learner-facing product is **Englotti**.
 
-A separate **Free Speak** path is always available for open conversation without changing Course Progress.
+The product combines a structured authored course with real-time voice teaching:
 
-## Product thesis
+```text
+Course → Level → Unit → Lesson → Scene
+```
 
-> Structure like a real course. Delivery like a private live teacher.
+The application owns curriculum order, progression and completion. Gemini Live teaches naturally inside the current authored scene; it does not decide what lesson comes next.
 
-Initial target: adults around **CEFR B1 → B2** who understand English better than they can comfortably speak it.
+A separate **Free Speak** path is available for open conversation and does not complete course lessons.
 
-The first authored vertical slice is **B1 Unit 1 — Tell stories people can follow**.
+## Current product baseline
+
+The current stable implementation is on `main`.
+
+Production content currently includes:
+
+- A1 as the active learner level;
+- Unit 1;
+- the first 3 published lessons;
+- 12 selectable teachers/characters;
+- a published global teaching policy;
+- Neon-backed learner accounts, profile, progress and lesson sessions.
+
+Course navigation and published lesson content are read from Neon. The old TypeScript course data exists only as limited fallback/legacy support and must not become the primary source of truth again.
+
+## Learner journey
+
+```text
+Landing
+  → Sign up / Sign in
+  → Onboarding
+  → Home
+  → Learn
+  → Level journey
+  → Live lesson
+  → Completion / Progress
+```
+
+The intended Learn experience is:
+
+- `/learn` — level overview;
+- `/learn/level/:levelId` — one long Duolingo-style journey containing the Units and Lessons for the level;
+- `/learn/unit/:unitId` — compatibility redirect/legacy route rather than the primary UX.
+
+Free Speak lives under `/speak` and remains isolated from course completion.
+
+## Englotti Studio
+
+Authenticated admins can author production content through:
+
+- `/studio` — JSON-first Lesson / Character / Teaching Policy authoring;
+- `/studio/curriculum` — create/archive/restore Levels, Units and Lessons.
+
+The authoring model is deliberately revision-based:
+
+```text
+Draft
+→ Preview
+→ Publish
+→ published pointer moves to the new immutable revision
+```
+
+Published revisions are never edited in place. Existing learner sessions remain pinned to the exact lesson, character and teaching-policy revisions they started with.
+
+JSON-first authoring is intentional because curriculum/content editing is expected to happen with AI assistance.
 
 ## Architecture
 
-The base technical/product architecture is in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). Accepted ADRs supersede conflicting implementation details in that document.
+The main boundaries are:
 
-Current authoritative decisions:
+- **React + TypeScript + Vite** — learner and Studio web application.
+- **Cloudflare Pages + Functions** — hosting and trusted server/API boundary.
+- **Neon Postgres** — course identities, authored revisions, learner profile/progress/session state.
+- **Neon Auth** — email/password and Google account identity.
+- **Gemini Live** — low-latency bidirectional voice behind the application runtime.
+- **Renderer-neutral character layer** — current SVG/PixiLive-derived renderers stay separate from curriculum state.
+- **Capacitor** — shared web code can be packaged for iOS/Android; native release still requires real-device validation.
 
-- [`docs/ADR_001_CHARACTER_RENDERER.md`](docs/ADR_001_CHARACTER_RENDERER.md) — renderer-agnostic, SVG-first character runtime.
-- [`docs/ADR_002_STRUCTURED_COURSE_RUNTIME.md`](docs/ADR_002_STRUCTURED_COURSE_RUNTIME.md) — structured Course → Level → Unit → Lesson → Beat is the primary learning journey; Free Speak is separate.
+More detail:
 
-The most important boundaries are:
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+- [`docs/ADR_001_CHARACTER_RENDERER.md`](docs/ADR_001_CHARACTER_RENDERER.md)
+- [`docs/ADR_002_STRUCTURED_COURSE_RUNTIME.md`](docs/ADR_002_STRUCTURED_COURSE_RUNTIME.md)
+- [`docs/TEAM_HANDOFF.md`](docs/TEAM_HANDOFF.md)
 
-- **Renderer-agnostic, SVG-first character layer** — characters own visual identity/performance, never curriculum state. Rive remains an optional future renderer behind the same contract.
-- **Gemini Live transport** — low-latency bidirectional audio, interruption and tool calling behind an adapter.
-- **Course Lesson Runtime** — the application, not the model, owns Lesson order, current Beat, authored board, semantic evidence and completion.
-- **Conversation Tutor Runtime** — remains available for challenge/assessment/legacy mission flows, but is no longer the primary product navigation model.
-- **Stage Director** — the character is the visual hero by default; authored teaching boards appear only when useful and are synchronized with audible speech.
-- **Memory is product state** — learner profile, learning/course progress and relationship memory are explicit application data, not accidental model context.
-- **Free Speak is isolated from Course Progress** — open conversation may use the selected character and learner-approved relationship memory, but it cannot complete Lessons.
-- **Web-first + Capacitor** — one React application ships to web, iOS and Android; native escape hatches stay behind platform interfaces.
+When an older milestone document conflicts with current code, current `main` wins.
 
-## Current learning experience
+## Data/source-of-truth rules
 
-### Learn
+### Neon owns
 
-```text
-B1
-└── Unit 1 — Tell stories people can follow
-    ├── Lesson 1 — Set the scene
-    ├── Lesson 2 — Put events in order
-    ├── Lesson 3 — Explain why it happened
-    ├── Lesson 4 — React and add useful detail
-    ├── Lesson 5 — Handle follow-up questions
-    └── Lesson 6 — Live story challenge
-```
+- Course → Level → Unit → Lesson identities and ordering.
+- Published Lesson JSON revisions.
+- Published Character JSON revisions.
+- Published Teaching Policy revisions.
+- Learner profiles.
+- Lesson progress.
+- Version-pinned lesson sessions and scene results.
 
-A Lesson can combine:
+### The frontend owns
 
-- concise teacher-led explanation;
-- an authored board moment;
-- a spoken question or guided practice;
-- semantic assessment of the learner's live answer;
-- a short conversation task;
-- a recap.
+- presentation/layout;
+- renderer implementation details;
+- local cache/resilience;
+- application-owned runtime state for the current live scene.
 
-Teacher-only Beats advance only after the audible teaching turn completes. Evidence Beats advance only through application-owned semantic assessment. Gemini never chooses or skips curriculum steps itself.
-
-### Free Speak
-
-Initial modes:
-
-- Just chat
-- Work conversation
-- Travel & everyday situations
-- Interview practice
-
-Free Speak reuses the live voice and character stack, but it does **not** instantiate the Course Lesson Runtime and never writes Course Progress.
-
-## Progress semantics
-
-EnglishLive deliberately separates:
-
-1. **Course completion** — deterministic product state such as `4/6 lessons completed`.
-2. **Speaking proficiency evidence** — broader repeated evidence across fresh contexts.
-
-Completing a Lesson or Unit does not automatically become a CEFR mastery claim or numeric fluency score.
+The browser must never receive a privileged `DATABASE_URL` or provider API key.
 
 ## Development
 
@@ -90,65 +122,87 @@ npm install
 npm run dev
 ```
 
-Useful commands:
+Primary validation:
 
 ```sh
 npm run check
+```
+
+Useful commands:
+
+```sh
+npm run build
+npm run preview
 npm run cf:dev
-npm run cap:add:ios
-npm run cap:add:android
+npm run db:seed
 npm run cap:sync
 ```
 
-Web deployments may use same-origin `/api`. Native builds must set `VITE_API_BASE_URL` to the public HTTPS API origin. Never place provider secrets in `VITE_*` values.
+## Environment variables
 
-Milestone implementation notes:
+The canonical template is [`.env.example`](.env.example).
 
-- [`docs/MILESTONE_01_FOUNDATION.md`](docs/MILESTONE_01_FOUNDATION.md)
-- [`docs/MILESTONE_02_CHARACTER_RUNTIME.md`](docs/MILESTONE_02_CHARACTER_RUNTIME.md)
-- [`docs/MILESTONE_03_LIVE_VOICE.md`](docs/MILESTONE_03_LIVE_VOICE.md)
-- [`docs/MILESTONE_04_CHARACTER_PERFORMANCE.md`](docs/MILESTONE_04_CHARACTER_PERFORMANCE.md)
-- [`docs/MILESTONE_04_5_PRODUCT_EXPERIENCE.md`](docs/MILESTONE_04_5_PRODUCT_EXPERIENCE.md)
-- [`docs/MILESTONE_05_CONVERSATION_TUTOR_RUNTIME.md`](docs/MILESTONE_05_CONVERSATION_TUTOR_RUNTIME.md)
-- [`docs/MILESTONE_06_STAGE_DIRECTOR_BOARD.md`](docs/MILESTONE_06_STAGE_DIRECTOR_BOARD.md)
-- [`docs/MILESTONE_07_FIRST_B1_MISSION.md`](docs/MILESTONE_07_FIRST_B1_MISSION.md)
-- [`docs/MILESTONE_08_MEMORY_LEARNER_MODEL.md`](docs/MILESTONE_08_MEMORY_LEARNER_MODEL.md)
-- [`docs/MILESTONE_09_MVP_CURRICULUM_PRODUCT_SHELL.md`](docs/MILESTONE_09_MVP_CURRICULUM_PRODUCT_SHELL.md)
-- [`docs/MILESTONE_09_5_STRUCTURED_COURSE_RUNTIME.md`](docs/MILESTONE_09_5_STRUCTURED_COURSE_RUNTIME.md)
-
-## Reference repositories
-
-EnglishLive owns its runtime contracts. Existing repositories are references/upstreams, not authorities that may leak their old product architecture into this app.
-
-- `addvaluewithai-hub/pixilive`
-  - The initial SVG human runtime is extracted from `feat/character-engine` at pinned commit `d1f0b1ba4c35867878d47b297bffb655f6e84d5c`.
-  - Rive experiments remain useful reference material, but EnglishLive does not require Rive for every character.
-- `addvaluewithai-hub/learn`
-  - Reference for Gemini Live lifecycle, interruption, output gating, authoritative Lesson state and board/presentation patterns.
-  - EnglishLive reuses the architectural principle that the app owns progression while the model teaches naturally inside current state; it does not clone Learn's classroom product.
-- `addvaluewithai-hub/english-course`
-  - Curriculum research/reference only: CEFR progression, capability maps and approved level exit profiles.
-  - Do **not** migrate its old lesson delivery model into EnglishLive.
-
-## Current MVP loop
+Client-safe configuration:
 
 ```text
-Onboarding
-  → B1 Unit 1
-  → authored live Lesson
-  → spoken evidence + board support
-  → Lesson Review
-  → saved Course Progress
-  → next Lesson
+VITE_API_BASE_URL
+VITE_NEON_AUTH_URL
 ```
 
-At any point the learner can leave the course path for:
+Server-only configuration:
 
 ```text
-Free Speak
-  → open live conversation
-  → optional learner-approved relationship continuity
-  → no Course Progress mutation
+GEMINI_API_KEY
+DATABASE_URL
+NEON_AUTH_JWKS_URL
+STUDIO_ADMIN_EMAILS
+STUDIO_ADMIN_USER_IDS
 ```
 
-M9.5 intentionally proves one complete Unit before authoring dozens of Lessons. The next release gate is real-device validation and mobile hardening, not pretending that one Unit is a complete B1 syllabus.
+Never put real secrets into `VITE_*`, source control, browser bundles or screenshots/logs.
+
+## Database
+
+Migrations live under:
+
+```text
+db/migrations/
+```
+
+The production authoring foundation uses relational identities plus JSONB revisions. Published lesson, character and teaching-policy revisions are protected by immutability triggers.
+
+Do not manually mutate published revisions. Create a new draft/revision and publish it.
+
+## CI / visual QA
+
+Pull requests run TypeScript/Vite validation. The repository also contains Playwright-based screenshot QA for important learner flows.
+
+Automated browser QA is regression protection; it is **not** a substitute for physical-device validation of:
+
+- microphone permissions;
+- speaker/audio routes;
+- interruption latency;
+- background/foreground lifecycle;
+- native safe areas.
+
+## Branch workflow
+
+The earlier stacked-feature development phase is finished. New work should use short branches from `main`:
+
+```text
+main
+→ feature branch
+→ PR to main
+→ CI + relevant Visual QA
+→ review / smoke test
+→ merge
+→ verify production deploy
+```
+
+Do not rebuild a long chain of dependent PRs.
+
+Before handing repository write access to a larger team, protect `main` in GitHub and require PR/checks rather than direct pushes.
+
+## Handoff
+
+Start with [`docs/TEAM_HANDOFF.md`](docs/TEAM_HANDOFF.md). It documents the current runtime, deployment boundaries, authoring flow, database rules, environment variables, release discipline and known production-readiness items.
