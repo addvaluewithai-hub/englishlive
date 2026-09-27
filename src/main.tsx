@@ -18,6 +18,7 @@ import './product-v4-visual-qa.css';
 import './product-v5-final-polish.css';
 import './product-v6-session-polish.css';
 import './product-v7-final-qa.css';
+import './learn-journey.css';
 import './studio.css';
 import './studio-curriculum.css';
 import './otti.css';
