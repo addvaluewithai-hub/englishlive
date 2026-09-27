@@ -74,6 +74,13 @@ export function App() {
       )}
 
       <main className={isSceneLesson ? 'app-main app-main-session v2-scene-main' : isSession ? 'app-main app-main-session' : usesProductV2 ? 'v2-app-main' : 'app-main'}>
+        {isStudio ? (
+          <nav className="studio-global-nav" aria-label="Studio navigation" dir="rtl">
+            <Link className={location.pathname === '/studio' ? 'is-active' : ''} to="/studio">JSON Authoring</Link>
+            <Link className={location.pathname === '/studio/curriculum' ? 'is-active' : ''} to="/studio/curriculum">المنهج</Link>
+            <Link to="/home">تطبيق المتعلم</Link>
+          </nav>
+        ) : null}
         <Routes>
           <Route path="/" element={<LandingScreen />} />
           <Route path="/auth/sign-in" element={<AuthScreen mode="sign-in" />} />
