@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { hydrateCloudLearnerState } from '../cloud/bootstrap';
-import type { LearnerProfile } from '../product/profile';
+import { hydrateCloudLearnerState, isCloudHydratedForUser } from '../cloud/bootstrap';
+import { readLearnerProfile, type LearnerProfile } from '../product/profile';
 import { authClient } from './client';
 
 function AuthenticatedGate({ children, requireProfile }: { children: ReactNode; requireProfile: boolean }) {
@@ -22,10 +22,16 @@ function AuthenticatedGate({ children, requireProfile }: { children: ReactNode; 
       setError(null);
       return;
     }
+    if (isCloudHydratedForUser(userId)) {
+      setProfile(readLearnerProfile());
+      setHydratedUserId(userId);
+      setError(null);
+      return;
+    }
     let cancelled = false;
     setError(null);
     setHydratedUserId(null);
-    hydrateCloudLearnerState()
+    hydrateCloudLearnerState(userId)
       .then((result) => {
         if (cancelled) return;
         setProfile(result.profile);
