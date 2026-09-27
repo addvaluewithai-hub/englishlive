@@ -18,13 +18,15 @@ interface JwtClaims {
   [key: string]: unknown;
 }
 
+type NeonJsonWebKey = JsonWebKey & { kid?: string };
+
 interface JwksResponse {
-  keys?: JsonWebKey[];
+  keys?: NeonJsonWebKey[];
 }
 
 const DEFAULT_JWKS_URL = 'https://ep-lucky-sound-b4k7l37j.neonauth.c-6.us-east-2.aws.neon.tech/neondb/auth/.well-known/jwks.json';
 const encoder = new TextEncoder();
-let cachedJwks: { url: string; expiresAt: number; keys: JsonWebKey[] } | null = null;
+let cachedJwks: { url: string; expiresAt: number; keys: NeonJsonWebKey[] } | null = null;
 
 function decodeBase64Url(value: string) {
   const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
@@ -48,7 +50,7 @@ async function loadJwks(url: string, force = false) {
   return keys;
 }
 
-function keyAlgorithm(header: JwtHeader, jwk: JsonWebKey) {
+function keyAlgorithm(header: JwtHeader, jwk: NeonJsonWebKey) {
   const alg = header.alg || jwk.alg;
   switch (alg) {
     case 'EdDSA':
@@ -81,7 +83,7 @@ function keyAlgorithm(header: JwtHeader, jwk: JsonWebKey) {
   }
 }
 
-async function verifyWithKey(token: string, headerPart: string, payloadPart: string, signaturePart: string, header: JwtHeader, jwk: JsonWebKey) {
+async function verifyWithKey(headerPart: string, payloadPart: string, signaturePart: string, header: JwtHeader, jwk: NeonJsonWebKey) {
   const algorithms = keyAlgorithm(header, jwk);
   const key = await crypto.subtle.importKey('jwk', jwk, algorithms.importAlgorithm, false, ['verify']);
   return crypto.subtle.verify(
@@ -123,7 +125,7 @@ export async function authenticateRequest(request: Request, env: AuthEnv) {
 
   for (const jwk of candidates) {
     try {
-      if (await verifyWithKey(token, headerPart, payloadPart, signaturePart, header, jwk)) {
+      if (await verifyWithKey(headerPart, payloadPart, signaturePart, header, jwk)) {
         return {
           userId: claims.sub,
           email: typeof claims.email === 'string' ? claims.email : null,
