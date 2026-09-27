@@ -19,6 +19,7 @@ import { ReviewScreen } from '../screens/ReviewScreen';
 import { SceneLessonCompleteScreen } from '../screens/SceneLessonCompleteScreen';
 import { SceneLessonScreen } from '../screens/SceneLessonScreen';
 import { SessionScreen } from '../screens/SessionScreen';
+import { StudioScreen } from '../screens/StudioScreen';
 import { UnitScreen } from '../screens/UnitScreen';
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
@@ -29,6 +30,7 @@ export function App() {
   const isLanding = location.pathname === '/';
   const isAuth = location.pathname.startsWith('/auth/');
   const isOnboarding = location.pathname.startsWith('/onboarding');
+  const isStudio = location.pathname.startsWith('/studio');
   const isCompletion = location.pathname.startsWith('/lesson-complete/');
   const isLegacySession = location.pathname.startsWith('/session/');
   const isLesson = location.pathname.startsWith('/lesson/');
@@ -36,14 +38,14 @@ export function App() {
   const isFreeSpeakSession = /^\/speak\/[^/]+/.test(location.pathname);
   const isSession = isLegacySession || isLesson || isSceneLesson || isFreeSpeakSession;
   const isReview = location.pathname.startsWith('/review/') || location.pathname.startsWith('/lesson-review/');
-  const isApp = !isLanding && !isAuth && !isOnboarding && !isSession && !isReview;
-  const usesProductV2 = isApp || isAuth || isOnboarding || isSceneLesson;
+  const isApp = !isLanding && !isAuth && !isOnboarding && !isStudio && !isSession && !isReview;
+  const usesProductV2 = isApp || isAuth || isOnboarding || isSceneLesson || isStudio;
   const showProductHeader = isApp && !isCompletion;
-  const hideGlobalHeader = isLanding || isAuth || isOnboarding || isCompletion || isSceneLesson;
+  const hideGlobalHeader = isLanding || isAuth || isOnboarding || isStudio || isCompletion || isSceneLesson;
   const showBottomNav = isApp && !isCompletion;
 
   return (
-    <div className={`app-shell${isSession ? ' is-session' : ''}${isSceneLesson ? ' is-scene-lesson' : ''}${isFreeSpeakSession ? ' is-free-speak-session' : ''}${isCompletion ? ' is-completion' : ''}${isLanding ? ' is-landing' : ''}${usesProductV2 ? ' is-product-v2' : ''}`}>
+    <div className={`app-shell${isSession ? ' is-session' : ''}${isSceneLesson ? ' is-scene-lesson' : ''}${isFreeSpeakSession ? ' is-free-speak-session' : ''}${isCompletion ? ' is-completion' : ''}${isLanding ? ' is-landing' : ''}${isStudio ? ' is-studio' : ''}${usesProductV2 ? ' is-product-v2' : ''}`}>
       {hideGlobalHeader ? null : showProductHeader ? (
         <header className="v2-app-header">
           <Link to="/home" className="v2-brand" aria-label="Englotti home">
@@ -76,6 +78,7 @@ export function App() {
           <Route path="/auth/sign-in" element={<AuthScreen mode="sign-in" />} />
           <Route path="/auth/sign-up" element={<AuthScreen mode="sign-up" />} />
           <Route path="/onboarding" element={<RequireAuth requireProfile={false}><OnboardingScreen /></RequireAuth>} />
+          <Route path="/studio" element={<RequireAuth requireProfile={false}><StudioScreen /></RequireAuth>} />
           <Route path="/home" element={<RequireAuth><HomeScreen /></RequireAuth>} />
           <Route path="/learn" element={<RequireAuth><LearnScreen /></RequireAuth>} />
           <Route path="/learn/level/:levelId" element={<RequireAuth><LevelScreen /></RequireAuth>} />
