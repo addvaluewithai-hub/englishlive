@@ -27,7 +27,11 @@ export function FreeSpeakRecapScreen() {
   const [session, setSession] = useState<FreeSpeakCloudSession | null>(state?.session ?? null);
   const [loading, setLoading] = useState(!state?.session);
   const [retrying, setRetrying] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(
+    state?.session?.analysisStatus === 'error' && !state.session.analysis
+      ? 'التحليل اللي فات ماكملش. جرّبه تاني من الزرار تحت.'
+      : null,
+  );
   const [relationshipProposal, setRelationshipProposal] = useState<RelationshipMemoryProposal | null>(state?.relationshipProposal ?? null);
   const [memorySaved, setMemorySaved] = useState(false);
 
@@ -37,7 +41,11 @@ export function FreeSpeakRecapScreen() {
     setLoading(true);
     void fetchFreeSpeakSession(sessionId)
       .then((value) => {
-        if (!cancelled) setSession(value);
+        if (cancelled) return;
+        setSession(value);
+        if (!value.analysis && value.analysisStatus === 'error') {
+          setError('التحليل اللي فات ماكملش. جرّبه تاني من الزرار تحت.');
+        }
       })
       .catch(() => {
         if (!cancelled) setError('تعذر تحميل ملخص المحادثة.');
@@ -53,9 +61,13 @@ export function FreeSpeakRecapScreen() {
     setRetrying(true);
     setError(null);
     try {
-      setSession(await analyzeFreeSpeakSession(sessionId));
+      const analyzed = await analyzeFreeSpeakSession(sessionId);
+      setSession(analyzed);
+      if (!analyzed.analysis) {
+        setError('المحادثة محفوظة، لكن الملخص ماطلعش. جرّب مرة كمان.');
+      }
     } catch {
-      setError('المحادثة محفوظة، لكن الملخص محتاج محاولة تانية.');
+      setError('المحادثة محفوظة، لكن التحليل ماكملش. جرّب مرة كمان بعد شوية.');
     } finally {
       setRetrying(false);
     }
@@ -90,6 +102,7 @@ export function FreeSpeakRecapScreen() {
 
   const recap = session.analysis;
   const character = getCharacterDefinition(session.characterSlug);
+  const analysisFailed = !recap && session.analysisStatus === 'error';
 
   return (
     <section className="fs-recap" dir="rtl">
@@ -103,15 +116,15 @@ export function FreeSpeakRecapScreen() {
       </header>
 
       {!recap ? (
-        <section className="fs-recap-pending">
+        <section className={`fs-recap-pending${analysisFailed ? ' is-error' : ''}`}>
           <OttiMark />
           <div>
-            <strong>المحادثة محفوظة بالكامل.</strong>
-            <p>الملخص الذكي لسه ما اكتملش. تقدر تعيد التحليل من غير ما تعيد المحادثة.</p>
-            {error ? <small>{error}</small> : null}
+            <strong>{analysisFailed ? 'المحادثة محفوظة — التحليل محتاج إعادة محاولة.' : 'المحادثة محفوظة بالكامل.'}</strong>
+            <p>{analysisFailed ? 'ولا كلمة من المحادثة ضاعت. هنستخدم نفس الـtranscription المحفوظة ونحللها من جديد.' : 'الملخص الذكي لسه ما اكتملش. تقدر تعيد التحليل من غير ما تعيد المحادثة.'}</p>
+            {error ? <small role="alert">{error}</small> : null}
           </div>
           <button type="button" onClick={() => void retryAnalysis()} disabled={retrying}>
-            {retrying ? 'بنحلل…' : 'جهّز الملخص'}
+            {retrying ? 'بنحلل…' : analysisFailed ? 'حلّل المحادثة تاني' : 'جهّز الملخص'}
           </button>
         </section>
       ) : (
