@@ -1,0 +1,30 @@
+/* Screenshot-driven alignment with the supplied Free Speak design. */
+
+/* Primary CTA in the final design keeps the microphone on the left and the
+ * navigation arrow on the right in the RTL composition. */
+.fs-primary-chat-mic { grid-column: 1; grid-row: 1; }
+.fs-primary-chat-copy { grid-column: 2; grid-row: 1; }
+.fs-primary-chat-arrow { grid-column: 3; grid-row: 1; }
+.fs-primary-chat-arrow svg { transform: rotate(180deg); }
+
+/* Keep the Englotti wordmark visible on the live screen at phone widths. */
+@media (max-width: 390px) {
+  .fs-live-header {
+    grid-template-columns: 38px auto minmax(82px, 1fr) auto;
+    gap: 6px;
+  }
+
+  .fs-live-brand strong {
+    display: inline !important;
+    font-size: 12px;
+    letter-spacing: -.025em;
+  }
+
+  .fs-live-brand .otti-mark {
+    width: 29px;
+    height: 29px;
+  }
+
+  .fs-live-title { font-size: 14px; }
+  .fs-live-mode { font-size: 10.5px; }
+}
