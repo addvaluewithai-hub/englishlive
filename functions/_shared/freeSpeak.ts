@@ -18,7 +18,7 @@ function nullableString(value: unknown) {
 
 export function sanitizeTranscript(value: unknown): FreeSpeakTurn[] {
   if (!Array.isArray(value)) return [];
-  return value.slice(0, 600).flatMap((candidate, index) => {
+  return value.flatMap((candidate, index) => {
     if (!candidate || typeof candidate !== 'object') return [];
     const item = candidate as Record<string, unknown>;
     const speaker = item.speaker === 'learner' || item.speaker === 'teacher' ? item.speaker : null;
@@ -68,22 +68,3 @@ export function mapFreeSpeakSessionRow(row: Record<string, unknown>): FreeSpeakC
     analysisModel: nullableString(row.analysis_model),
   };
 }
-
-export const freeSpeakSessionSelect = `
-  select
-    fs.id::text as id,
-    fs.mode_id,
-    fs.status,
-    fs.started_at,
-    fs.ended_at,
-    fs.duration_seconds,
-    fs.transcript,
-    fs.analysis,
-    fs.analysis_status,
-    fs.analysis_model,
-    c.slug as character_slug,
-    coalesce(cr.content->>'displayName', c.slug) as character_name
-  from free_speak_sessions fs
-  join characters c on c.id = fs.character_id
-  join character_revisions cr on cr.id = fs.character_revision_id
-`;
