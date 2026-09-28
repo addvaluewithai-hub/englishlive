@@ -5,7 +5,39 @@
 .fs-primary-chat-mic { grid-column: 1; grid-row: 1; }
 .fs-primary-chat-copy { grid-column: 2; grid-row: 1; }
 .fs-primary-chat-arrow { grid-column: 3; grid-row: 1; }
-.fs-primary-chat-arrow svg { transform: rotate(180deg); }
+.fs-primary-chat-arrow svg { transform: none; }
+
+/* The supplied mode cards are deliberately quiet; the microphone is enough
+ * affordance and avoids an extra layer of little arrows. */
+.fs-mode-chevron { display: none; }
+
+/* Recap cards place the illustration on the left and Arabic content on the
+ * right. Correction examples read from the learner's original on the left to
+ * the improved English on the right, matching the final design. */
+.fs-recap-hero,
+.fs-recap-card {
+  direction: ltr;
+}
+
+.fs-recap-copy,
+.fs-recap-card > div {
+  direction: rtl;
+  text-align: right;
+}
+
+.fs-correction-list,
+.fs-correction-list article {
+  direction: ltr;
+}
+
+.fs-correction-arrow {
+  transform: rotate(180deg);
+}
+
+.fs-correction-list small {
+  direction: rtl;
+  text-align: right;
+}
 
 /* Keep the Englotti wordmark visible on the live screen at phone widths. */
 @media (max-width: 390px) {
