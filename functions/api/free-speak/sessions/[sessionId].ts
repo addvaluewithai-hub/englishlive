@@ -56,7 +56,11 @@ async function runAnalysis(
       set analysis_status = 'error', updated_at = now()
       where id = ${sessionId}::uuid and user_id = ${userId}
     `;
-    return { ...session, analysisStatus: 'error' as const };
+    const updated = await loadOwnedSession(sql, userId, sessionId);
+    return {
+      session: updated ? mapFreeSpeakSessionRow(updated) : session,
+      error: 'Conversation transcript is empty.',
+    };
   }
 
   try {
@@ -83,10 +87,15 @@ async function runAnalysis(
       set analysis_status = 'error', updated_at = now()
       where id = ${sessionId}::uuid and user_id = ${userId}
     `;
+    const updated = await loadOwnedSession(sql, userId, sessionId);
+    return {
+      session: updated ? mapFreeSpeakSessionRow(updated) : session,
+      error: reason instanceof Error ? reason.message : 'Gemini analysis failed.',
+    };
   }
 
   const updated = await loadOwnedSession(sql, userId, sessionId);
-  return updated ? mapFreeSpeakSessionRow(updated) : null;
+  return updated ? { session: mapFreeSpeakSessionRow(updated), error: null } : null;
 }
 
 export const onRequestOptions = async () => new Response(null, { status: 204, headers: jsonHeaders });
@@ -164,9 +173,10 @@ export const onRequestPut = async ({ request, env, params }: PagesContext) => {
     `;
     if (!rows.length) return jsonResponse({ error: 'Free Speak session was not found.' }, 404);
 
-    const session = await runAnalysis(sql, env, auth.userId, sessionId);
-    if (!session) return jsonResponse({ error: 'Free Speak session was not found.' }, 404);
-    return jsonResponse({ session });
+    const analysis = await runAnalysis(sql, env, auth.userId, sessionId);
+    if (!analysis) return jsonResponse({ error: 'Free Speak session was not found.' }, 404);
+    if (analysis.error) return jsonResponse({ error: analysis.error, session: analysis.session }, 502);
+    return jsonResponse({ session: analysis.session });
   } catch (reason) {
     console.error('[free-speak/session:put]', reason);
     return jsonResponse({ error: 'Unable to complete Free Speak session.' }, 500);
@@ -196,9 +206,10 @@ export const onRequestPost = async ({ request, env, params }: PagesContext) => {
     `;
     if (!rows.length) return jsonResponse({ error: 'Free Speak session was not found.' }, 404);
 
-    const session = await runAnalysis(sql, env, auth.userId, sessionId);
-    if (!session) return jsonResponse({ error: 'Free Speak session was not found.' }, 404);
-    return jsonResponse({ session });
+    const analysis = await runAnalysis(sql, env, auth.userId, sessionId);
+    if (!analysis) return jsonResponse({ error: 'Free Speak session was not found.' }, 404);
+    if (analysis.error) return jsonResponse({ error: analysis.error, session: analysis.session }, 502);
+    return jsonResponse({ session: analysis.session });
   } catch (reason) {
     console.error('[free-speak/session:post]', reason);
     return jsonResponse({ error: 'Unable to analyze Free Speak session.' }, 500);
