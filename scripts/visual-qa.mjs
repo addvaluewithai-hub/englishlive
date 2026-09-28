@@ -47,6 +47,42 @@ const progress = {
   updatedAt: '2026-09-26T10:20:00.000Z',
 };
 
+const freeSpeakRecapFixture = {
+  id: '00000000-0000-4000-8000-000000000001',
+  modeId: 'just-chat',
+  characterSlug: 'otti',
+  characterName: 'Otti',
+  startedAt: '2026-09-28T08:00:00.000Z',
+  endedAt: '2026-09-28T08:08:00.000Z',
+  durationSeconds: 480,
+  status: 'completed',
+  analysisStatus: 'complete',
+  analysisModel: 'gemini-3.5-flash-lite',
+  transcript: [
+    { id: 't1', speaker: 'teacher', text: 'How is your day going?', atMs: 1000 },
+    { id: 't2', speaker: 'learner', text: 'I am doing good. I worked a lot today.', atMs: 5500 },
+    { id: 't3', speaker: 'learner', text: 'I go yesterday to a project meeting.', atMs: 11500 },
+  ],
+  analysis: {
+    schemaVersion: 1,
+    headlineAr: 'أحسنت!',
+    conversationTopicAr: 'مشروعك والشغل',
+    summaryAr: 'اتكلمت عن يومك وشغلك والمشروع اللي بتشتغل عليه.',
+    strengths: ['جاوبت بسرعة وحافظت على المحادثة', 'استخدمت جمل كاملة عشان توصل فكرتك'],
+    corrections: [
+      { original: 'I go yesterday', improved: 'I went yesterday', noteAr: 'مع yesterday استخدم الماضي went.' },
+      { original: 'He don’t like it', improved: 'He doesn’t like it', noteAr: 'مع he نستخدم doesn’t.' },
+    ],
+    vocabulary: [
+      { word: 'project', meaningAr: 'مشروع', source: 'learner' },
+      { word: 'deadline', meaningAr: 'موعد نهائي', source: 'teacher' },
+      { word: 'meeting', meaningAr: 'اجتماع', source: 'learner' },
+      { word: 'confident', meaningAr: 'واثق', source: 'teacher' },
+    ],
+    nextFocusAr: 'جرّب تستخدم الماضي البسيط لما تحكي عن حاجة حصلت وانتهت.',
+  },
+};
+
 const viewports = [
   { name: 'mobile', width: 390, height: 844 },
   { name: 'desktop', width: 1440, height: 1000 },
@@ -116,6 +152,12 @@ const scenarios = [
   { name: 'lesson-complete', path: '/lesson-complete/a1-u1-l01-hello-im?character=otti', full: true },
   { name: 'free-speak', path: '/speak', full: true },
   { name: 'free-speak-session', path: '/speak/just-chat?character=otti' },
+  {
+    name: 'free-speak-recap',
+    path: '/speak/recap/visual-qa',
+    full: true,
+    historyState: { session: freeSpeakRecapFixture, relationshipProposal: null },
+  },
   { name: 'progress', path: '/progress', full: true },
   { name: 'teachers', path: '/characters', prepare: validateTeacherRoster, full: true },
 ];
@@ -134,17 +176,21 @@ try {
       });
       const page = await context.newPage();
 
-      await page.addInitScript(({ shouldSeedProfile, profileValue, progressValue }) => {
+      await page.addInitScript(({ shouldSeedProfile, profileValue, progressValue, historyState }) => {
         localStorage.clear();
         sessionStorage.clear();
         if (shouldSeedProfile) {
           localStorage.setItem('englishlive.learner-profile.v1', JSON.stringify(profileValue));
           localStorage.setItem('englishlive.product-course.v1', JSON.stringify(progressValue));
         }
+        if (historyState) {
+          window.history.replaceState({ usr: historyState, key: 'visual-qa', idx: 0 }, '', window.location.href);
+        }
       }, {
         shouldSeedProfile: scenario.profile !== false,
         profileValue: profile,
         progressValue: progress,
+        historyState: scenario.historyState ?? null,
       });
 
       const errors = [];
