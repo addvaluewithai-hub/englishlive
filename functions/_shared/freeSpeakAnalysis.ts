@@ -1,4 +1,4 @@
-import type { FreeSpeakRecap, FreeSpeakTurn } from '../../src/freeSpeak/types';
+import type { FreeSpeakRecap, FreeSpeakTurn, FreeSpeakVocabularyItem } from '../../src/freeSpeak/types';
 
 export interface FreeSpeakAnalysisEnv {
   GEMINI_API_KEY?: string;
@@ -105,13 +105,13 @@ function normalizeRecap(value: unknown): FreeSpeakRecap {
       return [{ original, improved, noteAr }];
     }).slice(0, 3)
     : [];
-  const vocabulary = Array.isArray(input.vocabulary)
-    ? input.vocabulary.flatMap((item) => {
+  const vocabulary: FreeSpeakVocabularyItem[] = Array.isArray(input.vocabulary)
+    ? input.vocabulary.flatMap((item): FreeSpeakVocabularyItem[] => {
       if (!item || typeof item !== 'object') return [];
       const row = item as Record<string, unknown>;
       const word = clip(row.word, 80);
       const meaningAr = clip(row.meaningAr, 160);
-      const source = row.source === 'learner' || row.source === 'teacher' || row.source === 'asked_about'
+      const source: FreeSpeakVocabularyItem['source'] = row.source === 'learner' || row.source === 'teacher' || row.source === 'asked_about'
         ? row.source
         : 'teacher';
       if (!word) return [];
