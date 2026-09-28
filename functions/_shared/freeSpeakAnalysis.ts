@@ -8,58 +8,60 @@ export interface FreeSpeakAnalysisEnv {
 const DEFAULT_ANALYSIS_MODEL = 'gemini-3.5-flash-lite';
 
 const recapSchema = {
-  type: 'OBJECT',
+  type: 'object',
+  additionalProperties: false,
   properties: {
-    schemaVersion: { type: 'INTEGER', enum: [1] },
+    schemaVersion: { type: 'integer', enum: [1] },
     headlineAr: {
-      type: 'STRING',
+      type: 'string',
       description: 'A short encouraging Arabic headline, grounded in what actually happened.',
     },
     conversationTopicAr: {
-      type: 'STRING',
+      type: 'string',
       description: 'A short Arabic noun phrase naming the main conversation topic.',
     },
     summaryAr: {
-      type: 'STRING',
+      type: 'string',
       description: 'One concise Arabic sentence summarizing what the learner talked about.',
     },
     strengths: {
-      type: 'ARRAY',
+      type: 'array',
       maxItems: 3,
-      items: { type: 'STRING' },
+      items: { type: 'string' },
       description: '0-3 concise Arabic strengths supported by the learner transcript.',
     },
     corrections: {
-      type: 'ARRAY',
+      type: 'array',
       maxItems: 3,
       items: {
-        type: 'OBJECT',
+        type: 'object',
+        additionalProperties: false,
         properties: {
-          original: { type: 'STRING' },
-          improved: { type: 'STRING' },
-          noteAr: { type: 'STRING' },
+          original: { type: 'string' },
+          improved: { type: 'string' },
+          noteAr: { type: 'string' },
         },
         required: ['original', 'improved', 'noteAr'],
       },
       description: '0-3 meaningful English corrections. Never correct punctuation or capitalization from speech transcription.',
     },
     vocabulary: {
-      type: 'ARRAY',
+      type: 'array',
       maxItems: 6,
       items: {
-        type: 'OBJECT',
+        type: 'object',
+        additionalProperties: false,
         properties: {
-          word: { type: 'STRING' },
-          meaningAr: { type: 'STRING' },
-          source: { type: 'STRING', enum: ['learner', 'teacher', 'asked_about'] },
+          word: { type: 'string' },
+          meaningAr: { type: 'string' },
+          source: { type: 'string', enum: ['learner', 'teacher', 'asked_about'] },
         },
         required: ['word', 'meaningAr', 'source'],
       },
       description: 'Useful English words that were actually present in the transcript. asked_about only if the learner explicitly asked what a word/expression meant.',
     },
     nextFocusAr: {
-      type: 'STRING',
-      nullable: true,
+      anyOf: [{ type: 'string' }, { type: 'null' }],
       description: 'One small evidence-based next focus in Arabic, or null when the transcript is too short.',
     },
   },
@@ -173,7 +175,7 @@ ${transcript}`;
 
   const upstream = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
     method: 'POST',
-    signal: AbortSignal.timeout(22_000),
+    signal: AbortSignal.timeout(30_000),
     headers: {
       'content-type': 'application/json',
       'x-goog-api-key': apiKey,
@@ -181,10 +183,13 @@ ${transcript}`;
     body: JSON.stringify({
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       generationConfig: {
-        temperature: 0.15,
         maxOutputTokens: 2_400,
-        responseMimeType: 'application/json',
-        responseSchema: recapSchema,
+        responseFormat: {
+          text: {
+            mimeType: 'application/json',
+            schema: recapSchema,
+          },
+        },
       },
     }),
   });
