@@ -21,6 +21,7 @@ import './product-v7-final-qa.css';
 import './learn-journey.css';
 import './home-redesign.css';
 import './free-speak-v2.css';
+import './free-speak-v2-fixes.css';
 import './studio.css';
 import './studio-curriculum.css';
 import './otti.css';
