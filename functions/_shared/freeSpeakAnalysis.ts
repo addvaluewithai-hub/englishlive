@@ -61,7 +61,7 @@ const recapSchema = {
       description: 'Useful English words that were actually present in the transcript. asked_about only if the learner explicitly asked what a word/expression meant.',
     },
     nextFocusAr: {
-      anyOf: [{ type: 'string' }, { type: 'null' }],
+      type: ['string', 'null'],
       description: 'One small evidence-based next focus in Arabic, or null when the transcript is too short.',
     },
   },
@@ -135,6 +135,26 @@ function normalizeRecap(value: unknown): FreeSpeakRecap {
   };
 }
 
+function interactionText(payload: unknown) {
+  if (!payload || typeof payload !== 'object') return '';
+  const record = payload as Record<string, unknown>;
+  if (typeof record.output_text === 'string' && record.output_text.trim()) return record.output_text.trim();
+  if (!Array.isArray(record.steps)) return '';
+
+  const chunks: string[] = [];
+  for (const step of record.steps) {
+    if (!step || typeof step !== 'object') continue;
+    const content = (step as Record<string, unknown>).content;
+    if (!Array.isArray(content)) continue;
+    for (const part of content) {
+      if (!part || typeof part !== 'object') continue;
+      const row = part as Record<string, unknown>;
+      if (row.type === 'text' && typeof row.text === 'string') chunks.push(row.text);
+    }
+  }
+  return chunks.join('').trim();
+}
+
 export async function analyzeFreeSpeakTranscript(
   env: FreeSpeakAnalysisEnv,
   input: {
@@ -173,7 +193,10 @@ Duration: ${input.durationSeconds} seconds
 TRANSCRIPT
 ${transcript}`;
 
-  const upstream = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+  // Interactions is Google's current recommended Gemini API surface. Using it
+  // here also gives Flash-Lite a first-class structured-output path instead of
+  // relying on the legacy generateContent model/support matrix.
+  const upstream = await fetch('https://generativelanguage.googleapis.com/v1beta/interactions', {
     method: 'POST',
     signal: AbortSignal.timeout(30_000),
     headers: {
@@ -181,33 +204,44 @@ ${transcript}`;
       'x-goog-api-key': apiKey,
     },
     body: JSON.stringify({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: {
-        maxOutputTokens: 2_400,
-        responseFormat: {
-          text: {
-            mimeType: 'application/json',
-            schema: recapSchema,
-          },
-        },
+      model,
+      input: prompt,
+      store: false,
+      generation_config: {
+        thinking_level: 'minimal',
+        max_output_tokens: 2_400,
+      },
+      response_format: {
+        type: 'text',
+        mime_type: 'application/json',
+        schema: recapSchema,
       },
     }),
   });
 
   const payload = await upstream.json().catch(() => null) as {
-    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+    status?: string;
+    steps?: Array<{ content?: Array<{ type?: string; text?: string }> }>;
+    output_text?: string;
     error?: { message?: string };
   } | null;
+
   if (!upstream.ok) {
     throw new Error(payload?.error?.message || `Gemini analysis failed (${upstream.status}).`);
   }
-  const text = payload?.candidates?.[0]?.content?.parts?.map((part) => part.text ?? '').join('').trim() ?? '';
+  if (payload?.status && payload.status !== 'completed') {
+    throw new Error(`Gemini analysis did not complete (status: ${payload.status}).`);
+  }
+
+  const text = interactionText(payload);
   if (!text) throw new Error('Gemini analysis returned an empty response.');
+
   let parsed: unknown;
   try {
     parsed = JSON.parse(text);
   } catch {
     throw new Error('Gemini analysis did not return valid JSON.');
   }
+
   return { model, recap: normalizeRecap(parsed) };
 }
