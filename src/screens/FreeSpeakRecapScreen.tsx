@@ -47,8 +47,10 @@ export function FreeSpeakRecapScreen() {
           setError('التحليل اللي فات ماكملش. جرّبه تاني من الزرار تحت.');
         }
       })
-      .catch(() => {
-        if (!cancelled) setError('تعذر تحميل ملخص المحادثة.');
+      .catch((reason) => {
+        if (!cancelled) {
+          setError(reason instanceof Error ? reason.message : 'تعذر تحميل ملخص المحادثة.');
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -66,8 +68,9 @@ export function FreeSpeakRecapScreen() {
       if (!analyzed.analysis) {
         setError('المحادثة محفوظة، لكن الملخص ماطلعش. جرّب مرة كمان.');
       }
-    } catch {
-      setError('المحادثة محفوظة، لكن التحليل ماكملش. جرّب مرة كمان بعد شوية.');
+    } catch (reason) {
+      const message = reason instanceof Error ? reason.message : 'التحليل ماكملش.';
+      setError(`المحادثة محفوظة. سبب فشل التحليل: ${message}`);
     } finally {
       setRetrying(false);
     }
