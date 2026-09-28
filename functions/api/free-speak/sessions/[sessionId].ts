@@ -180,6 +180,22 @@ export const onRequestPost = async ({ request, env, params }: PagesContext) => {
     const sessionId = sessionIdFrom(params);
     if (!sessionId) return jsonResponse({ error: 'sessionId is required.' }, 400);
     const sql = getSql(env);
+
+    // A final analysis retry must also recover a session whose first completion
+    // request reached autosave but timed out before flipping active -> completed.
+    const rows = await sql`
+      update free_speak_sessions
+      set
+        status = case when status = 'active' then 'completed' else status end,
+        ended_at = case when status = 'active' then coalesce(ended_at, now()) else ended_at end,
+        analysis_status = 'pending',
+        updated_at = now()
+      where id = ${sessionId}::uuid
+        and user_id = ${auth.userId}
+      returning id::text as id
+    `;
+    if (!rows.length) return jsonResponse({ error: 'Free Speak session was not found.' }, 404);
+
     const session = await runAnalysis(sql, env, auth.userId, sessionId);
     if (!session) return jsonResponse({ error: 'Free Speak session was not found.' }, 404);
     return jsonResponse({ session });
