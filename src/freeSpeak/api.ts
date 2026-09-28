@@ -50,9 +50,13 @@ export async function completeFreeSpeakSession(sessionId: string, transcript: Fr
 }
 
 export async function analyzeFreeSpeakSession(sessionId: string) {
-  return sessionFrom(await authorizedJson(`/api/free-speak/sessions/${encodeURIComponent(sessionId)}`, {
+  const session = sessionFrom(await authorizedJson(`/api/free-speak/sessions/${encodeURIComponent(sessionId)}`, {
     method: 'POST',
   }));
+  if (!session.analysis && session.analysisStatus === 'error') {
+    throw new Error('Recap analysis did not complete.');
+  }
+  return session;
 }
 
 export async function fetchFreeSpeakSession(sessionId: string) {
