@@ -15,7 +15,7 @@ import {
   saveFreeSpeakTranscript,
 } from '../freeSpeak/api';
 import { getFreeSpeakMode } from '../freeSpeak/modes';
-import type { FreeSpeakCloudSession, FreeSpeakSpeaker, FreeSpeakTurn } from '../freeSpeak/types';
+import type { FreeSpeakSpeaker, FreeSpeakTurn } from '../freeSpeak/types';
 import { GeminiLiveTransport } from '../live/GeminiLiveTransport';
 import type { LiveStatus } from '../live/types';
 import { buildRelationshipPrompt } from '../memory/context';
@@ -45,8 +45,8 @@ function turnId(speaker: FreeSpeakSpeaker) {
 const statusCopy: Record<LiveStatus, { title: string; body: string }> = {
   idle: { title: 'جاهز؟', body: 'ابدأ لما تكون مستعد' },
   connecting: { title: 'بنجهز المحادثة', body: 'ثواني وهنبدأ' },
-  listening: { title: 'دورك الآن', body: 'تكلّم بصوتك' },
-  speaking: { title: 'بسمعك الرد', body: 'خليك مع المحادثة' },
+  listening: { title: 'دورك الآن', body: 'المايك مفتوح — اتكلم براحتك' },
+  speaking: { title: 'المدرس بيتكلم', body: 'لو عايز تقاطعه اضغط الزرار' },
   reconnecting: { title: 'بنرجّع الاتصال', body: 'المحادثة محفوظة' },
   error: { title: 'حصلت مشكلة بسيطة', body: 'جرّب تبدأ تاني' },
 };
@@ -73,17 +73,18 @@ export function FreeSpeakSessionScreen() {
   const microphone = useRef<MicrophonePcmStream | null>(null);
   const playback = useRef<PcmPlaybackQueue | null>(null);
   const performer = useRef<CharacterPerformanceController | null>(null);
-  const relationshipCollector = useRef<RelationshipMemoryCollector | null>(null);
   const cloudSessionId = useRef<string | null>(null);
   const startedAtMs = useRef<number | null>(null);
   const turnsRef = useRef<FreeSpeakTurn[]>([]);
   const learnerDraftRef = useRef('');
   const teacherDraftRef = useRef('');
   const saveTimer = useRef<number | null>(null);
+  const exchangeRef = useRef<HTMLDivElement | null>(null);
+  const manualInterrupt = useRef(false);
 
   const [status, setStatus] = useState<LiveStatus>('idle');
   const [micLevel, setMicLevel] = useState(0);
-  const [micMuted, setMicMuted] = useState(false);
+  const [micOpen, setMicOpen] = useState(false);
   const [turns, setTurns] = useState<FreeSpeakTurn[]>([]);
   const [learnerDraft, setLearnerDraft] = useState('');
   const [teacherDraft, setTeacherDraft] = useState('');
@@ -98,6 +99,12 @@ export function FreeSpeakSessionScreen() {
 
   function durationSeconds() {
     return startedAtMs.current ? Math.max(0, Math.round((Date.now() - startedAtMs.current) / 1_000)) : 0;
+  }
+
+  function setLearnerMicEnabled(enabled: boolean) {
+    microphone.current?.setEnabled(enabled);
+    setMicOpen(enabled);
+    if (!enabled) setMicLevel(0);
   }
 
   function queueCloudSave() {
@@ -147,6 +154,16 @@ export function FreeSpeakSessionScreen() {
   }, [character.id, character.name]);
 
   useEffect(() => {
+    const container = exchangeRef.current;
+    if (!container) return;
+    const frame = window.requestAnimationFrame(() => {
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      container.scrollTo({ top: container.scrollHeight, behavior: reduced ? 'auto' : 'smooth' });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [turns, learnerDraft, teacherDraft]);
+
+  useEffect(() => {
     return () => {
       if (saveTimer.current !== null) window.clearTimeout(saveTimer.current);
       transport.current?.close();
@@ -162,13 +179,6 @@ export function FreeSpeakSessionScreen() {
     else if (status === 'idle' || status === 'error') host.current?.setMode('idle');
   }, [status, character.id]);
 
-  async function enableMic() {
-    const mic = new MicrophonePcmStream();
-    microphone.current = mic;
-    await mic.start((chunk) => transport.current?.sendAudio(chunk), setMicLevel);
-    setMicMuted(false);
-  }
-
   async function stopTransport() {
     transport.current?.endAudioStream();
     transport.current?.close();
@@ -179,7 +189,9 @@ export function FreeSpeakSessionScreen() {
     playback.current = null;
     performer.current?.close();
     performer.current = null;
+    manualInterrupt.current = false;
     setMicLevel(0);
+    setMicOpen(false);
   }
 
   async function startLive() {
@@ -187,13 +199,14 @@ export function FreeSpeakSessionScreen() {
     setStatus('connecting');
     setError(null);
     setRelationshipProposal(null);
-    setMicMuted(false);
+    setMicOpen(false);
     turnsRef.current = [];
     setTurns([]);
     learnerDraftRef.current = '';
     teacherDraftRef.current = '';
     setLearnerDraft('');
     setTeacherDraft('');
+    manualInterrupt.current = false;
 
     const publishedCharacter = await loadPublishedCharacter(character);
     const characterConfig = publishedCharacter.content;
@@ -201,19 +214,21 @@ export function FreeSpeakSessionScreen() {
     setTeacherDisplayName(teacherName);
 
     const memoryCollector = new RelationshipMemoryCollector(setRelationshipProposal);
-    relationshipCollector.current = memoryCollector;
     const characterPerformance = new CharacterPerformanceController(() => host.current);
     performer.current = characterPerformance;
 
+    let live: GeminiLiveTransport;
     const queue = new PcmPlaybackQueue({
       onMouthPose: (pose) => characterPerformance.setMouth(pose),
       onSpeechStart: () => {
         flushLearnerDraft();
+        setLearnerMicEnabled(false);
         setStatus('speaking');
         characterPerformance.speechStart();
       },
       onSpeechEnd: () => {
         flushTeacherDraft();
+        setLearnerMicEnabled(true);
         setStatus((current) => current === 'idle' || current === 'error' ? current : 'listening');
         characterPerformance.speechEnd();
       },
@@ -221,7 +236,7 @@ export function FreeSpeakSessionScreen() {
     });
     playback.current = queue;
 
-    const live = new GeminiLiveTransport(
+    live = new GeminiLiveTransport(
       {
         onStatus: setStatus,
         onInputTranscript: (text) => {
@@ -230,18 +245,28 @@ export function FreeSpeakSessionScreen() {
           setLearnerDraft(next);
         },
         onOutputTranscript: (text) => {
+          if (manualInterrupt.current) return;
+          setLearnerMicEnabled(false);
           queue.pushTranscript(text);
           const next = appendTranscript(teacherDraftRef.current, text);
           teacherDraftRef.current = next;
           setTeacherDraft(next);
         },
-        onAudio: (data, mimeType) => void queue.enqueue(data, pcmSampleRate(mimeType)),
+        onAudio: (data, mimeType) => {
+          if (manualInterrupt.current) return;
+          setLearnerMicEnabled(false);
+          void queue.enqueue(data, pcmSampleRate(mimeType));
+        },
         onInterrupted: () => {
+          manualInterrupt.current = false;
           flushTeacherDraft();
           queue.interrupt();
           characterPerformance.interrupt();
+          setLearnerMicEnabled(true);
+          setStatus('listening');
         },
         onTurnComplete: () => {
+          manualInterrupt.current = false;
           flushTeacherDraft();
           queue.markTurnComplete();
         },
@@ -250,6 +275,10 @@ export function FreeSpeakSessionScreen() {
       [memoryCollector.tool],
     );
     transport.current = live;
+
+    const mic = new MicrophonePcmStream();
+    mic.setEnabled(false);
+    microphone.current = mic;
 
     const learnerContext = profile
       ? `The learner's first name is ${profile.firstName || 'not provided'}. Their main reason for English is to ${goalPrompt(profile.goals[0] ?? 'everyday')}. Their self-description is: ${comfortLabel(profile.comfort)} Use this only to pace the conversation naturally.`
@@ -273,8 +302,9 @@ export function FreeSpeakSessionScreen() {
     const characterPrompt = [
       `You are ${teacherName}, ${persona}. Be a natural adult English conversation partner.`,
       'Speak English by default; if the learner explicitly asks for a brief Arabic clarification, clarify briefly in Egyptian Arabic and return to English.',
-      'Allow interruption and respond to meaning rather than sounding like an assistant.',
+      'Respond to meaning rather than sounding like an assistant.',
       `Never call yourself another character name; when referring to yourself, always use ${teacherName}.`,
+      'The learner microphone is intentionally closed while you are audibly speaking. The learner can explicitly interrupt you with the app button; otherwise finish one concise conversational turn, stop, and give them space to answer.',
       teachingStyle,
     ].filter(Boolean).join(' ');
 
@@ -286,7 +316,7 @@ export function FreeSpeakSessionScreen() {
       const cloudSession = await createFreeSpeakSession({ modeId: mode.id, characterSlug: character.id });
       cloudSessionId.current = cloudSession.id;
       startedAtMs.current = Date.now();
-      await enableMic();
+      await mic.start((chunk) => live.sendAudio(chunk), setMicLevel);
       setStartedOnce(true);
       live.sendText(`Start ${mode.title} naturally. Greet the learner briefly and make one genuine conversational move. Do not explain the mode or give instructions.`);
     } catch (reason) {
@@ -297,29 +327,20 @@ export function FreeSpeakSessionScreen() {
     }
   }
 
-  async function toggleMic() {
-    if (status === 'idle' || status === 'error') {
-      await startLive();
-      return;
-    }
-    if (status === 'connecting' || status === 'reconnecting' || ending) return;
-    if (micMuted) {
-      try {
-        await enableMic();
-      } catch {
-        setError('تعذر تشغيل الميكروفون.');
-      }
-      return;
-    }
-    await microphone.current?.stop();
-    microphone.current = null;
-    setMicMuted(true);
-    setMicLevel(0);
+  function interruptTeacher() {
+    const live = transport.current;
+    if (status !== 'speaking' || !live?.connected) return;
+    manualInterrupt.current = true;
+    flushTeacherDraft();
+    playback.current?.interrupt();
+    performer.current?.interrupt();
+    setLearnerMicEnabled(true);
+    setStatus('listening');
   }
 
   function sendTypedText() {
     const value = typedText.trim();
-    if (!value || !transport.current?.connected) return;
+    if (!value || !transport.current?.connected || status !== 'listening' || !micOpen) return;
     flushLearnerDraft();
     pushTurn('learner', value);
     transport.current.sendText(value);
@@ -328,7 +349,7 @@ export function FreeSpeakSessionScreen() {
   }
 
   function askForClarification() {
-    if (!transport.current?.connected) return;
+    if (!transport.current?.connected || status !== 'listening' || !micOpen) return;
     transport.current.sendText('I did not understand your last turn. Briefly clarify only that last point in Egyptian Arabic, then return to English and continue naturally.');
   }
 
@@ -355,7 +376,7 @@ export function FreeSpeakSessionScreen() {
       try {
         await saveFreeSpeakTranscript(sessionId, snapshot, seconds);
       } catch {
-        // The transcript is also still held in memory for this screen; recap can retry from cloud when available.
+        // The transcript remains stored in memory for this navigation and the cloud autosave may already contain it.
       }
       navigate(`/speak/recap/${sessionId}`, {
         replace: true,
@@ -366,13 +387,14 @@ export function FreeSpeakSessionScreen() {
 
   const connecting = status === 'connecting' || status === 'reconnecting';
   const liveConversation = status === 'listening' || status === 'speaking';
-  const statusText = micMuted && liveConversation
-    ? { title: 'الميكروفون متوقف', body: 'اضغط عليه عشان تكمل' }
-    : statusCopy[status];
-  const lastTeacherTurn = [...turns].reverse().find((turn) => turn.speaker === 'teacher')?.text ?? '';
-  const lastLearnerTurn = [...turns].reverse().find((turn) => turn.speaker === 'learner')?.text ?? '';
-  const teacherBubble = teacherDraft || lastTeacherTurn;
-  const learnerBubble = learnerDraft || lastLearnerTurn;
+  const teacherSpeaking = status === 'speaking';
+  const learnerTurn = status === 'listening' && micOpen;
+  const statusText = statusCopy[status];
+  const visibleTurns: FreeSpeakTurn[] = [
+    ...turns,
+    ...(learnerDraft.trim() ? [{ id: 'draft-learner', speaker: 'learner' as const, text: learnerDraft, atMs: durationSeconds() * 1_000 }] : []),
+    ...(teacherDraft.trim() ? [{ id: 'draft-teacher', speaker: 'teacher' as const, text: teacherDraft, atMs: durationSeconds() * 1_000 }] : []),
+  ].slice(-8);
 
   return (
     <section className="fs-live" dir="rtl">
@@ -393,7 +415,7 @@ export function FreeSpeakSessionScreen() {
           <CharacterHost ref={host} character={character} className="fs-live-character-host" />
         </div>
 
-        <div className={`fs-live-status status-${status}${micMuted ? ' is-muted' : ''}`} aria-live="polite">
+        <div className={`fs-live-status status-${status}${learnerTurn ? ' is-open' : ''}`} aria-live="polite">
           <span className="fs-live-wave" aria-hidden="true"><i /><i /><i /></span>
           <span><strong>{statusText.title}</strong><small>{statusText.body}</small></span>
         </div>
@@ -402,25 +424,24 @@ export function FreeSpeakSessionScreen() {
           <span aria-hidden="true">↶</span>
         </button>
 
-        <div className="fs-exchange" aria-live="polite">
-          {teacherBubble ? (
-            <article className="fs-bubble fs-bubble-teacher">
+        <div ref={exchangeRef} className="fs-exchange" aria-live="polite">
+          {visibleTurns.length ? visibleTurns.map((turn) => turn.speaker === 'teacher' ? (
+            <article key={turn.id} className={`fs-bubble fs-bubble-teacher${turn.id.startsWith('draft-') ? ' is-draft' : ''}`}>
               <span className="fs-bubble-avatar" aria-hidden="true"><OttiMark /></span>
               <small><bdi dir="ltr">{teacherDisplayName}</bdi></small>
-              <p dir="auto">{teacherBubble}</p>
+              <p dir="auto">{turn.text}</p>
             </article>
           ) : (
+            <article key={turn.id} className={`fs-bubble fs-bubble-learner${turn.id.startsWith('draft-') ? ' is-draft' : ''}`}>
+              <span className="fs-learner-dot" aria-hidden="true"><ProductIcon name="profile" size={20} /></span>
+              <p dir="auto">{turn.text}</p>
+            </article>
+          )) : (
             <article className="fs-bubble fs-bubble-teacher is-placeholder">
               <span className="fs-bubble-avatar" aria-hidden="true"><OttiMark /></span>
-              <p>{startedOnce ? 'المحادثة هتظهر هنا لحظة بلحظة.' : modeCopy.body}</p>
+              <p>{startedOnce ? 'المحادثة هتظهر هنا رسالة وراء رسالة.' : modeCopy.body}</p>
             </article>
           )}
-          {learnerBubble ? (
-            <article className="fs-bubble fs-bubble-learner">
-              <span className="fs-learner-dot" aria-hidden="true"><ProductIcon name="profile" size={20} /></span>
-              <p dir="auto">{learnerBubble}</p>
-            </article>
-          ) : null}
         </div>
       </div>
 
@@ -433,7 +454,7 @@ export function FreeSpeakSessionScreen() {
               placeholder="اكتب اللي عايز تقوله بالإنجليزي…"
               autoFocus
             />
-            <button type="submit" disabled={!typedText.trim() || !liveConversation}>إرسال</button>
+            <button type="submit" disabled={!typedText.trim() || !learnerTurn}>إرسال</button>
           </form>
         ) : null}
 
@@ -442,7 +463,7 @@ export function FreeSpeakSessionScreen() {
             type="button"
             className="fs-help-control"
             onClick={askForClarification}
-            disabled={!liveConversation || micMuted}
+            disabled={!learnerTurn}
           >
             <span>؟</span>
             <strong>مش فاهم</strong>
@@ -450,26 +471,32 @@ export function FreeSpeakSessionScreen() {
 
           <button
             type="button"
-            className={`fs-mic-control${liveConversation ? ' is-live' : ''}${micMuted ? ' is-muted' : ''}`}
-            onClick={() => void toggleMic()}
-            disabled={connecting || ending}
-            aria-label={liveConversation ? (micMuted ? 'شغّل الميكروفون' : 'أوقف الميكروفون مؤقتًا') : 'ابدأ المحادثة'}
+            className={`fs-mic-control${learnerTurn ? ' is-live' : ''}${teacherSpeaking ? ' is-interrupt' : ''}`}
+            onClick={() => {
+              if (teacherSpeaking) interruptTeacher();
+              else if (status === 'idle' || status === 'error') void startLive();
+            }}
+            disabled={connecting || ending || (liveConversation && !teacherSpeaking)}
+            aria-label={teacherSpeaking ? 'قاطع المدرس واتكلم' : learnerTurn ? 'دورك تتكلم' : 'ابدأ المحادثة'}
           >
-            <ProductIcon name="speak" size={54} />
-            {!startedOnce && !connecting ? <small>ابدأ</small> : null}
+            {teacherSpeaking ? (
+              <><span className="fs-interrupt-bars" aria-hidden="true"><i /><i /></span><small>مقاطعة</small></>
+            ) : (
+              <><ProductIcon name="speak" size={54} /><small>{learnerTurn ? 'دورك' : !startedOnce && !connecting ? 'ابدأ' : 'استنى'}</small></>
+            )}
           </button>
 
           <button
             type="button"
             className="fs-keyboard-control"
             onClick={() => setKeyboardOpen((value) => !value)}
-            disabled={!liveConversation}
+            disabled={!learnerTurn}
             aria-label="اكتب بدل الكلام"
           >
             <ProductIcon name="keyboard" size={31} />
           </button>
         </div>
-        <div className="fs-mic-meter" aria-hidden="true"><span style={{ width: `${Math.max(liveConversation && !micMuted ? 3 : 0, micLevel * 100)}%` }} /></div>
+        <div className="fs-mic-meter" aria-hidden="true"><span style={{ width: `${Math.max(learnerTurn ? 3 : 0, micLevel * 100)}%` }} /></div>
         {error ? <p className="fs-live-error" role="alert">{error}</p> : null}
       </div>
 
