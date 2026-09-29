@@ -1,5 +1,8 @@
+import { speakingAssets } from './assets';
+
 export type SpeakingReadiness = 'ready' | 'challenge' | 'later';
 export type SpeakingDifficulty = 'easier' | 'recommended' | 'challenge';
+export type SpeakingApplicationType = 'embedded' | 'integration' | 'unit_challenge' | 'practice';
 
 export type SpeakingScenario = {
   id: string;
@@ -15,7 +18,11 @@ export type SpeakingScenario = {
   readinessReasonAr: string;
   usesAr: string[];
   image: string;
+  liveCharacterImage?: string;
   modeId: 'travel' | 'work' | 'just-chat' | 'interview';
+  applicationType: SpeakingApplicationType;
+  courseSourceAr?: string;
+  courseLessonIds?: string[];
 };
 
 export type SpeakingGroup = {
@@ -35,76 +42,110 @@ export type SpeakingWorld = {
   groups: SpeakingGroup[];
 };
 
-const speakingAsset = '/speaking-assets/otti-hero.webp';
-const travelBannerAsset = '/speaking-assets/airport-banner.webp';
+const hotelBase = {
+  worldId: 'travel',
+  groupId: 'hotel',
+  learnerRoleAr: 'نزيل',
+  image: speakingAssets.hotelReception,
+  liveCharacterImage: speakingAssets.ottiReceptionist,
+  modeId: 'travel' as const,
+  applicationType: 'practice' as const,
+};
 
 const travelScenarios: SpeakingScenario[] = [
   {
-    id: 'hotel-check-in', worldId: 'travel', groupId: 'hotel', titleAr: 'تسجيل الدخول',
-    descriptionAr: 'اتكلم مع موظف الاستقبال واحجز غرفتك وسجّل الدخول.',
-    learnerRoleAr: 'نزيل', aiRoleAr: 'موظف الاستقبال',
-    goalAr: 'سجّل دخولك واسأل عن أهم تفاصيل الإقامة.', durationMinutes: 5,
-    readiness: 'ready', readinessReasonAr: 'اللغة الأساسية اتغطت في دروسك.',
+    ...hotelBase,
+    id: 'hotel-check-in',
+    titleAr: 'تسجيل الدخول',
+    descriptionAr: 'اتكلم مع موظف الاستقبال وأكد حجزك وسجّل الدخول.',
+    aiRoleAr: 'موظف الاستقبال',
+    goalAr: 'سجّل دخولك واسأل عن أهم تفاصيل الإقامة.',
+    durationMinutes: 5,
+    readiness: 'ready',
+    readinessReasonAr: 'اللغة الأساسية اتغطت في دروسك.',
     usesAr: ['التعريف بنفسك', 'تأكيد الحجز', 'السؤال عن التفاصيل'],
-    image: speakingAsset, modeId: 'travel',
   },
   {
-    id: 'hotel-services', worldId: 'travel', groupId: 'hotel', titleAr: 'السؤال عن الخدمات',
+    ...hotelBase,
+    id: 'hotel-services',
+    titleAr: 'السؤال عن الخدمات',
     descriptionAr: 'اسأل عن الواي فاي والإفطار وخدمات الفندق.',
-    learnerRoleAr: 'نزيل', aiRoleAr: 'موظف الاستقبال',
-    goalAr: 'اعرف الخدمات اللي محتاجها واسأل عنها بوضوح.', durationMinutes: 5,
-    readiness: 'ready', readinessReasonAr: 'مناسب للي أخدته في مواقف السؤال والطلب.',
+    aiRoleAr: 'موظف الاستقبال',
+    goalAr: 'اعرف الخدمات اللي محتاجها واسأل عنها بوضوح.',
+    durationMinutes: 5,
+    readiness: 'ready',
+    readinessReasonAr: 'مناسب للي أخدته في مواقف السؤال والطلب.',
     usesAr: ['السؤال عن خدمة', 'الوقت والمكان'],
-    image: speakingAsset, modeId: 'travel',
   },
   {
-    id: 'hotel-room-problem', worldId: 'travel', groupId: 'hotel', titleAr: 'مشكلة في الفندق',
+    ...hotelBase,
+    id: 'hotel-room-problem',
+    titleAr: 'مشكلة في الفندق',
     descriptionAr: 'عبّر عن مشكلة في الغرفة واطلب المساعدة لحد ما توصلوا لحل.',
-    learnerRoleAr: 'نزيل', aiRoleAr: 'موظف الاستقبال',
-    goalAr: 'اشرح المشكلة ووصل إلى حل.', durationMinutes: 6,
-    readiness: 'challenge', readinessReasonAr: 'الموقف بيجمع أكتر من قدرة وبيحتاج متابعة.',
+    aiRoleAr: 'موظف الاستقبال',
+    goalAr: 'اشرح المشكلة ووصل إلى حل.',
+    durationMinutes: 6,
+    readiness: 'challenge',
+    readinessReasonAr: 'الموقف بيجمع أكتر من قدرة وبيحتاج متابعة.',
     usesAr: ['طلب المساعدة', 'شرح مشكلة', 'السؤال عن الحل'],
-    image: speakingAsset, modeId: 'travel',
   },
   {
-    id: 'change-booking', worldId: 'travel', groupId: 'hotel', titleAr: 'تغيير الحجز',
+    ...hotelBase,
+    id: 'change-booking',
+    titleAr: 'تغيير الحجز',
     descriptionAr: 'اطلب تغيير موعد الحجز أو تعديل التفاصيل.',
-    learnerRoleAr: 'نزيل', aiRoleAr: 'موظف الحجوزات',
-    goalAr: 'اطلب التغيير وافهم البدائل المتاحة.', durationMinutes: 6,
-    readiness: 'later', readinessReasonAr: 'يعتمد على لغة لسه جاية في مسارك.',
+    aiRoleAr: 'موظف الحجوزات',
+    goalAr: 'اطلب التغيير وافهم البدائل المتاحة.',
+    durationMinutes: 6,
+    readiness: 'later',
+    readinessReasonAr: 'يعتمد على لغة لسه جاية في مسارك.',
     usesAr: ['طلب تغيير', 'فهم البدائل'],
-    image: speakingAsset, modeId: 'travel',
   },
   {
-    id: 'late-checkout', worldId: 'travel', groupId: 'hotel', titleAr: 'تسجيل خروج متأخر',
+    ...hotelBase,
+    id: 'late-checkout',
+    titleAr: 'تسجيل خروج متأخر',
     descriptionAr: 'اطلب وقت إضافي قبل مغادرة الفندق.',
-    learnerRoleAr: 'نزيل', aiRoleAr: 'موظف الاستقبال',
-    goalAr: 'اطلب تسجيل خروج متأخر وافهم الشروط.', durationMinutes: 5,
-    readiness: 'ready', readinessReasonAr: 'طلب بسيط ومباشر ومناسب لمستواك الحالي.',
+    aiRoleAr: 'موظف الاستقبال',
+    goalAr: 'اطلب تسجيل خروج متأخر وافهم الشروط.',
+    durationMinutes: 5,
+    readiness: 'ready',
+    readinessReasonAr: 'طلب بسيط ومباشر ومناسب لمستواك الحالي.',
     usesAr: ['طلب بسيط', 'الوقت'],
-    image: speakingAsset, modeId: 'travel',
   },
   {
-    id: 'booking-missing', worldId: 'travel', groupId: 'hotel', titleAr: 'الحجز غير موجود',
+    ...hotelBase,
+    id: 'booking-missing',
+    titleAr: 'الحجز غير موجود',
     descriptionAr: 'اتكلم عن حجز مش ظاهر واطلب حل مناسب.',
-    learnerRoleAr: 'نزيل', aiRoleAr: 'موظف الاستقبال',
-    goalAr: 'وضّح بيانات الحجز واتعامل مع المشكلة.', durationMinutes: 7,
-    readiness: 'challenge', readinessReasonAr: 'فيه complication ومتابعة أكتر من المعتاد.',
+    aiRoleAr: 'موظف الاستقبال',
+    goalAr: 'وضّح بيانات الحجز واتعامل مع المشكلة.',
+    durationMinutes: 7,
+    readiness: 'challenge',
+    readinessReasonAr: 'فيه complication ومتابعة أكتر من المعتاد.',
     usesAr: ['توضيح البيانات', 'التعامل مع مشكلة', 'متابعة الحل'],
-    image: speakingAsset, modeId: 'travel',
   },
 ];
 
 export const SPEAKING_WORLDS: SpeakingWorld[] = [
-  { id: 'everyday', titleAr: 'الحياة اليومية', subtitleAr: 'مواقف يومية بسيطة تخليك تستخدم اللي اتعلمته بسرعة.', icon: 'home', groups: [] },
   {
-    id: 'travel', titleAr: 'السفر', subtitleAr: 'مكتبة مواقف تقدر تتدرب عليها وتتحدث بثقة في المطار والفندق والأماكن السياحية.', icon: 'travel',
-    heroImage: travelBannerAsset,
+    id: 'everyday',
+    titleAr: 'الحياة اليومية',
+    subtitleAr: 'مواقف يومية بسيطة تخليك تستخدم اللي اتعلمته بسرعة.',
+    icon: 'home',
+    groups: [],
+  },
+  {
+    id: 'travel',
+    titleAr: 'السفر',
+    subtitleAr: 'مكتبة مواقف تقدر تتدرب عليها وتتحدث بثقة في المطار والفندق والأماكن السياحية.',
+    icon: 'travel',
+    heroImage: speakingAssets.ottiTravel,
     groups: [
-      { id: 'airport', titleAr: 'المطار', subtitleAr: '5 مواقف', scenarios: [] },
-      { id: 'hotel', titleAr: 'الفندق', subtitleAr: '6 مواقف', image: speakingAsset, scenarios: travelScenarios },
-      { id: 'food', titleAr: 'الأكل بره', subtitleAr: '4 مواقف', scenarios: [] },
-      { id: 'problems', titleAr: 'مشاكل ومفاجآت', subtitleAr: '3 مواقف', scenarios: [] },
+      { id: 'airport', titleAr: 'المطار', subtitleAr: '5 مواقف', image: speakingAssets.airportBanner, scenarios: [] },
+      { id: 'hotel', titleAr: 'الفندق', subtitleAr: '6 مواقف', image: speakingAssets.hotelBuilding, scenarios: travelScenarios },
+      { id: 'food', titleAr: 'الأكل بره', subtitleAr: '4 مواقف', image: speakingAssets.foodOut, scenarios: [] },
+      { id: 'problems', titleAr: 'مشاكل ومفاجآت', subtitleAr: '3 مواقف', image: speakingAssets.luggageWarning, scenarios: [] },
     ],
   },
   { id: 'work', titleAr: 'العمل', subtitleAr: 'اجتماعات، طلبات، خطط ومواقف الشغل اليومية.', icon: 'work', groups: [] },
@@ -114,13 +155,24 @@ export const SPEAKING_WORLDS: SpeakingWorld[] = [
 ];
 
 export const FEATURED_SPEAKING_SCENARIO: SpeakingScenario = {
-  id: 'meet-someone-new', worldId: 'people', groupId: 'first-contact', titleAr: 'اتعرف على شخص جديد',
+  id: 'meet-someone-new',
+  worldId: 'people',
+  groupId: 'first-contact',
+  titleAr: 'اتعرف على شخص جديد',
   descriptionAr: 'تدرّب على التحيات والتعريف بنفسك والكلام اللي أخدته في آخر دروسك.',
-  learnerRoleAr: 'نفسك', aiRoleAr: 'شخص بتقابله لأول مرة',
-  goalAr: 'ابدأ تعارف بسيط وخلي الحوار يكمل بشكل طبيعي.', durationMinutes: 6,
-  readiness: 'ready', readinessReasonAr: 'من آخر دروسك ومناسب لمستواك.',
+  learnerRoleAr: 'نفسك',
+  aiRoleAr: 'شخص بتقابله لأول مرة',
+  goalAr: 'ابدأ تعارف بسيط وخلي الحوار يكمل بشكل طبيعي.',
+  durationMinutes: 6,
+  readiness: 'ready',
+  readinessReasonAr: 'من آخر دروسك ومناسب لمستواك.',
   usesAr: ['التحيات', 'التعريف بنفسك', 'سؤال متابعة'],
-  image: speakingAsset, modeId: 'just-chat',
+  image: speakingAssets.meetingPeople,
+  liveCharacterImage: speakingAssets.ottiHero,
+  modeId: 'just-chat',
+  applicationType: 'integration',
+  courseSourceAr: 'من آخر دروسك',
+  courseLessonIds: ['A1-U1-L01', 'A1-U1-L03', 'A1-U1-L04'],
 };
 
 export function speakingWorldById(worldId?: string) {
