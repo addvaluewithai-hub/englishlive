@@ -29,9 +29,13 @@ export function SpeakingWorldScreen() {
     return scenarios.find((scenario) => scenario.id === 'hotel-room-problem') ?? scenarios[0];
   }, [world]);
 
+  const heroBackdrop = world.id === 'travel'
+    ? `linear-gradient(90deg, rgba(239,250,255,.82), rgba(255,242,248,.72)), url(${speakingAssets.airportBanner})`
+    : undefined;
+
   return (
     <section className="sp-world" dir="rtl">
-      <header className="sp-world-hero">
+      <header className="sp-world-hero" style={heroBackdrop ? { backgroundImage: heroBackdrop } : undefined}>
         <div className="sp-world-hero-copy">
           <span className="sp-world-hero-icon"><img src={speakingAssets.icons[world.icon]} alt="" /></span>
           <h1>{world.titleAr}</h1>
