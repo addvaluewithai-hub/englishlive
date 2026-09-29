@@ -24,27 +24,33 @@ async function loadOwnedSession(sql: ReturnType<typeof getSql>, userId: string, 
   const rows = await sql`
     select
       ss.id::text as id,
-      ss.scenario_id,
-      ss.difficulty,
+      ss.application_id,
+      ss.requested_difficulty,
       ss.status,
       ss.started_at,
       ss.ended_at,
       ss.duration_seconds,
-      ss.scenario_snapshot,
+      ss.resolved_profile,
       ss.transcript,
       ss.analysis,
       ss.analysis_status,
-      ss.analysis_model,
+      ss.metadata,
       c.slug as character_slug,
       coalesce(cr.content->>'displayName', c.slug) as character_name
     from speaking_sessions ss
-    join characters c on c.id = ss.character_id
-    join character_revisions cr on cr.id = ss.character_revision_id
+    left join characters c on c.id = ss.character_id
+    left join character_revisions cr on cr.id = ss.character_revision_id
     where ss.id = ${sessionId}::uuid
       and ss.user_id = ${userId}
     limit 1
   `;
   return rows[0] as Record<string, unknown> | undefined;
+}
+
+function observationResult(outcome: string) {
+  if (outcome === 'demonstrated') return 'independent';
+  if (outcome === 'emerging') return 'supported';
+  return 'not_observed';
 }
 
 async function persistEvidence(
@@ -54,13 +60,44 @@ async function persistEvidence(
   evidence: Array<{ skillId: string; outcome: string; evidenceAr: string; learnerExcerpt: string | null }>,
 ) {
   for (const item of evidence) {
-    const evidenceJson = JSON.stringify({ evidenceAr: item.evidenceAr, learnerExcerpt: item.learnerExcerpt });
+    const capabilities = await sql`
+      select id
+      from interaction_capabilities
+      where slug = ${item.skillId}
+        and status = 'active'
+      limit 1
+    `;
+    const capability = capabilities[0] as Record<string, unknown> | undefined;
+    if (!capability?.id) continue;
+
+    const metadataJson = JSON.stringify({
+      learnerExcerpt: item.learnerExcerpt,
+      analyzerOutcome: item.outcome,
+      source: 'scenario_transcript_analysis',
+    });
     await sql`
-      insert into speaking_session_evidence (session_id, user_id, skill_id, outcome, evidence)
-      values (${sessionId}::uuid, ${userId}, ${item.skillId}, ${item.outcome}, ${evidenceJson}::jsonb)
-      on conflict (session_id, skill_id) do update set
-        outcome = excluded.outcome,
-        evidence = excluded.evidence,
+      insert into speaking_capability_observations (
+        user_id,
+        speaking_session_id,
+        capability_id,
+        opportunity,
+        result,
+        summary,
+        metadata
+      ) values (
+        ${userId},
+        ${sessionId}::uuid,
+        ${String(capability.id)},
+        true,
+        ${observationResult(item.outcome)},
+        ${item.evidenceAr},
+        ${metadataJson}::jsonb
+      )
+      on conflict (speaking_session_id, capability_id) do update set
+        opportunity = excluded.opportunity,
+        result = excluded.result,
+        summary = excluded.summary,
+        metadata = excluded.metadata,
         created_at = now()
     `;
   }
@@ -78,7 +115,7 @@ async function runAnalysis(
   if (!session.transcript.length) {
     await sql`
       update speaking_sessions
-      set analysis_status = 'error', updated_at = now()
+      set analysis_status = 'failed', updated_at = now()
       where id = ${sessionId}::uuid and user_id = ${userId}
     `;
     const updated = await loadOwnedSession(sql, userId, sessionId);
@@ -100,12 +137,19 @@ async function runAnalysis(
       transcript: session.transcript,
     });
     const analysisJson = JSON.stringify(result.recap);
+    const summaryJson = JSON.stringify({
+      headlineAr: result.recap.headlineAr,
+      summaryAr: result.recap.summaryAr,
+      nextFocusAr: result.recap.nextFocusAr,
+    });
+    const analysisMetadataJson = JSON.stringify({ analysisModel: result.model });
     await sql`
       update speaking_sessions
       set
         analysis = ${analysisJson}::jsonb,
+        summary = ${summaryJson}::jsonb,
         analysis_status = 'complete',
-        analysis_model = ${result.model},
+        metadata = metadata || ${analysisMetadataJson}::jsonb,
         updated_at = now()
       where id = ${sessionId}::uuid and user_id = ${userId}
     `;
@@ -114,7 +158,7 @@ async function runAnalysis(
     console.error('[speaking/session:analysis]', reason);
     await sql`
       update speaking_sessions
-      set analysis_status = 'error', updated_at = now()
+      set analysis_status = 'failed', updated_at = now()
       where id = ${sessionId}::uuid and user_id = ${userId}
     `;
     const updated = await loadOwnedSession(sql, userId, sessionId);
