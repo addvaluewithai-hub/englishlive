@@ -29,7 +29,7 @@ export function SpeakingWorldScreen() {
           <p>{world.subtitleAr}</p>
           <small>مكتبة مواقف للتدريب، مش مسار دروس جديد.</small>
         </div>
-        {world.heroImage ? <img src="/speaking-assets/otti-travel.webp" alt="" className="sp-world-hero-art" /> : null}
+        {world.heroImage ? <img src={world.heroImage} alt="" className="sp-world-hero-art" /> : null}
       </header>
 
       {featured ? (
@@ -51,7 +51,7 @@ export function SpeakingWorldScreen() {
             <section className={`sp-group-card${isOpen ? ' is-open' : ''}`} key={group.id}>
               <button type="button" className="sp-group-head" onClick={() => setOpenGroup(isOpen ? '' : group.id)}>
                 <span className="sp-group-thumb">
-                  {group.id === 'hotel' ? <img src="/speaking-assets/hotel-reception.webp" alt="" /> : <span>{group.id === 'airport' ? '✈️' : group.id === 'food' ? '🍔' : '🧳'}</span>}
+                  {group.id === 'hotel' ? <img src={group.image ?? '/speaking-assets/otti-hero.webp'} alt="" /> : <span>{group.id === 'airport' ? '✈️' : group.id === 'food' ? '🍔' : '🧳'}</span>}
                 </span>
                 <span className="sp-group-title"><strong>{group.titleAr}</strong><small>{group.subtitleAr}</small></span>
                 <span className="sp-group-toggle">{isOpen ? '⌃' : '⌄'}</span>
