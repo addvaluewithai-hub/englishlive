@@ -16,21 +16,23 @@ export const onRequestGet = async ({ request, env }: PagesContext) => {
     const summaryRows = await sql`
       select
         count(*) filter (where status = 'completed')::int as completed_sessions,
-        count(distinct scenario_id) filter (where status = 'completed')::int as scenarios_practised
+        count(distinct coalesce(metadata->>'scenarioId', application_id))
+          filter (where status = 'completed' and coalesce(metadata->>'scenarioId', application_id) is not null)::int as scenarios_practised
       from speaking_sessions
       where user_id = ${auth.userId}
     `;
     const skillRows = await sql`
       select
-        skill_id,
-        count(*) filter (where outcome <> 'not_observed')::int as observations,
-        count(*) filter (where outcome = 'demonstrated')::int as demonstrated,
-        count(*) filter (where outcome = 'emerging')::int as emerging,
-        max(created_at) filter (where outcome <> 'not_observed') as last_observed_at
-      from speaking_session_evidence
-      where user_id = ${auth.userId}
-      group by skill_id
-      order by max(created_at) desc
+        ic.slug as skill_id,
+        count(*) filter (where sco.result in ('independent', 'supported'))::int as observations,
+        count(*) filter (where sco.result = 'independent')::int as demonstrated,
+        count(*) filter (where sco.result = 'supported')::int as emerging,
+        max(sco.created_at) filter (where sco.result in ('independent', 'supported')) as last_observed_at
+      from speaking_capability_observations sco
+      join interaction_capabilities ic on ic.id = sco.capability_id
+      where sco.user_id = ${auth.userId}
+      group by ic.slug
+      order by max(sco.created_at) desc
     `;
     const summary = summaryRows[0] as Record<string, unknown> | undefined;
     const skills = skillRows.map((row) => {
