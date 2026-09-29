@@ -13,14 +13,14 @@ interface RecapLocationState {
 const skillCopy: Record<string, string> = {
   initiate: 'تبدأ الحوار',
   respond: 'ترد بشكل مناسب',
-  followup: 'تسأل سؤال متابعة',
+  'follow-up': 'تسأل سؤال متابعة',
   maintain: 'تكمل الحوار',
   develop: 'تطوّر فكرتك',
   close: 'تنهي الحوار طبيعي',
   clarify: 'تطلب أو تقدم توضيح',
   repair: 'تتعامل مع سوء الفهم',
   explain: 'تشرح اللي تقصده',
-  request_negotiate: 'تطلب وتتفاوض',
+  'request-negotiate': 'تطلب وتتفاوض',
   solve: 'توصل لحل',
   opinion: 'تعبر عن رأيك',
 };
