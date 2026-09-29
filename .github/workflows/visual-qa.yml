@@ -6,6 +6,8 @@ on:
     paths:
       - 'src/**'
       - 'scripts/visual-qa.mjs'
+      - 'scripts/visual-qa-speaking.mjs'
+      - 'public/speaking-assets/**'
       - 'package.json'
       - 'package-lock.json'
   push:
@@ -45,7 +47,9 @@ jobs:
           cat /tmp/englotti-vite.log
           exit 1
       - name: Capture product screens
-        run: node scripts/visual-qa.mjs
+        run: |
+          node scripts/visual-qa.mjs
+          node scripts/visual-qa-speaking.mjs
       - name: Upload screenshots
         if: always()
         uses: actions/upload-artifact@v4
