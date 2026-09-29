@@ -1,0 +1,201 @@
+/* Final mobile density pass after reviewing the 390x844 Visual QA capture
+ * against the supplied level-picker design.
+ */
+
+@media (max-width: 620px) {
+  .journey-levels {
+    padding-top: 8px;
+    gap: 8px;
+  }
+
+  .journey-levels-hero {
+    height: 118px;
+    min-height: 118px;
+  }
+
+  .journey-levels-hero::after {
+    top: 12px;
+    height: 92px;
+  }
+
+  .journey-levels-hero-art {
+    height: 118px;
+  }
+
+  .journey-levels-hero-art img {
+    width: 164px;
+    max-height: 118px;
+  }
+
+  .journey-levels-hero-copy {
+    padding: 3px 0 3px 4px;
+    align-self: center;
+  }
+
+  .journey-levels-hero-copy > span {
+    font-size: 11.5px;
+    line-height: 1.35;
+  }
+
+  .journey-levels-hero-copy h1 {
+    margin: 1px 0 3px;
+    font-size: 25px;
+    line-height: 1.08;
+    white-space: nowrap;
+  }
+
+  .journey-levels-hero-copy p {
+    font-size: 10.5px;
+    line-height: 1.45;
+  }
+
+  .journey-level-card-list {
+    gap: 7px;
+  }
+
+  .journey-level-card.is-live {
+    height: 132px;
+    min-height: 132px;
+    grid-template-columns: 84px minmax(0, 1fr) 40px;
+    grid-template-rows: 60px 38px;
+    column-gap: 7px;
+    row-gap: 6px;
+    padding: 8px 9px;
+    border-radius: 19px;
+  }
+
+  .journey-level-card.is-live .journey-level-badge {
+    min-height: 60px;
+    border-radius: 16px;
+  }
+
+  .journey-level-card.is-live .journey-level-badge strong {
+    font-size: 31px;
+  }
+
+  .journey-level-card.is-live .journey-level-badge span {
+    font-size: 10px;
+  }
+
+  .journey-level-card.is-live .journey-level-copy {
+    align-self: center;
+  }
+
+  .journey-level-card.is-live .journey-level-copy h2 {
+    margin: 1px 0 1px;
+    font-size: 17px;
+    line-height: 1.18;
+  }
+
+  .journey-level-card.is-live .journey-level-copy p {
+    display: -webkit-box;
+    overflow: hidden;
+    font-size: 9.75px;
+    line-height: 1.35;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .journey-now-pill {
+    padding: 3px 8px;
+    font-size: 9px;
+  }
+
+  .journey-level-card.is-live .journey-level-stats {
+    height: 38px;
+    padding-inline: 5px;
+    border-radius: 14px;
+  }
+
+  .journey-level-card.is-live .journey-level-stats > span {
+    height: 30px;
+  }
+
+  .journey-level-card.is-live .journey-level-stats strong {
+    font-size: 12.5px;
+  }
+
+  .journey-level-card.is-live .journey-level-stats small {
+    font-size: 8px;
+  }
+
+  .journey-level-card.is-live .journey-level-go {
+    width: 40px;
+    height: 40px;
+  }
+
+  .journey-level-card.is-live .journey-level-art {
+    left: 33px;
+    bottom: 31px;
+    width: 96px;
+    height: 67px;
+  }
+
+  .journey-level-card.is-locked {
+    height: 68px;
+    min-height: 68px;
+    grid-template-columns: 70px minmax(0, 1fr) 34px;
+    gap: 7px;
+    padding: 5px 8px;
+    border-radius: 18px;
+  }
+
+  .journey-level-card.is-locked .journey-level-badge {
+    min-height: 56px;
+    border-radius: 15px;
+  }
+
+  .journey-level-card.is-locked .journey-level-badge strong {
+    font-size: 28px;
+  }
+
+  .journey-level-card.is-locked .journey-level-badge span {
+    font-size: 8.5px;
+  }
+
+  .journey-level-card.is-locked .journey-level-copy h2 {
+    margin: 0 0 1px;
+    font-size: 15px;
+    line-height: 1.2;
+  }
+
+  .journey-level-card.is-locked .journey-level-copy p {
+    font-size: 8.75px;
+    line-height: 1.3;
+  }
+
+  .journey-level-card.is-locked .journey-level-lock {
+    width: 34px;
+    height: 34px;
+  }
+
+  .journey-level-card.is-locked .journey-level-lock svg {
+    width: 19px;
+    height: 19px;
+  }
+
+  .journey-level-card.is-locked .journey-level-art {
+    left: 34px;
+    bottom: -12px;
+    width: 91px;
+    height: 58px;
+  }
+}
+
+@media (max-width: 390px) {
+  .journey-levels {
+    padding-inline: 14px;
+  }
+
+  .journey-levels-hero-copy h1 {
+    font-size: 24px;
+  }
+
+  .journey-level-card.is-live {
+    grid-template-columns: 80px minmax(0, 1fr) 38px;
+  }
+
+  .journey-level-card.is-locked {
+    grid-template-columns: 66px minmax(0, 1fr) 32px;
+  }
+}
