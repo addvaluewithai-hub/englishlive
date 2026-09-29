@@ -22,7 +22,7 @@ export function SpeakingScenarioScreen() {
         <span className="sp-sheet-handle" />
 
         <div className="sp-start-art">
-          <img src="/speaking-assets/otti-receptionist.webp" alt="" />
+          <img src={scenario.image} alt="" />
         </div>
 
         <h1>{scenario.titleAr}</h1>
