@@ -1,17 +1,7 @@
 import { Link } from 'react-router-dom';
 import { ProductIcon } from '../components/ProductIcon';
+import { speakingAssets } from '../speaking/assets';
 import { FEATURED_SPEAKING_SCENARIO, SPEAKING_WORLDS } from '../speaking/catalog';
-
-type WorldIconName = 'home' | 'learn' | 'profile' | 'chevron' | 'chat';
-
-const worldIcon: Record<string, WorldIconName> = {
-  everyday: 'home',
-  travel: 'chevron',
-  work: 'profile',
-  people: 'profile',
-  opinions: 'chat',
-  stories: 'learn',
-};
 
 export function SpeakingHomeScreen() {
   const scenario = FEATURED_SPEAKING_SCENARIO;
@@ -24,7 +14,7 @@ export function SpeakingHomeScreen() {
           <h1>تكلم بثقة</h1>
           <p>تدرّب على مواقف الحياة الحقيقية باستخدام ما تعلمته في دروسك، وحوّل معرفتك إلى محادثات واقعية.</p>
         </div>
-        <img src="/speaking-assets/otti-hero.webp" alt="" className="sp-home-hero-art" />
+        <img src={speakingAssets.ottiHero} alt="" className="sp-home-hero-art" />
       </header>
 
       <section className="sp-recommend-card">
@@ -32,7 +22,7 @@ export function SpeakingHomeScreen() {
           <img src={scenario.image} alt="" />
         </div>
         <div className="sp-recommend-copy">
-          <span className="sp-course-chip"><ProductIcon name="learn" size={18} /> من آخر دروسك</span>
+          <span className="sp-course-chip"><ProductIcon name="learn" size={18} /> {scenario.courseSourceAr ?? 'من آخر دروسك'}</span>
           <h2>استخدم اللي اتعلمته</h2>
           <strong>{scenario.titleAr}</strong>
           <p>{scenario.descriptionAr}</p>
@@ -59,21 +49,21 @@ export function SpeakingHomeScreen() {
         <div className="sp-world-grid">
           {SPEAKING_WORLDS.map((world) => (
             <Link key={world.id} className={`sp-world-card is-${world.id}`} to={`/speak/world/${world.id}`}>
-              <span className="sp-world-icon"><ProductIcon name={worldIcon[world.id] ?? 'chat'} size={28} /></span>
+              <span className="sp-world-icon"><img src={speakingAssets.icons[world.icon]} alt="" /></span>
               <strong>{world.titleAr}</strong>
             </Link>
           ))}
         </div>
       </section>
 
-      <Link className="sp-resume-card" to="/speak/live/hotel-room-problem">
+      <Link className="sp-resume-card" to="/speak/scenario/hotel-room-problem">
         <span className="sp-resume-arrow"><ProductIcon name="chevron" size={23} /></span>
         <div>
           <strong>كمّل محادثتك السابقة</strong>
           <span>مشكلة في الفندق</span>
           <small>آخر مرة: اليوم</small>
         </div>
-        <img src="/speaking-assets/otti-hero.webp" alt="" />
+        <img src={speakingAssets.hotelReception} alt="" />
       </Link>
 
       <Link className="sp-progress-teaser" to="/speak/progress">
