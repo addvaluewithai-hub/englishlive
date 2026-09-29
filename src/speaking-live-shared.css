@@ -1,0 +1,192 @@
+/* Scenario speaking deliberately reuses the proven Free Speak live surface.
+ * Only scenario-specific environment/header polish lives here; turn-taking,
+ * chat viewport, mic controls and responsive geometry stay on the shared fs-* rules. */
+
+.sp-scenario-live {
+  min-height: 100dvh;
+  padding-bottom: 0;
+  background: #fffdfc;
+}
+
+.sp-scenario-live-header {
+  position: relative;
+  z-index: 20;
+}
+
+.sp-scenario-live .fs-live-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sp-scenario-timer {
+  direction: ltr;
+  min-width: 82px;
+  justify-content: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.sp-scenario-stage {
+  isolation: isolate;
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+
+.sp-scenario-stage::before {
+  inset: 0;
+  left: 0;
+  top: 0;
+  width: auto;
+  height: auto;
+  transform: none;
+  border-radius: 0;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.03) 0%, rgba(255,249,246,.16) 44%, rgba(255,253,252,.94) 92%, #fffdfc 100%);
+}
+
+.sp-scenario-stage::after {
+  content: '';
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(90deg, rgba(255,255,255,.08), transparent 25% 75%, rgba(255,255,255,.08));
+}
+
+.sp-scenario-character {
+  z-index: 3;
+  height: 320px;
+  overflow: visible;
+}
+
+.sp-scenario-character .fs-live-character-host {
+  filter: drop-shadow(0 20px 28px rgba(105, 46, 52, .18));
+}
+
+.sp-scenario-live .fs-live-status,
+.sp-scenario-live .fs-history-button,
+.sp-scenario-live .fs-exchange {
+  z-index: 5;
+}
+
+.sp-scenario-live .fs-live-status {
+  backdrop-filter: blur(10px);
+}
+
+.sp-scenario-live .fs-exchange {
+  width: min(100%, 650px);
+}
+
+.sp-scenario-live .fs-bubble-teacher,
+.sp-scenario-live .fs-bubble-learner {
+  backdrop-filter: blur(10px);
+}
+
+.sp-scenario-live .fs-bubble-teacher {
+  background: rgba(255, 244, 247, .94);
+}
+
+.sp-scenario-live .fs-bubble-learner {
+  background: rgba(246, 249, 255, .94);
+}
+
+.sp-scenario-live .fs-live-controls {
+  padding-top: 10px;
+  background: linear-gradient(180deg, rgba(255,253,252,.72), #fff 22%);
+}
+
+.sp-help-sheet-inline {
+  position: relative;
+  inset: auto;
+  width: min(560px, 100%);
+  margin: 0 auto 12px;
+  padding: 12px;
+  border-radius: 22px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  border: 1px solid #f1dce4;
+  background: rgba(255,255,255,.98);
+  box-shadow: 0 12px 30px rgba(57, 34, 42, .08);
+}
+
+.sp-help-sheet-inline > strong {
+  grid-column: 1 / -1;
+  margin: 0 2px 2px;
+  color: var(--fs-ink);
+  font-size: 14px;
+}
+
+.sp-help-sheet-inline button {
+  min-height: 42px;
+  border: 1px solid #f1e4e8;
+  border-radius: 15px;
+  color: #283650;
+  background: #fff7fa;
+  font: inherit;
+  font-weight: 800;
+}
+
+.sp-help-sheet-inline button:active {
+  transform: translateY(1px);
+}
+
+@media (max-width: 620px) {
+  .sp-scenario-live {
+    min-height: calc(100dvh - 78px);
+  }
+
+  .sp-scenario-live .fs-live-header {
+    grid-template-columns: 38px auto minmax(90px, 1fr) auto;
+  }
+
+  .sp-scenario-live .fs-live-title {
+    font-size: 14px;
+  }
+
+  .sp-scenario-timer {
+    min-width: 70px;
+    padding-inline: 8px;
+    font-size: 10.5px;
+  }
+
+  .sp-scenario-stage {
+    min-height: 510px;
+  }
+
+  .sp-scenario-character {
+    width: min(305px, 78vw);
+    height: 255px;
+  }
+
+  .sp-scenario-live .fs-exchange {
+    padding-inline: 44px;
+  }
+
+  .sp-help-sheet-inline {
+    width: calc(100% - 8px);
+  }
+}
+
+@media (max-width: 390px) {
+  .sp-scenario-live .fs-live-header {
+    grid-template-columns: 38px auto minmax(72px, 1fr) auto;
+  }
+
+  .sp-scenario-live .fs-live-brand strong {
+    display: inline !important;
+  }
+
+  .sp-scenario-live .fs-live-title {
+    font-size: 12px;
+  }
+
+  .sp-scenario-timer {
+    min-width: 62px;
+    font-size: 10px;
+  }
+
+  .sp-scenario-character {
+    width: min(285px, 78vw);
+  }
+}
