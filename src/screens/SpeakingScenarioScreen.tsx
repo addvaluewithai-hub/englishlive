@@ -22,7 +22,7 @@ export function SpeakingScenarioScreen() {
         <span className="sp-sheet-handle" />
 
         <div className="sp-start-art">
-          <img src={scenario.image} alt="" />
+          <img src={scenario.liveCharacterImage ?? scenario.image} alt="" />
         </div>
 
         <h1>{scenario.titleAr}</h1>
@@ -55,7 +55,7 @@ export function SpeakingScenarioScreen() {
               </button>
             ))}
           </div>
-          <p>✨ مقترح لك بناءً على مستواك وتقدمك ✨</p>
+          <p>✨ {scenario.readinessReasonAr} ✨</p>
         </section>
 
         <Link className="sp-start-button" to={`/speak/live/${scenario.id}?difficulty=${difficulty}`}>
