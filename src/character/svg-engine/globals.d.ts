@@ -1,6 +1,7 @@
-import type { CharacterEmotion, CharacterGesture, MouthPose } from '../types';
+import type { CharacterEmotion, CharacterGesture, CharacterMode, MouthPose } from '../types';
 
 type CharacterRig = {
+  setMode?: (mode: CharacterMode) => void;
   setEmotion: (emotion: CharacterEmotion | 'happy') => void;
   setIntensity: (value: number) => void;
   setEnergy: (value: number) => void;

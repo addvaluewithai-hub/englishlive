@@ -30,6 +30,8 @@ export class OttiRenderer implements CharacterRenderer {
     container.innerHTML = window.OctopusAnatomy.render({ name: 'Otti' }, false);
     container.dataset.renderer = 'otti-svg';
     this.rig = window.OctopusMotion.createRig(container, {
+      // Keep the upstream Octo speech-motion tuning. The new rig uses actual
+      // playback energy/visemes to decide when a subtle speech gesture belongs.
       speechMotionScale: this.config.motionScale ?? 0.5,
     });
     this.setMode('idle');
@@ -37,6 +39,8 @@ export class OttiRenderer implements CharacterRenderer {
   }
 
   unmount() {
+    this.rig?.cancelActions();
+    this.rig?.setMouthPose(null);
     this.rig?.destroy();
     this.rig = null;
     if (this.host) {
@@ -47,6 +51,10 @@ export class OttiRenderer implements CharacterRenderer {
   }
 
   setMode(mode: CharacterMode) {
+    // The dedicated Octo rig owns breathing, attentive listening, thinking and
+    // audio-reactive speaking. Forward the semantic mode instead of layering a
+    // second local speaking animation on top of it.
+    this.rig?.setMode?.(mode);
     this.rig?.setEnergy(modeEnergy[mode] * (this.config.motionScale ?? 0.5));
   }
 
@@ -60,6 +68,8 @@ export class OttiRenderer implements CharacterRenderer {
   }
 
   setMouth(pose: MouthPose | null) {
+    // MouthPose comes from the PCM that is actually scheduled for playback,
+    // including energy/open and width/round when the analyzer can infer them.
     this.rig?.setMouthPose(pose);
   }
 
