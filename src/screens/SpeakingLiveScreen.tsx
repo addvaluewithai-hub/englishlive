@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { OttiMark } from '../character/otti/OttiMark';
 import { ProductIcon } from '../components/ProductIcon';
+import { speakingAssets } from '../speaking/assets';
 import { speakingScenarioById } from '../speaking/catalog';
 
 export function SpeakingLiveScreen() {
@@ -28,14 +30,14 @@ export function SpeakingLiveScreen() {
     <section className="sp-live" dir="rtl">
       <header className="sp-live-header">
         <Link to={`/speak/scenario/${scenario.id}`} className="sp-live-close" aria-label="إنهاء"><ProductIcon name="close" size={27} /></Link>
-        <div className="sp-live-brand"><span>🐙</span><strong>Englotti</strong></div>
+        <div className="sp-live-brand"><OttiMark /><strong>Englotti</strong></div>
         <div className="sp-live-progress"><span><i /><i /><i /></span><small>00:28 ◷</small></div>
         <div className="sp-live-scenario"><span>🛏️</span><strong>{scenario.titleAr}</strong></div>
       </header>
 
       <div className="sp-live-stage">
         <img className="sp-live-bg" src={scenario.image} alt="" />
-        <img className="sp-live-otti" src="/speaking-assets/otti-hero.webp" alt="Otti" />
+        <img className="sp-live-otti" src={scenario.liveCharacterImage ?? speakingAssets.ottiHero} alt="Otti" />
         <div className={`sp-turn-status${isLearnerTurn ? ' is-active' : ''}`}>
           <ProductIcon name="speak" size={26} />
           <span><strong>{isLearnerTurn ? 'دورك الآن' : 'Otti بيتكلم'}</strong><small>{isLearnerTurn ? 'رد بصوتك' : 'اسمع وبعدها رد'}</small></span>
@@ -44,7 +46,7 @@ export function SpeakingLiveScreen() {
 
       <div className="sp-live-dialogue">
         <article className="sp-live-bubble is-otti">
-          <span className="sp-live-avatar"><img src="/speaking-assets/otti-hero.webp" alt="" /></span>
+          <span className="sp-live-avatar"><OttiMark /></span>
           <button type="button" aria-label="اسمع الجملة">🔊</button>
           <p dir="ltr">I’m sorry, but your room isn’t ready yet.</p>
         </article>
