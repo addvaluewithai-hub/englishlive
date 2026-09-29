@@ -6,7 +6,6 @@ import { AccountScreen } from '../screens/AccountScreen';
 import { AuthScreen } from '../screens/AuthScreen';
 import { CharacterSelectScreen } from '../screens/CharacterSelectScreen';
 import { FreeSpeakRecapScreen } from '../screens/FreeSpeakRecapScreen';
-import { FreeSpeakScreen } from '../screens/FreeSpeakScreen';
 import { FreeSpeakSessionScreen } from '../screens/FreeSpeakSessionScreen';
 import { HomeScreen } from '../screens/HomeScreen';
 import { LandingScreen } from '../screens/LandingScreen';
@@ -20,6 +19,11 @@ import { ReviewScreen } from '../screens/ReviewScreen';
 import { SceneLessonCompleteScreen } from '../screens/SceneLessonCompleteScreen';
 import { SceneLessonScreen } from '../screens/SceneLessonScreen';
 import { SessionScreen } from '../screens/SessionScreen';
+import { SpeakingHomeScreen } from '../screens/SpeakingHomeScreen';
+import { SpeakingLiveScreen } from '../screens/SpeakingLiveScreen';
+import { SpeakingProgressScreen } from '../screens/SpeakingProgressScreen';
+import { SpeakingScenarioScreen } from '../screens/SpeakingScenarioScreen';
+import { SpeakingWorldScreen } from '../screens/SpeakingWorldScreen';
 import { StudioCurriculumScreen } from '../screens/StudioCurriculumScreen';
 import { StudioScreen } from '../screens/StudioScreen';
 import { UnitScreen } from '../screens/UnitScreen';
@@ -38,17 +42,20 @@ export function App() {
   const isLesson = location.pathname.startsWith('/lesson/');
   const isSceneLesson = location.pathname.startsWith('/scene-lesson/');
   const isFreeSpeakRecap = location.pathname.startsWith('/speak/recap/');
-  const isFreeSpeakSession = /^\/speak\/(?!recap(?:\/|$))[^/]+/.test(location.pathname);
-  const isSession = isLegacySession || isLesson || isSceneLesson || isFreeSpeakSession;
+  const isSpeakingScenario = location.pathname.startsWith('/speak/scenario/');
+  const isSpeakingLive = location.pathname.startsWith('/speak/live/');
+  const isLegacyFreeSpeakSession = /^\/speak\/(just-chat|work|travel|interview)(?:\/|$)/.test(location.pathname);
+  const isSession = isLegacySession || isLesson || isSceneLesson || isLegacyFreeSpeakSession || isSpeakingLive;
   const isReview = location.pathname.startsWith('/review/') || location.pathname.startsWith('/lesson-review/');
-  const isApp = !isLanding && !isAuth && !isOnboarding && !isStudio && !isSession && !isReview;
-  const usesProductV2 = isApp || isAuth || isOnboarding || isSceneLesson || isStudio || isFreeSpeakSession;
+  const isOverlay = isSpeakingScenario || isSpeakingLive;
+  const isApp = !isLanding && !isAuth && !isOnboarding && !isStudio && !isSession && !isReview && !isOverlay;
+  const usesProductV2 = isApp || isAuth || isOnboarding || isSceneLesson || isStudio || isLegacyFreeSpeakSession || isOverlay;
   const showProductHeader = isApp && !isCompletion;
-  const hideGlobalHeader = isLanding || isAuth || isOnboarding || isStudio || isCompletion || isSceneLesson || isFreeSpeakSession;
-  const showBottomNav = (isApp && !isCompletion) || isFreeSpeakSession;
+  const hideGlobalHeader = isLanding || isAuth || isOnboarding || isStudio || isCompletion || isSceneLesson || isLegacyFreeSpeakSession || isOverlay;
+  const showBottomNav = (isApp && !isCompletion) || isLegacyFreeSpeakSession;
 
   return (
-    <div className={`app-shell${isSession ? ' is-session' : ''}${isSceneLesson ? ' is-scene-lesson' : ''}${isFreeSpeakSession ? ' is-free-speak-session' : ''}${isFreeSpeakRecap ? ' is-free-speak-recap' : ''}${isCompletion ? ' is-completion' : ''}${isLanding ? ' is-landing' : ''}${isStudio ? ' is-studio' : ''}${usesProductV2 ? ' is-product-v2' : ''}`}>
+    <div className={`app-shell${isSession ? ' is-session' : ''}${isSceneLesson ? ' is-scene-lesson' : ''}${isLegacyFreeSpeakSession ? ' is-free-speak-session' : ''}${isSpeakingLive ? ' is-speaking-live' : ''}${isSpeakingScenario ? ' is-speaking-scenario' : ''}${isFreeSpeakRecap ? ' is-free-speak-recap' : ''}${isCompletion ? ' is-completion' : ''}${isLanding ? ' is-landing' : ''}${isStudio ? ' is-studio' : ''}${usesProductV2 ? ' is-product-v2' : ''}`}>
       {hideGlobalHeader ? null : showProductHeader ? (
         <header className="v2-app-header">
           <Link to="/home" className="v2-brand" aria-label="Englotti home">
@@ -66,8 +73,8 @@ export function App() {
             <span>Englotti</span>
           </Link>
           {isSession ? (
-            <Link className="header-action quiet-link" to={isFreeSpeakSession ? '/speak' : '/learn'}>
-              {isFreeSpeakSession ? 'الرجوع للمحادثة' : 'Leave session'}
+            <Link className="header-action quiet-link" to={isLegacyFreeSpeakSession ? '/speak' : '/learn'}>
+              {isLegacyFreeSpeakSession ? 'الرجوع للمحادثة' : 'Leave session'}
             </Link>
           ) : isReview ? (
             <Link className="header-action quiet-link" to="/learn">Back to Learn</Link>
@@ -75,7 +82,7 @@ export function App() {
         </header>
       )}
 
-      <main className={isSceneLesson ? 'app-main app-main-session v2-scene-main' : isFreeSpeakSession ? 'app-main app-main-session free-speak-v2-main' : isSession ? 'app-main app-main-session' : usesProductV2 ? 'v2-app-main' : 'app-main'}>
+      <main className={isSceneLesson ? 'app-main app-main-session v2-scene-main' : isLegacyFreeSpeakSession ? 'app-main app-main-session free-speak-v2-main' : isSpeakingLive || isSpeakingScenario ? 'app-main app-main-session spk3-overlay-main' : isSession ? 'app-main app-main-session' : usesProductV2 ? 'v2-app-main' : 'app-main'}>
         {isStudio ? (
           <nav className="studio-global-nav" aria-label="Studio navigation" dir="rtl">
             <Link className={location.pathname === '/studio' ? 'is-active' : ''} to="/studio">JSON Authoring</Link>
@@ -98,7 +105,11 @@ export function App() {
           <Route path="/scene-lesson/:lessonId" element={<RequireAuth><SceneLessonScreen /></RequireAuth>} />
           <Route path="/lesson-complete/:lessonId" element={<RequireAuth><SceneLessonCompleteScreen /></RequireAuth>} />
           <Route path="/lesson-review/:runId" element={<RequireAuth><LessonReviewScreen /></RequireAuth>} />
-          <Route path="/speak" element={<RequireAuth><FreeSpeakScreen /></RequireAuth>} />
+          <Route path="/speak" element={<RequireAuth><SpeakingHomeScreen /></RequireAuth>} />
+          <Route path="/speak/world/:worldId" element={<RequireAuth><SpeakingWorldScreen /></RequireAuth>} />
+          <Route path="/speak/scenario/:scenarioId" element={<RequireAuth><SpeakingScenarioScreen /></RequireAuth>} />
+          <Route path="/speak/live/:scenarioId" element={<RequireAuth><SpeakingLiveScreen /></RequireAuth>} />
+          <Route path="/speak/progress" element={<RequireAuth><SpeakingProgressScreen /></RequireAuth>} />
           <Route path="/speak/recap/:sessionId" element={<RequireAuth><FreeSpeakRecapScreen /></RequireAuth>} />
           <Route path="/speak/:modeId" element={<RequireAuth><FreeSpeakSessionScreen /></RequireAuth>} />
           <Route path="/progress" element={<RequireAuth><ProgressScreen /></RequireAuth>} />
@@ -115,7 +126,7 @@ export function App() {
           <NavLink end to="/home" className={navClass}><ProductIcon name="home" /><span>الرئيسية</span></NavLink>
           <NavLink to="/learn" className={navClass}><ProductIcon name="learn" /><span>التعلم</span></NavLink>
           <NavLink to="/speak" className={navClass}><ProductIcon name="speak" /><span>المحادثة</span></NavLink>
-          <NavLink to="/progress" className={navClass}><ProductIcon name="profile" /><span>تقدمي</span></NavLink>
+          <NavLink to="/account" className={navClass}><ProductIcon name="profile" /><span>حسابي</span></NavLink>
         </nav>
       ) : null}
     </div>
