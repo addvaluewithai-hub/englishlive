@@ -17,7 +17,7 @@ export function SpeakingProgressScreen() {
           <h1>تقدمك في المحادثة</h1>
           <p>من خلال محادثاتك، بنلاحظ إنك بتتقدم خطوة بخطوة.</p>
         </div>
-        <img src="/speaking-assets/otti-progress.webp" alt="" />
+        <img src="/speaking-assets/otti-hero.webp" alt="" />
       </header>
 
       <div className="sp-progress-stats">
