@@ -8,13 +8,13 @@ import type { SpeakingProgressSnapshot } from '../speaking/types';
 const skillConfig: Record<string, { title: string; icon: string; suggestion: string; scenarioId: string }> = {
   initiate: { title: 'تبدأ الحوار', icon: '👋', suggestion: 'اتعرف على شخص جديد', scenarioId: 'meet-someone-new' },
   respond: { title: 'ترد بشكل مناسب', icon: '↩️', suggestion: 'تسجيل الدخول', scenarioId: 'hotel-check-in' },
-  followup: { title: 'تسأل أسئلة متابعة', icon: '❓', suggestion: 'السؤال عن الخدمات', scenarioId: 'hotel-services' },
+  'follow-up': { title: 'تسأل أسئلة متابعة', icon: '❓', suggestion: 'السؤال عن الخدمات', scenarioId: 'hotel-services' },
   maintain: { title: 'تكمل الحوار', icon: '💬', suggestion: 'اتعرف على شخص جديد', scenarioId: 'meet-someone-new' },
   close: { title: 'تنهي الحوار طبيعي', icon: '👋', suggestion: 'تسجيل خروج متأخر', scenarioId: 'late-checkout' },
   clarify: { title: 'تطلب أو تقدم توضيح', icon: '🔎', suggestion: 'الحجز غير موجود', scenarioId: 'booking-missing' },
   repair: { title: 'تتعامل مع سوء الفهم', icon: '💡', suggestion: 'مشكلة في الفندق', scenarioId: 'hotel-room-problem' },
   explain: { title: 'تشرح اللي تقصده', icon: '🗣️', suggestion: 'مشكلة في الفندق', scenarioId: 'hotel-room-problem' },
-  request_negotiate: { title: 'تطلب وتتفاوض', icon: '🤝', suggestion: 'تغيير الحجز', scenarioId: 'change-booking' },
+  'request-negotiate': { title: 'تطلب وتتفاوض', icon: '🤝', suggestion: 'تغيير الحجز', scenarioId: 'change-booking' },
   solve: { title: 'توصل لحل', icon: '🧩', suggestion: 'الحجز غير موجود', scenarioId: 'booking-missing' },
   opinion: { title: 'تعبر عن رأيك', icon: '📈', suggestion: 'اتعرف على شخص جديد', scenarioId: 'meet-someone-new' },
 };
@@ -58,7 +58,7 @@ export function SpeakingProgressScreen() {
       .filter((item) => skillConfig[item.skillId])
       .sort((a, b) => b.observations - a.observations);
     if (observed.length) return observed;
-    return ['maintain', 'followup', 'repair', 'clarify'].map((skillId) => ({
+    return ['maintain', 'follow-up', 'repair', 'clarify'].map((skillId) => ({
       skillId,
       observations: 0,
       demonstrated: 0,
