@@ -46,39 +46,42 @@ export const onRequestPost = async ({ request, env }: PagesContext) => {
     }
 
     const snapshotJson = JSON.stringify(snapshot);
+    const metadataJson = JSON.stringify({ scenarioId, runtime: 'speaking-hub-v1' });
     const rows = await sql`
       insert into speaking_sessions (
         user_id,
-        scenario_id,
-        difficulty,
+        session_kind,
         character_id,
         character_revision_id,
-        scenario_snapshot,
+        requested_difficulty,
+        resolved_profile,
+        metadata,
         status,
         analysis_status
       ) values (
         ${auth.userId},
-        ${scenarioId},
-        ${difficulty},
+        'world_scenario',
         ${String(character.id)}::uuid,
         ${String(character.revision_id)}::uuid,
+        ${difficulty},
         ${snapshotJson}::jsonb,
+        ${metadataJson}::jsonb,
         'active',
         'pending'
       )
       returning
         id::text as id,
-        scenario_id,
-        difficulty,
+        application_id,
+        requested_difficulty,
         status,
         started_at,
         ended_at,
         duration_seconds,
-        scenario_snapshot,
+        resolved_profile,
         transcript,
         analysis,
         analysis_status,
-        analysis_model
+        metadata
     `;
     const row = rows[0] as Record<string, unknown>;
     return jsonResponse({
