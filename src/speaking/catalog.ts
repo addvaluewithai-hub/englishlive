@@ -6,14 +6,14 @@ export type SpeakingApplicationType = 'embedded' | 'integration' | 'unit_challen
 export type SpeakingInteractionSkill =
   | 'initiate'
   | 'respond'
-  | 'followup'
+  | 'follow-up'
   | 'maintain'
   | 'develop'
   | 'close'
   | 'clarify'
   | 'repair'
   | 'explain'
-  | 'request_negotiate'
+  | 'request-negotiate'
   | 'solve'
   | 'opinion';
 
@@ -79,7 +79,7 @@ const travelScenarios: SpeakingScenario[] = [
     readiness: 'ready',
     readinessReasonAr: 'اللغة الأساسية اتغطت في دروسك.',
     usesAr: ['التعريف بنفسك', 'تأكيد الحجز', 'السؤال عن التفاصيل'],
-    interactionFocus: ['initiate', 'respond', 'followup', 'close'],
+    interactionFocus: ['initiate', 'respond', 'follow-up', 'close'],
     partnerBriefEn: 'You are a friendly hotel receptionist. Confirm the guest name and booking, then give one or two useful stay details. Let the learner do the practical work instead of feeding them a script.',
   },
   {
@@ -93,7 +93,7 @@ const travelScenarios: SpeakingScenario[] = [
     readiness: 'ready',
     readinessReasonAr: 'مناسب للي أخدته في مواقف السؤال والطلب.',
     usesAr: ['السؤال عن خدمة', 'الوقت والمكان'],
-    interactionFocus: ['followup', 'clarify', 'request_negotiate'],
+    interactionFocus: ['follow-up', 'clarify', 'request-negotiate'],
     partnerBriefEn: 'You are a hotel receptionist answering questions about Wi-Fi, breakfast, opening times and hotel facilities. Give realistic concise answers and occasionally ask what the guest needs.',
   },
   {
@@ -107,7 +107,7 @@ const travelScenarios: SpeakingScenario[] = [
     readiness: 'challenge',
     readinessReasonAr: 'الموقف بيجمع أكتر من قدرة وبيحتاج متابعة.',
     usesAr: ['طلب المساعدة', 'شرح مشكلة', 'السؤال عن الحل'],
-    interactionFocus: ['explain', 'clarify', 'repair', 'request_negotiate', 'solve'],
+    interactionFocus: ['explain', 'clarify', 'repair', 'request-negotiate', 'solve'],
     partnerBriefEn: 'You are a hotel receptionist. Ask how you can help, let the learner explain the room problem, ask one useful clarification and offer a realistic solution. Do not solve everything in the first sentence.',
   },
   {
@@ -121,7 +121,7 @@ const travelScenarios: SpeakingScenario[] = [
     readiness: 'later',
     readinessReasonAr: 'يعتمد على لغة لسه جاية في مسارك.',
     usesAr: ['طلب تغيير', 'فهم البدائل'],
-    interactionFocus: ['clarify', 'request_negotiate', 'solve'],
+    interactionFocus: ['clarify', 'request-negotiate', 'solve'],
     partnerBriefEn: 'You are a hotel reservations agent. Clarify what the learner wants to change, explain one realistic constraint or alternative, and work toward an agreed option.',
   },
   {
@@ -135,7 +135,7 @@ const travelScenarios: SpeakingScenario[] = [
     readiness: 'ready',
     readinessReasonAr: 'طلب بسيط ومباشر ومناسب لمستواك الحالي.',
     usesAr: ['طلب بسيط', 'الوقت'],
-    interactionFocus: ['request_negotiate', 'clarify', 'close'],
+    interactionFocus: ['request-negotiate', 'clarify', 'close'],
     partnerBriefEn: 'You are a hotel receptionist handling a late-checkout request. State the available time or simple condition, answer follow-up questions and close naturally once the guest decides.',
   },
   {
@@ -149,7 +149,7 @@ const travelScenarios: SpeakingScenario[] = [
     readiness: 'challenge',
     readinessReasonAr: 'فيه complication ومتابعة أكتر من المعتاد.',
     usesAr: ['توضيح البيانات', 'التعامل مع مشكلة', 'متابعة الحل'],
-    interactionFocus: ['clarify', 'repair', 'followup', 'solve'],
+    interactionFocus: ['clarify', 'repair', 'follow-up', 'solve'],
     partnerBriefEn: 'You are a hotel receptionist who cannot initially find the reservation. Ask for useful booking details, check them, introduce one small complication and collaborate on a practical resolution.',
   },
 ];
@@ -198,7 +198,7 @@ export const FEATURED_SPEAKING_SCENARIO: SpeakingScenario = {
   liveCharacterImage: speakingAssets.ottiHero,
   modeId: 'just-chat',
   applicationType: 'integration',
-  interactionFocus: ['initiate', 'respond', 'followup', 'maintain', 'close'],
+  interactionFocus: ['initiate', 'respond', 'follow-up', 'maintain', 'close'],
   partnerBriefEn: 'You are meeting the learner for the first time in a normal social setting. Exchange names and simple personal information, contribute a little about yourself, ask natural follow-ups and let the learner help keep the conversation going.',
   courseSourceAr: 'من آخر دروسك',
   courseLessonIds: ['A1-U1-L01', 'A1-U1-L03', 'A1-U1-L04'],
