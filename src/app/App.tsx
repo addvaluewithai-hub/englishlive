@@ -22,6 +22,7 @@ import { SessionScreen } from '../screens/SessionScreen';
 import { SpeakingHomeScreen } from '../screens/SpeakingHomeScreen';
 import { SpeakingLiveScreen } from '../screens/SpeakingLiveScreen';
 import { SpeakingProgressScreen } from '../screens/SpeakingProgressScreen';
+import { SpeakingRecapScreen } from '../screens/SpeakingRecapScreen';
 import { SpeakingScenarioScreen } from '../screens/SpeakingScenarioScreen';
 import { SpeakingWorldScreen } from '../screens/SpeakingWorldScreen';
 import { StudioCurriculumScreen } from '../screens/StudioCurriculumScreen';
@@ -42,9 +43,10 @@ export function App() {
   const isLesson = location.pathname.startsWith('/lesson/');
   const isSceneLesson = location.pathname.startsWith('/scene-lesson/');
   const isFreeSpeakRecap = location.pathname.startsWith('/speak/recap/');
+  const isSpeakingRecap = location.pathname.startsWith('/speak/scenario-recap/');
   const isSpeakingScenario = location.pathname.startsWith('/speak/scenario/');
   const isSpeakingLive = location.pathname.startsWith('/speak/live/');
-  const isFreeSpeakSession = /^\/speak\/(?!recap(?:\/|$)|world(?:\/|$)|scenario(?:\/|$)|progress(?:\/|$)|live(?:\/|$))[^/]+/.test(location.pathname);
+  const isFreeSpeakSession = /^\/speak\/(?!recap(?:\/|$)|scenario-recap(?:\/|$)|world(?:\/|$)|scenario(?:\/|$)|progress(?:\/|$)|live(?:\/|$))[^/]+/.test(location.pathname);
   const isSession = isLegacySession || isLesson || isSceneLesson || isFreeSpeakSession || isSpeakingLive;
   const isReview = location.pathname.startsWith('/review/') || location.pathname.startsWith('/lesson-review/');
   const isApp = !isLanding && !isAuth && !isOnboarding && !isStudio && !isSession && !isReview && !isSpeakingScenario;
@@ -54,7 +56,7 @@ export function App() {
   const showBottomNav = isApp && !isCompletion;
 
   return (
-    <div className={`app-shell${isSession ? ' is-session' : ''}${isSceneLesson ? ' is-scene-lesson' : ''}${isFreeSpeakSession ? ' is-free-speak-session' : ''}${isSpeakingLive ? ' is-speaking-live' : ''}${isSpeakingScenario ? ' is-speaking-scenario' : ''}${isFreeSpeakRecap ? ' is-free-speak-recap' : ''}${isCompletion ? ' is-completion' : ''}${isLanding ? ' is-landing' : ''}${isStudio ? ' is-studio' : ''}${usesProductV2 ? ' is-product-v2' : ''}`}>
+    <div className={`app-shell${isSession ? ' is-session' : ''}${isSceneLesson ? ' is-scene-lesson' : ''}${isFreeSpeakSession ? ' is-free-speak-session' : ''}${isSpeakingLive ? ' is-speaking-live' : ''}${isSpeakingScenario ? ' is-speaking-scenario' : ''}${isFreeSpeakRecap ? ' is-free-speak-recap' : ''}${isSpeakingRecap ? ' is-speaking-recap' : ''}${isCompletion ? ' is-completion' : ''}${isLanding ? ' is-landing' : ''}${isStudio ? ' is-studio' : ''}${usesProductV2 ? ' is-product-v2' : ''}`}>
       {hideGlobalHeader ? null : showProductHeader ? (
         <header className="v2-app-header">
           <Link to="/home" className="v2-brand" aria-label="Englotti home">
@@ -109,6 +111,7 @@ export function App() {
           <Route path="/speak/scenario/:scenarioId" element={<RequireAuth><SpeakingScenarioScreen /></RequireAuth>} />
           <Route path="/speak/live/:scenarioId" element={<RequireAuth><SpeakingLiveScreen /></RequireAuth>} />
           <Route path="/speak/progress" element={<RequireAuth><SpeakingProgressScreen /></RequireAuth>} />
+          <Route path="/speak/scenario-recap/:sessionId" element={<RequireAuth><SpeakingRecapScreen /></RequireAuth>} />
           <Route path="/speak/recap/:sessionId" element={<RequireAuth><FreeSpeakRecapScreen /></RequireAuth>} />
           <Route path="/speak/:modeId" element={<RequireAuth><FreeSpeakSessionScreen /></RequireAuth>} />
           <Route path="/progress" element={<RequireAuth><ProgressScreen /></RequireAuth>} />
