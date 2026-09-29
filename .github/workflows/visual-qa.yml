@@ -52,6 +52,7 @@ jobs:
           node scripts/visual-qa-speaking.mjs
       - name: Upload screenshots
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: englotti-visual-qa
