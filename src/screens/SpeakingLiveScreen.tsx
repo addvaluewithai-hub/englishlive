@@ -1,4 +1,5 @@
-import { FormEvent, useState } from 'react';
+import { useState } from 'react';
+import type { FormEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ProductIcon } from '../components/ProductIcon';
 import { speakingScenarioById } from '../speaking/catalog';
@@ -33,8 +34,8 @@ export function SpeakingLiveScreen() {
       </header>
 
       <div className="sp-live-stage">
-        <img className="sp-live-bg" src="/speaking-assets/hotel-reception.webp" alt="" />
-        <img className="sp-live-otti" src="/speaking-assets/otti-receptionist.webp" alt="Otti" />
+        <img className="sp-live-bg" src={scenario.image} alt="" />
+        <img className="sp-live-otti" src="/speaking-assets/otti-hero.webp" alt="Otti" />
         <div className={`sp-turn-status${isLearnerTurn ? ' is-active' : ''}`}>
           <ProductIcon name="speak" size={26} />
           <span><strong>{isLearnerTurn ? 'دورك الآن' : 'Otti بيتكلم'}</strong><small>{isLearnerTurn ? 'رد بصوتك' : 'اسمع وبعدها رد'}</small></span>
@@ -62,7 +63,7 @@ export function SpeakingLiveScreen() {
       ) : null}
 
       {helpOpen ? (
-        <section className="sp-help-sheet">
+        <section className="sp-help-sheet" aria-label="مساعدة المحادثة">
           <strong>أساعدك إزاي؟</strong>
           <button type="button">قولها أبسط</button>
           <button type="button">اشرح بالعربي</button>
