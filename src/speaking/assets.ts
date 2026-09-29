@@ -9,4 +9,17 @@ export const speakingAssets = {
   hotelBuilding: 'https://res.cloudinary.com/as9o12al/image/upload/v1790688205/englotti-speaking/hotel-building.png',
   foodOut: 'https://res.cloudinary.com/as9o12al/image/upload/v1790688215/englotti-speaking/food-out.png',
   luggageWarning: 'https://res.cloudinary.com/as9o12al/image/upload/v1790688229/englotti-speaking/luggage-warning.png',
+  icons: {
+    home: 'https://res.cloudinary.com/as9o12al/image/upload/v1790688437/englotti-speaking-icons/icon-home.png',
+    travel: 'https://res.cloudinary.com/as9o12al/image/upload/v1790688447/englotti-speaking-icons/icon-travel.png',
+    work: 'https://res.cloudinary.com/as9o12al/image/upload/v1790688458/englotti-speaking-icons/icon-work.png',
+    people: 'https://res.cloudinary.com/as9o12al/image/upload/v1790688473/englotti-speaking-icons/icon-people.png',
+    opinions: 'https://res.cloudinary.com/as9o12al/image/upload/v1790688484/englotti-speaking-icons/icon-opinions.png',
+    stories: 'https://res.cloudinary.com/as9o12al/image/upload/v1790688496/englotti-speaking-icons/icon-stories.png',
+    bell: 'https://res.cloudinary.com/as9o12al/image/upload/v1790688506/englotti-speaking-icons/icon-bell.png',
+    bed: 'https://res.cloudinary.com/as9o12al/image/upload/v1790688534/englotti-speaking-icons/icon-bed.png',
+    calendar: 'https://res.cloudinary.com/as9o12al/image/upload/v1790688546/englotti-speaking-icons/icon-calendar.png',
+    clock: 'https://res.cloudinary.com/as9o12al/image/upload/v1790688555/englotti-speaking-icons/icon-clock.png',
+    warning: 'https://res.cloudinary.com/as9o12al/image/upload/v1790688566/englotti-speaking-icons/icon-warning.png',
+  },
 } as const;
