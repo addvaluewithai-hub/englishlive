@@ -20,6 +20,19 @@ function stringArray(value: unknown, maxItems: number, maxLength: number) {
     .slice(0, maxItems);
 }
 
+function objectValue(value: unknown): Record<string, unknown> {
+  if (value && typeof value === 'object' && !Array.isArray(value)) return value as Record<string, unknown>;
+  if (typeof value === 'string' && value.trim()) {
+    try {
+      const parsed = JSON.parse(value) as unknown;
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed as Record<string, unknown>;
+    } catch {
+      return {};
+    }
+  }
+  return {};
+}
+
 export function sanitizeSpeakingDifficulty(value: unknown) {
   return typeof value === 'string' && validDifficulties.has(value)
     ? value as 'easier' | 'recommended' | 'challenge'
@@ -27,9 +40,7 @@ export function sanitizeSpeakingDifficulty(value: unknown) {
 }
 
 export function sanitizeSpeakingScenarioSnapshot(value: unknown): SpeakingScenarioSnapshot {
-  const row = value && typeof value === 'object' && !Array.isArray(value)
-    ? value as Record<string, unknown>
-    : {};
+  const row = objectValue(value);
   return {
     titleAr: stringValue(row.titleAr, 120),
     learnerRoleAr: stringValue(row.learnerRoleAr, 100),
@@ -42,9 +53,12 @@ export function sanitizeSpeakingScenarioSnapshot(value: unknown): SpeakingScenar
 }
 
 export function sanitizeSpeakingTranscript(value: unknown): SpeakingTurn[] {
-  if (!Array.isArray(value)) return [];
+  const source = typeof value === 'string'
+    ? (() => { try { return JSON.parse(value) as unknown; } catch { return []; } })()
+    : value;
+  if (!Array.isArray(source)) return [];
   const result: SpeakingTurn[] = [];
-  for (const item of value.slice(0, 240)) {
+  for (const item of source.slice(0, 240)) {
     if (!item || typeof item !== 'object') continue;
     const row = item as Record<string, unknown>;
     const speaker = validSpeakers.has(row.speaker as SpeakingTurnSpeaker)
@@ -64,16 +78,24 @@ export function sanitizeSpeakingTranscript(value: unknown): SpeakingTurn[] {
 }
 
 export function clampSpeakingDuration(value: unknown) {
-  const numeric = typeof value === 'number' && Number.isFinite(value) ? Math.round(value) : 0;
-  return Math.max(0, Math.min(numeric, 60 * 60 * 4));
+  const numeric = typeof value === 'number' && Number.isFinite(value)
+    ? Math.round(value)
+    : Number(value ?? 0);
+  return Number.isFinite(numeric) ? Math.max(0, Math.min(Math.round(numeric), 60 * 60 * 4)) : 0;
 }
 
 export function mapSpeakingSessionRow(row: Record<string, unknown>): SpeakingCloudSession {
-  const snapshot = sanitizeSpeakingScenarioSnapshot(row.scenario_snapshot);
+  const snapshot = sanitizeSpeakingScenarioSnapshot(row.resolved_profile);
+  const metadata = objectValue(row.metadata);
+  const analysisStatus = row.analysis_status === 'complete'
+    ? 'complete'
+    : row.analysis_status === 'failed'
+      ? 'error'
+      : 'pending';
   return {
     id: String(row.id ?? ''),
-    scenarioId: stringValue(row.scenario_id, 160),
-    difficulty: sanitizeSpeakingDifficulty(row.difficulty),
+    scenarioId: stringValue(metadata.scenarioId, 160, stringValue(row.application_id, 160)),
+    difficulty: sanitizeSpeakingDifficulty(row.requested_difficulty),
     characterSlug: stringValue(row.character_slug, 120),
     characterName: stringValue(row.character_name, 120, 'Otti'),
     startedAt: String(row.started_at ?? ''),
@@ -83,7 +105,7 @@ export function mapSpeakingSessionRow(row: Record<string, unknown>): SpeakingClo
     scenarioSnapshot: snapshot,
     transcript: sanitizeSpeakingTranscript(row.transcript),
     analysis: row.analysis && typeof row.analysis === 'object' ? row.analysis as SpeakingCloudSession['analysis'] : null,
-    analysisStatus: row.analysis_status === 'complete' || row.analysis_status === 'error' ? row.analysis_status : 'pending',
-    analysisModel: row.analysis_model ? String(row.analysis_model) : null,
+    analysisStatus,
+    analysisModel: stringValue(metadata.analysisModel, 120) || null,
   };
 }
