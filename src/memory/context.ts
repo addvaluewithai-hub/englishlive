@@ -1,11 +1,13 @@
 import type { ConversationMission } from '../tutor/types';
+import { readEnglishLiveMemory } from './store';
 import type { EnglishLiveMemoryState } from './types';
 
 export function buildRelationshipPrompt(
-  memory: EnglishLiveMemoryState,
+  memory: EnglishLiveMemoryState | undefined,
   characterId: string,
 ): string {
-  const notes = memory.relationshipNotes
+  const resolvedMemory = memory ?? readEnglishLiveMemory();
+  const notes = resolvedMemory.relationshipNotes
     .filter((note) => note.characterId === characterId)
     .slice(-3);
 
