@@ -2,7 +2,9 @@ import { Link } from 'react-router-dom';
 import { ProductIcon } from '../components/ProductIcon';
 import { FEATURED_SPEAKING_SCENARIO, SPEAKING_WORLDS } from '../speaking/catalog';
 
-const worldIcon: Record<string, Parameters<typeof ProductIcon>[0]['name']> = {
+type WorldIconName = 'home' | 'learn' | 'profile' | 'chevron' | 'chat';
+
+const worldIcon: Record<string, WorldIconName> = {
   everyday: 'home',
   travel: 'chevron',
   work: 'profile',
@@ -71,7 +73,7 @@ export function SpeakingHomeScreen() {
           <span>مشكلة في الفندق</span>
           <small>آخر مرة: اليوم</small>
         </div>
-        <img src="/speaking-assets/hotel-reception.webp" alt="" />
+        <img src="/speaking-assets/otti-hero.webp" alt="" />
       </Link>
 
       <Link className="sp-progress-teaser" to="/speak/progress">
