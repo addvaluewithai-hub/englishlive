@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ProductIcon } from '../components/ProductIcon';
+import { speakingAssets } from '../speaking/assets';
 import { speakingScenarioById, type SpeakingDifficulty } from '../speaking/catalog';
 
 const difficultyCopy: Record<SpeakingDifficulty, { title: string; icon: string }> = {
@@ -15,7 +16,11 @@ export function SpeakingScenarioScreen() {
   const [difficulty, setDifficulty] = useState<SpeakingDifficulty>('recommended');
 
   return (
-    <section className="sp-start-page" dir="rtl">
+    <section
+      className="sp-start-page"
+      dir="rtl"
+      style={{ backgroundImage: `linear-gradient(rgba(255,255,255,.22),rgba(255,255,255,.22)), url(${speakingAssets.airportBanner})` }}
+    >
       <div className="sp-start-backdrop" />
       <article className="sp-start-sheet">
         <Link to={`/speak/world/${scenario.worldId}`} className="sp-start-close" aria-label="إغلاق"><ProductIcon name="close" size={28} /></Link>
