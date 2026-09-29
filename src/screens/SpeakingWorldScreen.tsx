@@ -1,12 +1,21 @@
 import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ProductIcon } from '../components/ProductIcon';
+import { speakingAssets } from '../speaking/assets';
 import { speakingWorldById, type SpeakingReadiness } from '../speaking/catalog';
 
 const readinessCopy: Record<SpeakingReadiness, string> = {
   ready: 'جاهز ليك',
   challenge: 'تحدي',
   later: 'لسه بعدين',
+};
+
+const scenarioIcon: Record<string, string | undefined> = {
+  'hotel-check-in': speakingAssets.icons.bell,
+  'hotel-room-problem': speakingAssets.icons.bed,
+  'change-booking': speakingAssets.icons.calendar,
+  'late-checkout': speakingAssets.icons.clock,
+  'booking-missing': speakingAssets.icons.warning,
 };
 
 export function SpeakingWorldScreen() {
@@ -24,7 +33,7 @@ export function SpeakingWorldScreen() {
     <section className="sp-world" dir="rtl">
       <header className="sp-world-hero">
         <div className="sp-world-hero-copy">
-          <span className="sp-world-hero-icon">✈</span>
+          <span className="sp-world-hero-icon"><img src={speakingAssets.icons[world.icon]} alt="" /></span>
           <h1>{world.titleAr}</h1>
           <p>{world.subtitleAr}</p>
           <small>مكتبة مواقف للتدريب، مش مسار دروس جديد.</small>
@@ -51,7 +60,7 @@ export function SpeakingWorldScreen() {
             <section className={`sp-group-card${isOpen ? ' is-open' : ''}`} key={group.id}>
               <button type="button" className="sp-group-head" onClick={() => setOpenGroup(isOpen ? '' : group.id)}>
                 <span className="sp-group-thumb">
-                  {group.id === 'hotel' ? <img src={group.image ?? '/speaking-assets/otti-hero.webp'} alt="" /> : <span>{group.id === 'airport' ? '✈️' : group.id === 'food' ? '🍔' : '🧳'}</span>}
+                  {group.image ? <img src={group.image} alt="" /> : <span>✦</span>}
                 </span>
                 <span className="sp-group-title"><strong>{group.titleAr}</strong><small>{group.subtitleAr}</small></span>
                 <span className="sp-group-toggle">{isOpen ? '⌃' : '⌄'}</span>
@@ -59,17 +68,22 @@ export function SpeakingWorldScreen() {
 
               {isOpen ? (
                 <div className="sp-scenario-list">
-                  {group.scenarios.length ? group.scenarios.map((scenario) => (
-                    <Link key={scenario.id} className="sp-scenario-row" to={`/speak/scenario/${scenario.id}`}>
-                      <span className="sp-scenario-mini-icon">{scenario.id.includes('check') ? '🛎️' : scenario.id.includes('services') ? '📶' : scenario.id.includes('room') ? '🛏️' : scenario.id.includes('booking') ? '📅' : scenario.id.includes('late') ? '🕒' : '⚠️'}</span>
-                      <span className="sp-scenario-row-copy">
-                        <strong>{scenario.titleAr}</strong>
-                        <small>{scenario.descriptionAr}</small>
-                      </span>
-                      <span className={`sp-readiness is-${scenario.readiness}`}>{readinessCopy[scenario.readiness]}</span>
-                      <ProductIcon name="chevron" size={18} />
-                    </Link>
-                  )) : (
+                  {group.scenarios.length ? group.scenarios.map((scenario) => {
+                    const icon = scenarioIcon[scenario.id];
+                    return (
+                      <Link key={scenario.id} className="sp-scenario-row" to={`/speak/scenario/${scenario.id}`}>
+                        <span className="sp-scenario-mini-icon">
+                          {icon ? <img src={icon} alt="" /> : <span aria-hidden="true">📶</span>}
+                        </span>
+                        <span className="sp-scenario-row-copy">
+                          <strong>{scenario.titleAr}</strong>
+                          <small>{scenario.descriptionAr}</small>
+                        </span>
+                        <span className={`sp-readiness is-${scenario.readiness}`}>{readinessCopy[scenario.readiness]}</span>
+                        <ProductIcon name="chevron" size={18} />
+                      </Link>
+                    );
+                  }) : (
                     <div className="sp-group-placeholder">المواقف دي هتظهر هنا مع اكتمال ربط المنهج.</div>
                   )}
                 </div>
