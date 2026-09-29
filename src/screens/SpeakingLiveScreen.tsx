@@ -57,6 +57,7 @@ export function SpeakingLiveScreen() {
   const scenario = speakingScenarioById(scenarioId);
   const profile = readLearnerProfile();
   const character = getCharacterDefinition('otti');
+  const visualQa = import.meta.env.VITE_VISUAL_QA === '1';
   const difficultyParam = params.get('difficulty');
   const difficulty: SpeakingDifficulty = difficultyParam === 'easier' || difficultyParam === 'challenge'
     ? difficultyParam
@@ -151,7 +152,7 @@ export function SpeakingLiveScreen() {
   }
 
   async function startLive() {
-    if (transport.current || status === 'connecting' || status === 'reconnecting') return;
+    if (visualQa || transport.current || status === 'connecting' || status === 'reconnecting') return;
     setStatus('connecting');
     setError(null);
     setMicOpen(false);
@@ -274,6 +275,19 @@ export function SpeakingLiveScreen() {
   }
 
   useEffect(() => {
+    if (visualQa) {
+      const fixtureTurns: SpeakingTurn[] = [
+        { id: 'qa-teacher', speaker: 'teacher', text: 'I’m sorry, but your room isn’t ready yet. How can I help?', atMs: 8_000 },
+        { id: 'qa-learner', speaker: 'learner', text: 'Can I leave my luggage here?', atMs: 24_000 },
+      ];
+      turnsRef.current = fixtureTurns;
+      setTurns(fixtureTurns);
+      setElapsedSeconds(28);
+      setStatus('listening');
+      setMicOpen(true);
+      return;
+    }
+
     const startTimer = window.setTimeout(() => void startLive(), 0);
     const clock = window.setInterval(() => setElapsedSeconds(durationSeconds()), 1000);
     return () => {
@@ -299,6 +313,10 @@ export function SpeakingLiveScreen() {
   }
 
   function toggleMic() {
+    if (visualQa) {
+      setMicOpen((value) => !value);
+      return;
+    }
     if (status === 'speaking') {
       interruptTeacher();
       return;
@@ -311,6 +329,13 @@ export function SpeakingLiveScreen() {
     event.preventDefault();
     const value = typedText.trim();
     const live = transport.current;
+    if (visualQa) {
+      if (!value) return;
+      pushTurn('learner', value);
+      setTypedText('');
+      setKeyboardOpen(false);
+      return;
+    }
     if (!value || !live?.connected || status !== 'listening') return;
     flushLearnerDraft();
     pushTurn('learner', value);
@@ -320,6 +345,10 @@ export function SpeakingLiveScreen() {
   }
 
   function askForHelp(kind: 'simplify' | 'arabic' | 'example' | 'say-it') {
+    if (visualQa) {
+      setHelpOpen(false);
+      return;
+    }
     const live = transport.current;
     if (!live?.connected || status !== 'listening') return;
     const instructions = {
@@ -360,6 +389,7 @@ export function SpeakingLiveScreen() {
   }
 
   const learnerTurn = status === 'listening' && micOpen;
+  const liveConnected = visualQa || Boolean(transport.current?.connected);
   const visibleTurns: SpeakingTurn[] = [
     ...turns,
     ...(learnerDraft.trim() ? [{ id: 'draft-learner', speaker: 'learner' as const, text: learnerDraft, atMs: elapsedSeconds * 1000 }] : []),
@@ -430,7 +460,7 @@ export function SpeakingLiveScreen() {
       ) : null}
 
       <div className="sp-live-controls">
-        <button type="button" className="sp-live-control" onClick={() => setKeyboardOpen((value) => !value)} disabled={!transport.current?.connected || status !== 'listening'}>
+        <button type="button" className="sp-live-control" onClick={() => setKeyboardOpen((value) => !value)} disabled={!liveConnected || status !== 'listening'}>
           <ProductIcon name="keyboard" size={30} /><strong>لوحة المفاتيح</strong>
         </button>
         <button
@@ -443,7 +473,7 @@ export function SpeakingLiveScreen() {
         >
           <ProductIcon name="speak" size={56} />
         </button>
-        <button type="button" className="sp-live-control" onClick={() => setHelpOpen((value) => !value)} disabled={!transport.current?.connected || status !== 'listening'}>
+        <button type="button" className="sp-live-control" onClick={() => setHelpOpen((value) => !value)} disabled={!liveConnected || status !== 'listening'}>
           <span className="sp-question-icon">?</span><strong>مش فاهم</strong>
         </button>
       </div>
