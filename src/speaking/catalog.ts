@@ -36,6 +36,7 @@ export type SpeakingWorld = {
 };
 
 const speakingAsset = '/speaking-assets/otti-hero.webp';
+const travelBannerAsset = '/speaking-assets/airport-banner.webp';
 
 const travelScenarios: SpeakingScenario[] = [
   {
@@ -98,7 +99,7 @@ export const SPEAKING_WORLDS: SpeakingWorld[] = [
   { id: 'everyday', titleAr: 'الحياة اليومية', subtitleAr: 'مواقف يومية بسيطة تخليك تستخدم اللي اتعلمته بسرعة.', icon: 'home', groups: [] },
   {
     id: 'travel', titleAr: 'السفر', subtitleAr: 'مكتبة مواقف تقدر تتدرب عليها وتتحدث بثقة في المطار والفندق والأماكن السياحية.', icon: 'travel',
-    heroImage: speakingAsset,
+    heroImage: travelBannerAsset,
     groups: [
       { id: 'airport', titleAr: 'المطار', subtitleAr: '5 مواقف', scenarios: [] },
       { id: 'hotel', titleAr: 'الفندق', subtitleAr: '6 مواقف', image: speakingAsset, scenarios: travelScenarios },
