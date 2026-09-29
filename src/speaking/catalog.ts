@@ -35,6 +35,8 @@ export type SpeakingWorld = {
   groups: SpeakingGroup[];
 };
 
+const speakingAsset = '/speaking-assets/otti-hero.webp';
+
 const travelScenarios: SpeakingScenario[] = [
   {
     id: 'hotel-check-in', worldId: 'travel', groupId: 'hotel', titleAr: 'تسجيل الدخول',
@@ -43,7 +45,7 @@ const travelScenarios: SpeakingScenario[] = [
     goalAr: 'سجّل دخولك واسأل عن أهم تفاصيل الإقامة.', durationMinutes: 5,
     readiness: 'ready', readinessReasonAr: 'اللغة الأساسية اتغطت في دروسك.',
     usesAr: ['التعريف بنفسك', 'تأكيد الحجز', 'السؤال عن التفاصيل'],
-    image: '/speaking-assets/hotel-reception.webp', modeId: 'travel',
+    image: speakingAsset, modeId: 'travel',
   },
   {
     id: 'hotel-services', worldId: 'travel', groupId: 'hotel', titleAr: 'السؤال عن الخدمات',
@@ -52,7 +54,7 @@ const travelScenarios: SpeakingScenario[] = [
     goalAr: 'اعرف الخدمات اللي محتاجها واسأل عنها بوضوح.', durationMinutes: 5,
     readiness: 'ready', readinessReasonAr: 'مناسب للي أخدته في مواقف السؤال والطلب.',
     usesAr: ['السؤال عن خدمة', 'الوقت والمكان'],
-    image: '/speaking-assets/hotel-reception.webp', modeId: 'travel',
+    image: speakingAsset, modeId: 'travel',
   },
   {
     id: 'hotel-room-problem', worldId: 'travel', groupId: 'hotel', titleAr: 'مشكلة في الفندق',
@@ -61,7 +63,7 @@ const travelScenarios: SpeakingScenario[] = [
     goalAr: 'اشرح المشكلة ووصل إلى حل.', durationMinutes: 6,
     readiness: 'challenge', readinessReasonAr: 'الموقف بيجمع أكتر من قدرة وبيحتاج متابعة.',
     usesAr: ['طلب المساعدة', 'شرح مشكلة', 'السؤال عن الحل'],
-    image: '/speaking-assets/hotel-reception.webp', modeId: 'travel',
+    image: speakingAsset, modeId: 'travel',
   },
   {
     id: 'change-booking', worldId: 'travel', groupId: 'hotel', titleAr: 'تغيير الحجز',
@@ -70,7 +72,7 @@ const travelScenarios: SpeakingScenario[] = [
     goalAr: 'اطلب التغيير وافهم البدائل المتاحة.', durationMinutes: 6,
     readiness: 'later', readinessReasonAr: 'يعتمد على لغة لسه جاية في مسارك.',
     usesAr: ['طلب تغيير', 'فهم البدائل'],
-    image: '/speaking-assets/hotel-reception.webp', modeId: 'travel',
+    image: speakingAsset, modeId: 'travel',
   },
   {
     id: 'late-checkout', worldId: 'travel', groupId: 'hotel', titleAr: 'تسجيل خروج متأخر',
@@ -79,7 +81,7 @@ const travelScenarios: SpeakingScenario[] = [
     goalAr: 'اطلب تسجيل خروج متأخر وافهم الشروط.', durationMinutes: 5,
     readiness: 'ready', readinessReasonAr: 'طلب بسيط ومباشر ومناسب لمستواك الحالي.',
     usesAr: ['طلب بسيط', 'الوقت'],
-    image: '/speaking-assets/hotel-reception.webp', modeId: 'travel',
+    image: speakingAsset, modeId: 'travel',
   },
   {
     id: 'booking-missing', worldId: 'travel', groupId: 'hotel', titleAr: 'الحجز غير موجود',
@@ -88,20 +90,18 @@ const travelScenarios: SpeakingScenario[] = [
     goalAr: 'وضّح بيانات الحجز واتعامل مع المشكلة.', durationMinutes: 7,
     readiness: 'challenge', readinessReasonAr: 'فيه complication ومتابعة أكتر من المعتاد.',
     usesAr: ['توضيح البيانات', 'التعامل مع مشكلة', 'متابعة الحل'],
-    image: '/speaking-assets/hotel-reception.webp', modeId: 'travel',
+    image: speakingAsset, modeId: 'travel',
   },
 ];
 
 export const SPEAKING_WORLDS: SpeakingWorld[] = [
-  {
-    id: 'everyday', titleAr: 'الحياة اليومية', subtitleAr: 'مواقف يومية بسيطة تخليك تستخدم اللي اتعلمته بسرعة.', icon: 'home', groups: [],
-  },
+  { id: 'everyday', titleAr: 'الحياة اليومية', subtitleAr: 'مواقف يومية بسيطة تخليك تستخدم اللي اتعلمته بسرعة.', icon: 'home', groups: [] },
   {
     id: 'travel', titleAr: 'السفر', subtitleAr: 'مكتبة مواقف تقدر تتدرب عليها وتتحدث بثقة في المطار والفندق والأماكن السياحية.', icon: 'travel',
-    heroImage: '/speaking-assets/airport-banner.webp',
+    heroImage: speakingAsset,
     groups: [
       { id: 'airport', titleAr: 'المطار', subtitleAr: '5 مواقف', scenarios: [] },
-      { id: 'hotel', titleAr: 'الفندق', subtitleAr: '6 مواقف', image: '/speaking-assets/hotel-reception.webp', scenarios: travelScenarios },
+      { id: 'hotel', titleAr: 'الفندق', subtitleAr: '6 مواقف', image: speakingAsset, scenarios: travelScenarios },
       { id: 'food', titleAr: 'الأكل بره', subtitleAr: '4 مواقف', scenarios: [] },
       { id: 'problems', titleAr: 'مشاكل ومفاجآت', subtitleAr: '3 مواقف', scenarios: [] },
     ],
@@ -119,7 +119,7 @@ export const FEATURED_SPEAKING_SCENARIO: SpeakingScenario = {
   goalAr: 'ابدأ تعارف بسيط وخلي الحوار يكمل بشكل طبيعي.', durationMinutes: 6,
   readiness: 'ready', readinessReasonAr: 'من آخر دروسك ومناسب لمستواك.',
   usesAr: ['التحيات', 'التعريف بنفسك', 'سؤال متابعة'],
-  image: '/speaking-assets/meeting-people.webp', modeId: 'just-chat',
+  image: speakingAsset, modeId: 'just-chat',
 };
 
 export function speakingWorldById(worldId?: string) {
