@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { ProductIcon } from '../components/ProductIcon';
+import { speakingAssets } from '../speaking/assets';
 
 const skills = [
   { id: 'maintain', title: 'تكمل الحوار', status: 'بتتحسن بشكل كويس', progress: 4, icon: '💬', suggestion: 'تغيير حجز', scenarioId: 'change-booking' },
@@ -17,7 +18,7 @@ export function SpeakingProgressScreen() {
           <h1>تقدمك في المحادثة</h1>
           <p>من خلال محادثاتك، بنلاحظ إنك بتتقدم خطوة بخطوة.</p>
         </div>
-        <img src="/speaking-assets/otti-hero.webp" alt="" />
+        <img src={speakingAssets.ottiProgress} alt="" />
       </header>
 
       <div className="sp-progress-stats">
