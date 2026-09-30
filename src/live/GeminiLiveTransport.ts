@@ -16,7 +16,6 @@ interface FunctionCall {
 interface ServerMessage {
   error?: { message?: string };
   setupComplete?: Record<string, never>;
-  interactionStatus?: 'IN_PROGRESS' | 'IDLE';
   serverContent?: {
     interrupted?: boolean;
     generationComplete?: boolean;
@@ -56,6 +55,15 @@ function responseObject(value: unknown): Record<string, unknown> {
     return value as Record<string, unknown>;
   }
   return { result: value == null ? 'ok' : String(value) };
+}
+
+function scheduledResponse(
+  value: Record<string, unknown>,
+  behavior: 'BLOCKING' | 'NON_BLOCKING' | undefined,
+) {
+  return behavior === 'NON_BLOCKING'
+    ? { ...value, scheduling: 'SILENT' }
+    : value;
 }
 
 export class GeminiLiveTransport implements LiveTransport {
@@ -133,11 +141,7 @@ export class GeminiLiveTransport implements LiveTransport {
   }
 
   private toolDeclarations() {
-    return this.customTools.map((tool) => ({
-      ...tool.declaration,
-      // Gemini 3.8 Live Extended Thinking supports async tools only.
-      behavior: 'NON_BLOCKING' as const,
-    }));
+    return this.customTools.map((tool) => tool.declaration);
   }
 
   private async openSocket(token: string) {
@@ -181,9 +185,6 @@ export class GeminiLiveTransport implements LiveTransport {
         const functionDeclarations = this.toolDeclarations();
         const generationConfig: Record<string, unknown> = {
           responseModalities: ['AUDIO'],
-          thinkingConfig: {
-            thinkingLevel: 'HIGH',
-          },
         };
         if (this.sessionConfig.voiceName) {
           generationConfig.speechConfig = {
@@ -263,9 +264,7 @@ export class GeminiLiveTransport implements LiveTransport {
               }
             }
 
-            // Extended Thinking may emit turnComplete for an intermediate utterance.
-            // The interaction is truly ready for the learner only when the server is IDLE.
-            if (message.interactionStatus === 'IDLE') {
+            if (content?.turnComplete) {
               this.callbacks.onTurnComplete();
             }
 
@@ -339,15 +338,15 @@ export class GeminiLiveTransport implements LiveTransport {
         responses.push({
           id: call.id,
           name: call.name,
-          response: responseObject(result),
+          response: scheduledResponse(responseObject(result), tool.declaration.behavior),
         });
       } catch (reason) {
         responses.push({
           id: call.id,
           name: call.name,
-          response: {
+          response: scheduledResponse({
             error: reason instanceof Error ? reason.message : `Client tool ${call.name} failed.`,
-          },
+          }, tool.declaration.behavior),
         });
       }
     }
