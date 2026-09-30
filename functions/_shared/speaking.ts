@@ -41,6 +41,11 @@ export function sanitizeSpeakingDifficulty(value: unknown) {
 
 export function sanitizeSpeakingScenarioSnapshot(value: unknown): SpeakingScenarioSnapshot {
   const row = objectValue(value);
+  const curriculumLevel = stringValue(row.curriculumLevel, 24);
+  const lessonCode = stringValue(row.lessonCode, 40);
+  const targetLanguageEn = stringArray(row.targetLanguageEn, 32, 180);
+  const correctionFocusEn = stringArray(row.correctionFocusEn, 16, 180);
+  const boundariesEn = stringArray(row.boundariesEn, 16, 260);
   return {
     titleAr: stringValue(row.titleAr, 120),
     learnerRoleAr: stringValue(row.learnerRoleAr, 100),
@@ -49,6 +54,11 @@ export function sanitizeSpeakingScenarioSnapshot(value: unknown): SpeakingScenar
     usesAr: stringArray(row.usesAr, 12, 100),
     curriculumRefs: stringArray(row.curriculumRefs, 24, 100),
     interactionFocus: stringArray(row.interactionFocus, 18, 64),
+    ...(curriculumLevel ? { curriculumLevel } : {}),
+    ...(lessonCode ? { lessonCode } : {}),
+    ...(targetLanguageEn.length ? { targetLanguageEn } : {}),
+    ...(correctionFocusEn.length ? { correctionFocusEn } : {}),
+    ...(boundariesEn.length ? { boundariesEn } : {}),
   };
 }
 

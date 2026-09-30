@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { OttiMark } from '../character/otti/OttiMark';
 import { ProductIcon } from '../components/ProductIcon';
+import { a1SpeakingPilotLessonById, nextA1SpeakingPilotLesson } from '../speaking/a1Pilot';
 import { analyzeSpeakingSession, fetchSpeakingSession } from '../speaking/api';
 import { speakingAssets } from '../speaking/assets';
+import { markA1SpeakingPilotLessonComplete } from '../speaking/roadmapProgress';
 import type { SpeakingCloudSession } from '../speaking/types';
 
 interface RecapLocationState {
@@ -65,6 +67,12 @@ export function SpeakingRecapScreen() {
     return () => { cancelled = true; };
   }, [sessionId, state?.session]);
 
+  useEffect(() => {
+    if (!session || session.status !== 'completed') return;
+    const lesson = a1SpeakingPilotLessonById(session.scenarioId);
+    if (lesson) markA1SpeakingPilotLessonComplete(lesson.id);
+  }, [session]);
+
   async function retryAnalysis() {
     if (!sessionId || retrying) return;
     setRetrying(true);
@@ -102,14 +110,16 @@ export function SpeakingRecapScreen() {
 
   const recap = session.analysis;
   const usefulEvidence = recap?.evidence.filter((item) => item.outcome !== 'not_observed') ?? [];
+  const curriculumLesson = a1SpeakingPilotLessonById(session.scenarioId);
+  const nextLesson = nextA1SpeakingPilotLesson(session.scenarioId);
 
   return (
     <section className="fs-recap sp-scenario-recap" dir="rtl">
       <header className="fs-recap-hero">
         <div className="fs-recap-art"><img src={speakingAssets.ottiProgress} alt="Otti" /></div>
         <div className="fs-recap-copy">
-          <span className="sp-eyebrow">{session.scenarioSnapshot.titleAr}</span>
-          <h1>{recap?.headlineAr || 'الموقف اتحفظ!'}</h1>
+          <span className="sp-eyebrow">{curriculumLesson?.curriculum?.lessonCode ? `${curriculumLesson.curriculum.lessonCode} • ` : ''}{session.scenarioSnapshot.titleAr}</span>
+          <h1>{recap?.headlineAr || (curriculumLesson ? 'الدرس اتحفظ!' : 'الموقف اتحفظ!')}</h1>
           <strong>اتكلمت <em>{durationLabel(session.durationSeconds)}</em></strong>
           <p>{recap?.summaryAr || 'المحادثة اتحفظت كاملة. جهّز التحليل عشان نطلع أهم حاجة اتدربت عليها.'}</p>
         </div>
@@ -191,8 +201,19 @@ export function SpeakingRecapScreen() {
       )}
 
       <div className="fs-recap-actions">
-        <Link className="fs-recap-primary" to={`/speak/scenario/${session.scenarioId}`}><span>جرّب الموقف تاني</span><ProductIcon name="chevron" size={24} /></Link>
-        <Link className="fs-recap-secondary" to="/speak/progress"><ProductIcon name="speak" size={24} /><span>شوف تقدم المحادثة</span></Link>
+        {curriculumLesson ? (
+          <>
+            <Link className="fs-recap-primary" to={nextLesson ? `/speak/scenario/${nextLesson.id}` : '/speak'}>
+              <span>{nextLesson ? `الدرس التالي: ${nextLesson.titleAr}` : 'رجوع لمسار Speaking A1'}</span><ProductIcon name="chevron" size={24} />
+            </Link>
+            <Link className="fs-recap-secondary" to={`/speak/scenario/${session.scenarioId}`}><ProductIcon name="speak" size={24} /><span>كرر الدرس</span></Link>
+          </>
+        ) : (
+          <>
+            <Link className="fs-recap-primary" to={`/speak/scenario/${session.scenarioId}`}><span>جرّب الموقف تاني</span><ProductIcon name="chevron" size={24} /></Link>
+            <Link className="fs-recap-secondary" to="/speak/progress"><ProductIcon name="speak" size={24} /><span>شوف تقدم المحادثة</span></Link>
+          </>
+        )}
       </div>
     </section>
   );

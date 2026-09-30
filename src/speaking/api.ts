@@ -33,6 +33,7 @@ function sessionFrom(payload: Record<string, unknown> | null) {
 export async function createSpeakingSession(input: {
   scenarioId: string;
   difficulty: 'easier' | 'recommended' | 'challenge';
+  sessionKind?: 'guided_practice' | 'world_scenario';
   characterSlug: string;
   scenarioSnapshot: SpeakingScenarioSnapshot;
 }) {

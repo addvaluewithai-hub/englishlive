@@ -65,13 +65,16 @@ export function SpeakingLiveScreen() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const scenario = speakingScenarioById(scenarioId);
+  const isCurriculumLesson = Boolean(scenario.curriculum);
   const profile = readLearnerProfile();
   const character = getCharacterDefinition('otti');
   const visualQa = import.meta.env.VITE_VISUAL_QA === '1';
   const difficultyParam = params.get('difficulty');
-  const difficulty: SpeakingDifficulty = difficultyParam === 'easier' || difficultyParam === 'challenge'
-    ? difficultyParam
-    : 'recommended';
+  const difficulty: SpeakingDifficulty = isCurriculumLesson
+    ? 'recommended'
+    : difficultyParam === 'easier' || difficultyParam === 'challenge'
+      ? difficultyParam
+      : 'recommended';
 
   const host = useRef<CharacterHostHandle | null>(null);
   const transport = useRef<GeminiLiveTransport | null>(null);
@@ -270,19 +273,32 @@ export function SpeakingLiveScreen() {
       const learnerContext = profile
         ? `The learner's first name is ${profile.firstName || 'not provided'}. Their main reason for English is to ${goalPrompt(profile.goals[0] ?? 'everyday')}. Their self-description is: ${comfortLabel(profile.comfort)} Use this only to pace support naturally.`
         : 'No learner profile is available. Keep the interaction accessible and supportive.';
-      const productiveBoundary = scenario.usesAr.length
-        ? `The course says this scenario should recycle these already-taught abilities: ${scenario.usesAr.join('; ')}. Treat these as productive expectations. You may use a small amount of incidental comprehensible English, but never require unfamiliar specialist language to succeed.`
-        : 'Keep productive expectations simple and appropriate to the scenario.';
+      const productiveBoundary = scenario.targetLanguageEn?.length
+        ? `This lesson's productive target language is bounded to: ${scenario.targetLanguageEn.join('; ')}. Create natural opportunities for these resources, but never feed the learner a complete answer before they try.`
+        : scenario.usesAr.length
+          ? `The course says this scenario should recycle these already-taught abilities: ${scenario.usesAr.join('; ')}. Treat these as productive expectations. You may use a small amount of incidental comprehensible English, but never require unfamiliar specialist language to succeed.`
+          : 'Keep productive expectations simple and appropriate to the scenario.';
+      const curriculumContract = scenario.curriculum
+        ? [
+            `This is Speaking ${scenario.curriculum.level} curriculum lesson ${scenario.curriculum.lessonCode}, not free chat and not a difficulty variant.`,
+            `Stay inside this oral outcome: ${scenario.goalAr}`,
+            scenario.boundariesEn?.length ? `Hard lesson boundaries: ${scenario.boundariesEn.join(' | ')}` : '',
+            scenario.correctionFocusEn?.length ? `Correction priorities: ${scenario.correctionFocusEn.join('; ')}.` : '',
+            'Correct or briefly recast errors that affect meaning or the current lesson target. If a non-target error is clear enough and communication succeeds, keep the exchange moving instead of opening a new grammar lesson.',
+            'Use short, clear A1 turns and one idea at a time. Adapt support through repetition, rephrasing, wait time or a small hint; never raise the productive language target above this lesson.',
+            'Give the learner multiple natural chances to produce the target independently. Do not turn the lesson into explanation, drilling, or a fixed script.',
+          ].filter(Boolean).join('\n')
+        : difficultyPrompt[difficulty];
       const prompt = [
         `You are ${teacherName}, acting as ${scenario.aiRoleAr} in a real-life English roleplay.`,
         scenario.partnerBriefEn,
         `Learner role: ${scenario.learnerRoleAr}. Practical goal: ${scenario.goalAr}.`,
         productiveBoundary,
-        difficultyPrompt[difficulty],
+        curriculumContract,
         learnerContext,
         'Conversation comes first. Stay in role and react to meaning. Do not explain the exercise, quiz the learner, or turn every turn into a question.',
         'Contribute information, answer naturally, use follow-ups when useful, and let the learner initiate or repair when the situation creates a reason to do so.',
-        'Do not correct every mistake. Prefer a natural recast. Give explicit help only if meaning breaks down, the learner asks, or a repeated error blocks the task.',
+        'Do not correct every mistake. Prefer a natural recast. Give explicit help only if meaning breaks down, the learner asks, or a repeated target error blocks the task.',
         'Speak English by default. If the learner explicitly asks for Arabic help, give one brief Egyptian-Arabic clarification and return to English.',
         'Never assign a CEFR level, numeric score, mastery claim, pronunciation score, accent judgment, or unsupported assessment during the conversation.',
         'Keep each spoken turn concise so the learner gets most of the speaking time.',
@@ -293,6 +309,7 @@ export function SpeakingLiveScreen() {
       const cloudSession = await createSpeakingSession({
         scenarioId: scenario.id,
         difficulty,
+        sessionKind: isCurriculumLesson ? 'guided_practice' : 'world_scenario',
         characterSlug: character.id,
         scenarioSnapshot: {
           titleAr: scenario.titleAr,
@@ -302,13 +319,18 @@ export function SpeakingLiveScreen() {
           usesAr: scenario.usesAr,
           curriculumRefs: scenario.courseLessonIds ?? [],
           interactionFocus: scenario.interactionFocus,
+          curriculumLevel: scenario.curriculum?.level,
+          lessonCode: scenario.curriculum?.lessonCode,
+          targetLanguageEn: scenario.targetLanguageEn,
+          correctionFocusEn: scenario.correctionFocusEn,
+          boundariesEn: scenario.boundariesEn,
         },
       });
       cloudSessionId.current = cloudSession.id;
       startedAtMs.current = Date.now();
       setElapsedSeconds(0);
       await mic.start((chunk) => live.sendAudio(chunk), setMicLevel);
-      live.sendText('Begin the roleplay now with one short, natural opening move that fits your role. Do not explain the scenario.');
+      live.sendText(scenario.openingMoveEn ?? 'Begin the roleplay now with one short, natural opening move that fits your role. Do not explain the scenario.');
     } catch (reason) {
       const message = reason instanceof Error ? reason.message : 'تعذر بدء المحادثة.';
       setError(message);
@@ -449,7 +471,7 @@ export function SpeakingLiveScreen() {
           <OttiMark />
           <strong>Englotti</strong>
         </div>
-        <strong className="fs-live-title">{scenario.titleAr}</strong>
+        <strong className="fs-live-title">{scenario.curriculum ? `${scenario.curriculum.lessonCode} • ${scenario.titleAr}` : scenario.titleAr}</strong>
         <span className="fs-live-mode sp-scenario-timer">◷ {timeLabel(elapsedSeconds)}</span>
       </header>
 

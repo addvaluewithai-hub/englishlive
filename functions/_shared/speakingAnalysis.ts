@@ -164,6 +164,11 @@ export async function analyzeSpeakingTranscript(
     interactionFocus: string[];
     durationSeconds: number;
     transcript: SpeakingTurn[];
+    curriculumLevel?: string;
+    lessonCode?: string;
+    targetLanguageEn?: string[];
+    correctionFocusEn?: string[];
+    boundariesEn?: string[];
   },
 ) {
   const apiKey = env.GEMINI_API_KEY?.trim();
@@ -172,8 +177,14 @@ export async function analyzeSpeakingTranscript(
   const transcript = transcriptText(input.transcript);
   if (!transcript.trim()) throw new Error('Conversation transcript is empty.');
   const targetSkills = input.interactionFocus.slice(0, 18);
+  const curriculumScope = input.lessonCode
+    ? `\nCURRICULUM LESSON\nLevel: ${input.curriculumLevel || 'A1'}\nLesson: ${input.lessonCode}\nTarget language: ${(input.targetLanguageEn ?? []).join('; ') || 'not supplied'}\nCorrection focus: ${(input.correctionFocusEn ?? []).join('; ') || 'meaning breakdown and current lesson goal only'}\nBoundaries: ${(input.boundariesEn ?? []).join(' | ') || 'stay inside the stated lesson goal'}\n`
+    : '';
+  const correctionRule = input.lessonCode
+    ? '- Corrections: max 2. Correct only meaning breakdowns or errors directly relevant to the curriculum lesson correction focus/target language above. Do not introduce a broader grammar target because you noticed an unrelated clear error.'
+    : '- Corrections: max 2, only meaningful grammar/word-choice/natural-phrasing improvements from learner turns. Ignore ASR punctuation/capitalization.';
 
-  const prompt = `You are Englotti's post-scenario English coach.\nAnalyze only the evidence in this voice-conversation transcript.\n\nSCENARIO\nID: ${input.scenarioId}\nTitle: ${input.scenarioTitleAr}\nGoal: ${input.goalAr}\nDifficulty setting: ${input.difficulty}\nPartner: ${input.characterName}\nTarget interaction skills: ${targetSkills.join(', ') || 'none specified'}\nDuration: ${input.durationSeconds} seconds\n\nRULES\n- This is evidence collection, not a proficiency test. Never assign CEFR, numeric scores, percentages, mastery, pronunciation, accent, or intonation judgments.\n- Judge only the target interaction skills listed above.\n- demonstrated = clear transcript evidence that the learner performed the behavior.\n- emerging = partial/inconsistent evidence or heavy partner support.\n- not_observed = the transcript does not give enough evidence. Absence is not weakness.\n- learnerExcerpt must be an exact short excerpt from a LEARNER turn or null.\n- Strengths and next focus must be grounded in transcript evidence.\n- Corrections: max 2, only meaningful grammar/word-choice/natural-phrasing improvements from learner turns. Ignore ASR punctuation/capitalization.\n- Vocabulary: only words/expressions literally present in the transcript. asked_about only when the learner explicitly asked about meaning.\n- Arabic UI text should be concise Egyptian Arabic. English examples remain English.\n\nTRANSCRIPT\n${transcript}`;
+  const prompt = `You are Englotti's post-scenario English coach.\nAnalyze only the evidence in this voice-conversation transcript.\n\nSCENARIO\nID: ${input.scenarioId}\nTitle: ${input.scenarioTitleAr}\nGoal: ${input.goalAr}\nDifficulty setting: ${input.difficulty}\nPartner: ${input.characterName}\nTarget interaction skills: ${targetSkills.join(', ') || 'none specified'}\nDuration: ${input.durationSeconds} seconds\n${curriculumScope}\nRULES\n- This is evidence collection, not a proficiency test. Never assign CEFR, numeric scores, percentages, mastery, pronunciation, accent, or intonation judgments.\n- Judge only the target interaction skills listed above.\n- demonstrated = clear transcript evidence that the learner performed the behavior.\n- emerging = partial/inconsistent evidence or heavy partner support.\n- not_observed = the transcript does not give enough evidence. Absence is not weakness.\n- learnerExcerpt must be an exact short excerpt from a LEARNER turn or null.\n- Strengths and next focus must be grounded in transcript evidence.\n${correctionRule}\n- Vocabulary: only words/expressions literally present in the transcript. asked_about only when the learner explicitly asked about meaning.\n- Arabic UI text should be concise Egyptian Arabic. English examples remain English.\n\nTRANSCRIPT\n${transcript}`;
 
   const upstream = await fetch('https://generativelanguage.googleapis.com/v1beta/interactions', {
     method: 'POST',
