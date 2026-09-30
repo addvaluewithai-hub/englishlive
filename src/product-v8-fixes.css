@@ -62,7 +62,7 @@
 }
 
 .premium-live-status:has(.status-speaking) strong::after {
-  content: 'المعلمة تشرح الآن';
+  content: 'المعلم يشرح الآن';
   color: var(--lesson-ink);
   font-size: 15px;
   font-weight: 900;
