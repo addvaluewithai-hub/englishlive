@@ -24,11 +24,11 @@ export function SpeakingHomeScreen() {
       <header className="sp-roadmap-hero">
         <div className="sp-roadmap-hero-copy">
           <span className="sp-eyebrow">Speaking A1</span>
-          <h1>مسارك في الكلام</h1>
-          <p>امشِ درس ورا درس. كل درس له هدف كلام واضح، والـAI يفضل جوه حدود A1.</p>
+          <h1>اتدرّب على الكلام نفسه</h1>
+          <p>اللغة اللي اتعلمتها هي المادة. هنا بنتدرّب إزاي تبدأ، ترد، تكمل، توضّح وتصلّح الحوار.</p>
           <div className="sp-roadmap-progress-copy">
             <strong>{completedCount} / {A1_SPEAKING_PILOT_LESSONS.length}</strong>
-            <span>دروس متجربة من النسخة الأولى</span>
+            <span>مهارات متجربة من النسخة الجديدة</span>
           </div>
           <div className="sp-roadmap-progress-bar" aria-label={`اكتملت ${progressPercent}% من النسخة التجريبية`}>
             <span style={{ width: `${progressPercent}%` }} />
@@ -41,8 +41,8 @@ export function SpeakingHomeScreen() {
         <header className="sp-roadmap-unit-header">
           <div>
             <span className="sp-roadmap-level-chip">A1 • الوحدة 1</span>
-            <h2>أول تعارف وبيانات شخصية</h2>
-            <p>النسخة دي فيها أول 5 دروس عشان تجرب شكل المسار قبل ما نكمل باقي A1.</p>
+            <h2>أساسيات المحادثة</h2>
+            <p>أول 5 دروس بيركزوا على سلوك الكلام، مش إعادة شرح كلمات وجرامر Learn.</p>
           </div>
           <span className="sp-roadmap-unit-count">5 / 7</span>
         </header>
@@ -57,7 +57,7 @@ export function SpeakingHomeScreen() {
               <>
                 <span className="sp-roadmap-step" aria-hidden="true">{isComplete ? '✓' : index + 1}</span>
                 <div className="sp-roadmap-lesson-copy">
-                  <small>{lesson.curriculum?.lessonCode}</small>
+                  <small>{lesson.skillFocusAr ?? lesson.curriculum?.lessonCode}</small>
                   <strong>{lesson.titleAr}</strong>
                   <p>{lesson.goalAr}</p>
                   <div className="sp-roadmap-lesson-meta">
@@ -78,12 +78,12 @@ export function SpeakingHomeScreen() {
 
           <div className="sp-roadmap-coming">
             <span>6</span>
-            <div><strong>This is my friend…</strong><small>بعد تجربة أول 5 دروس هنقفل تصميم باقي الوحدة.</small></div>
+            <div><strong>اجمع الحركات مع بعض</strong><small>ابدأ + رد + تابع + وضّح داخل محادثة واحدة.</small></div>
             <em>قريبًا</em>
           </div>
           <div className="sp-roadmap-coming">
             <span>7</span>
-            <div><strong>First-contact mission</strong><small>مهمة نهاية الوحدة في موقف جديد.</small></div>
+            <div><strong>Conversation mission</strong><small>موقف جديد يختبر هل المهارات بقت بتطلع وقت الحاجة.</small></div>
             <em>قريبًا</em>
           </div>
         </div>
