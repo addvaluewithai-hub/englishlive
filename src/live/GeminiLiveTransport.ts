@@ -209,9 +209,10 @@ export class GeminiLiveTransport implements LiveTransport {
             automaticActivityDetection: {
               disabled: false,
               startOfSpeechSensitivity: 'START_SENSITIVITY_HIGH',
-              endOfSpeechSensitivity: 'END_SENSITIVITY_HIGH',
+              endOfSpeechSensitivity: 'END_SENSITIVITY_LOW',
               prefixPaddingMs: 120,
-              silenceDurationMs: 760,
+              // Learners need room for natural hesitation and word-search pauses.
+              silenceDurationMs: 1300,
             },
             turnCoverage: 'TURN_INCLUDES_ONLY_ACTIVITY',
           },
