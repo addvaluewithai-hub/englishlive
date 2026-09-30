@@ -319,6 +319,11 @@ export function SpeakingLiveScreen() {
           usesAr: scenario.usesAr,
           curriculumRefs: scenario.courseLessonIds ?? [],
           interactionFocus: scenario.interactionFocus,
+          curriculumLevel: scenario.curriculum?.level,
+          lessonCode: scenario.curriculum?.lessonCode,
+          targetLanguageEn: scenario.targetLanguageEn,
+          correctionFocusEn: scenario.correctionFocusEn,
+          boundariesEn: scenario.boundariesEn,
         },
       });
       cloudSessionId.current = cloudSession.id;
