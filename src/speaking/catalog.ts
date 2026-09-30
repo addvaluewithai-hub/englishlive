@@ -50,6 +50,8 @@ export type SpeakingScenario = {
   courseSourceAr?: string;
   courseLessonIds?: string[];
   curriculum?: SpeakingCurriculumMeta;
+  skillFocusAr?: string;
+  practiceStepsAr?: string[];
   targetLanguageEn?: string[];
   boundariesEn?: string[];
   correctionFocusEn?: string[];
