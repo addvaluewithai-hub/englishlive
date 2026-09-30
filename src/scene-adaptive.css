@@ -35,22 +35,53 @@
 }
 
 .premium-lesson-stage.has-preflight .premium-lesson-character {
-  opacity: 0.28;
-  filter: blur(0.2px);
+  opacity: 0.12 !important;
+  filter: blur(1px);
+  pointer-events: none !important;
 }
 
+/*
+ * Preflight must sit above every legacy lesson-stage layer. The lesson screen has
+ * accumulated several generations of stage CSS, so keeping this as a viewport
+ * sheet avoids decorative stage pseudo-elements or character layers swallowing
+ * taps on mobile browsers.
+ */
 .adaptive-preflight-card {
-  position: absolute;
-  z-index: 12;
-  inset-inline: 16px;
-  top: 66px;
-  bottom: 14px;
-  overflow: auto;
+  position: fixed !important;
+  z-index: 10000 !important;
+  top: max(104px, calc(env(safe-area-inset-top) + 88px)) !important;
+  right: 12px !important;
+  bottom: max(112px, calc(env(safe-area-inset-bottom) + 96px)) !important;
+  left: 12px !important;
+  width: min(720px, calc(100vw - 24px));
+  max-width: 720px;
+  margin-inline: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
   padding: 18px;
+  border: 1px solid rgb(255 63 104 / 14%);
   border-radius: 24px;
-  background: color-mix(in srgb, var(--surface, #fff) 94%, transparent);
-  box-shadow: 0 18px 60px rgb(0 0 0 / 14%);
-  backdrop-filter: blur(18px);
+  background: #fffdfb;
+  box-shadow: 0 20px 70px rgb(20 32 58 / 22%);
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  transform: none !important;
+}
+
+.adaptive-preflight-card,
+.adaptive-preflight-card * {
+  pointer-events: auto !important;
+}
+
+.adaptive-preflight-card button {
+  position: relative;
+  z-index: 1;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .adaptive-preflight-card > small {
@@ -96,7 +127,7 @@
   border: 1px solid rgb(0 0 0 / 10%);
   border-radius: 999px;
   padding: 9px 13px;
-  background: rgb(255 255 255 / 76%);
+  background: rgb(255 255 255 / 92%);
   color: inherit;
   font: inherit;
   cursor: pointer;
@@ -172,7 +203,11 @@
   }
 
   .adaptive-preflight-card {
-    inset-inline: 10px;
+    top: max(96px, calc(env(safe-area-inset-top) + 82px)) !important;
+    right: 8px !important;
+    bottom: max(104px, calc(env(safe-area-inset-bottom) + 90px)) !important;
+    left: 8px !important;
+    width: calc(100vw - 16px);
     padding: 15px;
     border-radius: 20px;
   }
