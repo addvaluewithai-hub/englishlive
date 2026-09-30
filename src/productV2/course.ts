@@ -1,4 +1,4 @@
-import { SCENE_LESSON_PILOTS } from '../lessonScenes/catalog';
+import { A1_SCENE_LESSON_PILOTS, B1_SCENE_LESSON_PILOTS } from '../lessonScenes/catalog';
 import type { SceneLessonDefinition } from '../lessonScenes/types';
 
 export interface ProductUnitDefinition {
@@ -46,13 +46,13 @@ export const A1_UNIT_1_PRODUCT: ProductUnitDefinition = {
   title: 'First Contact: Me and You',
   arabicTitle: 'التحيات والتعارف',
   description: 'ابدأ أول محادثة بسيطة: سلّم، عرّف بنفسك، واسأل عن معلومات شخصية أساسية بهدوء ووضوح.',
-  lessons: SCENE_LESSON_PILOTS,
+  lessons: A1_SCENE_LESSON_PILOTS,
 };
 
 export const A1_UNIT_1_LESSON_SLOTS: readonly PlannedLessonSlot[] = [
-  { sourceLessonId: 'U1-L01', order: 1, title: 'Greetings and introductions', arabicTitle: 'التحية والتعريف بنفسك', connectedLessonId: SCENE_LESSON_PILOTS[0]?.id },
-  { sourceLessonId: 'U1-L02', order: 2, title: 'Talking about age', arabicTitle: 'السؤال عن السن والأرقام', connectedLessonId: SCENE_LESSON_PILOTS[1]?.id },
-  { sourceLessonId: 'U1-L03', order: 3, title: 'Where are you from?', arabicTitle: 'البلد ومكان السكن', connectedLessonId: SCENE_LESSON_PILOTS[2]?.id },
+  { sourceLessonId: 'U1-L01', order: 1, title: 'Greetings and introductions', arabicTitle: 'التحية والتعريف بنفسك', connectedLessonId: A1_SCENE_LESSON_PILOTS[0]?.id },
+  { sourceLessonId: 'U1-L02', order: 2, title: 'Talking about age', arabicTitle: 'السؤال عن السن والأرقام', connectedLessonId: A1_SCENE_LESSON_PILOTS[1]?.id },
+  { sourceLessonId: 'U1-L03', order: 3, title: 'Where are you from?', arabicTitle: 'البلد ومكان السكن', connectedLessonId: A1_SCENE_LESSON_PILOTS[2]?.id },
   { sourceLessonId: 'U1-L04', order: 4, title: 'What do you do?', arabicTitle: 'العمل والدراسة' },
   { sourceLessonId: 'U1-L05', order: 5, title: 'Can you spell that?', arabicTitle: 'بيانات التواصل والتهجئة' },
   { sourceLessonId: 'U1-L06', order: 6, title: 'This is my friend …', arabicTitle: 'تقديم شخص آخر' },
@@ -83,8 +83,50 @@ export const A1_LEVEL_PRODUCT: ProductLevelDefinition = {
   outline: A1_UNIT_OUTLINE,
 };
 
-export const PRODUCT_LEVELS = [A1_LEVEL_PRODUCT] as const;
-export const PRODUCT_UNITS = [A1_UNIT_1_PRODUCT] as const;
+export const B1_UNIT_1_PRODUCT: ProductUnitDefinition = {
+  id: 'b1-u1-independent-conversation',
+  levelId: 'b1',
+  order: 1,
+  title: 'From Routine Exchange to Independent Conversation',
+  arabicTitle: 'من الحوار الروتيني إلى محادثة مستقلة',
+  description: 'ابدأ محادثة مألوفة من غير سكريبت، وبعدها خلّيها تكمل بالاستماع والمتابعة وإدارة الدور بشكل طبيعي.',
+  lessons: B1_SCENE_LESSON_PILOTS,
+};
+
+export const B1_UNIT_1_LESSON_SLOTS: readonly PlannedLessonSlot[] = [
+  { sourceLessonId: 'U1-L01', order: 1, title: 'Reconnect without a script', arabicTitle: 'ادخل الحوار من غير سكريبت', connectedLessonId: B1_SCENE_LESSON_PILOTS[0]?.id },
+  { sourceLessonId: 'U1-L02', order: 2, title: 'Keep a familiar conversation going', arabicTitle: 'خلّي المحادثة تكمل', connectedLessonId: B1_SCENE_LESSON_PILOTS[1]?.id },
+  { sourceLessonId: 'U1-L03', order: 3, title: 'Share personal updates, feelings and reactions', arabicTitle: 'شارك تحديثات ومشاعر وردود فعل' },
+  { sourceLessonId: 'U1-L04', order: 4, title: 'Paraphrase, clarify and work around a missing word', arabicTitle: 'وضّح ولف حوالين الكلمة الناقصة' },
+  { sourceLessonId: 'U1-L05', order: 5, title: 'Understand and respond in an informal interview', arabicTitle: 'افهم ورد في مقابلة غير رسمية' },
+  { sourceLessonId: 'U1-L06', order: 6, title: 'Ask follow-up questions and check information', arabicTitle: 'اسأل متابعة وتأكد من المعلومات' },
+  { sourceLessonId: 'U1-L07', order: 7, title: 'Fresh conversation/interview transfer', arabicTitle: 'تطبيق جديد للمحادثة والمقابلة' },
+];
+
+export const B1_UNIT_OUTLINE: readonly ProductUnitOutline[] = [
+  {
+    id: B1_UNIT_1_PRODUCT.id,
+    order: 1,
+    title: B1_UNIT_1_PRODUCT.title,
+    arabicTitle: B1_UNIT_1_PRODUCT.arabicTitle,
+    lessonCount: 7,
+    connected: true,
+  },
+];
+
+export const B1_LEVEL_PRODUCT: ProductLevelDefinition = {
+  id: 'b1',
+  title: 'B1',
+  arabicTitle: 'المتوسط',
+  description: 'الانتقال من التبادل الروتيني إلى تواصل مستقل ومترابط في موضوعات الحياة والعمل والدراسة والاهتمامات المألوفة.',
+  unitCount: 12,
+  lessonSlotCount: 85,
+  connectedUnits: [B1_UNIT_1_PRODUCT],
+  outline: B1_UNIT_OUTLINE,
+};
+
+export const PRODUCT_LEVELS = [A1_LEVEL_PRODUCT, B1_LEVEL_PRODUCT] as const;
+export const PRODUCT_UNITS = [A1_UNIT_1_PRODUCT, B1_UNIT_1_PRODUCT] as const;
 
 export function getProductLevel(levelId: string | null | undefined) {
   return PRODUCT_LEVELS.find((level) => level.id === levelId) ?? A1_LEVEL_PRODUCT;
@@ -94,33 +136,46 @@ export function getProductUnit(unitId: string | null | undefined) {
   return PRODUCT_UNITS.find((unit) => unit.id === unitId) ?? A1_UNIT_1_PRODUCT;
 }
 
+function lessonSlotFor(lesson: SceneLessonDefinition) {
+  const slots = lesson.levelId === 'b1' ? B1_UNIT_1_LESSON_SLOTS : A1_UNIT_1_LESSON_SLOTS;
+  return slots.find((item) => item.sourceLessonId === lesson.source.sourceLessonId);
+}
+
 export function lessonProductTitle(lesson: SceneLessonDefinition) {
-  const slot = A1_UNIT_1_LESSON_SLOTS.find((item) => item.sourceLessonId === lesson.source.sourceLessonId);
-  return slot?.title ?? lesson.title;
+  return lessonSlotFor(lesson)?.title ?? lesson.title;
 }
 
 export function lessonArabicTitle(lesson: SceneLessonDefinition) {
-  const slot = A1_UNIT_1_LESSON_SLOTS.find((item) => item.sourceLessonId === lesson.source.sourceLessonId);
-  return slot?.arabicTitle ?? lesson.subtitle;
+  return lessonSlotFor(lesson)?.arabicTitle ?? lesson.subtitle;
 }
 
 export function lessonCompletionWins(lesson: SceneLessonDefinition): readonly string[] {
   const wins: Record<string, readonly string[]> = {
-    'U1-L01': [
+    'a1:U1-L01': [
       'إلقاء التحية على شخص جديد',
       'التعريف بنفسك وذكر اسمك',
       'السؤال عن الاسم والتعامل مع How are you?',
     ],
-    'U1-L02': [
+    'a1:U1-L02': [
       'فهم واستخدام أرقام بسيطة تخدم الحديث عن السن',
       'السؤال عن السن بطريقة بسيطة',
       'قول سن حقيقي أو افتراضي في محادثة قصيرة',
     ],
-    'U1-L03': [
+    'a1:U1-L03': [
       'السؤال عن بلد الشخص',
       'قول أنت منين باستخدام I’m from…',
       'قول مكان سكنك باستخدام I live in…',
     ],
+    'b1:U1-L01': [
+      'الدخول في محادثة مألوفة حتى لو البداية مش متوقعة',
+      'التفاعل مع المعنى وعمل move جديد يثبت موضوع للحوار',
+      'استخدام hear of / get on with / too bad في سياق مناسب وفهم كلمات الموضوع الجديدة لما تظهر',
+    ],
+    'b1:U1-L02': [
+      'الحفاظ على الحوار لعدة أدوار بالاستماع والمتابعة بدل انتظار سؤال جديد',
+      'استخدام get to know / in touch / you see ومفردات القرار والخطة داخل سياق حقيقي',
+      'استخدام grammar support بسيط عند الحاجة وعمل دعوة مهذبة ثم متابعة الحوار',
+    ],
   };
-  return wins[lesson.source.sourceLessonId] ?? [lesson.performance];
+  return wins[`${lesson.levelId}:${lesson.source.sourceLessonId}`] ?? [lesson.performance];
 }
