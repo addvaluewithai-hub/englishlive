@@ -1,3 +1,5 @@
+import { B1_CATCH_UP_CONTRACT } from './b1LessonContract';
+
 export type LessonEvidenceLevel = 'supported' | 'independent';
 
 export interface SpeakingLessonCheck {
@@ -118,6 +120,7 @@ const FIRST_CONTACT_CONTRACT: SpeakingLessonContract = {
 
 const CONTRACTS: Record<string, SpeakingLessonContract> = {
   [FIRST_CONTACT_CONTRACT.scenarioId]: FIRST_CONTACT_CONTRACT,
+  [B1_CATCH_UP_CONTRACT.scenarioId]: B1_CATCH_UP_CONTRACT,
 };
 
 export function speakingLessonContractByScenarioId(id?: string) {
