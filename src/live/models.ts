@@ -1,4 +1,4 @@
-export const DEFAULT_LIVE_MODEL = 'gemini-3.8-live' as const;
+export const DEFAULT_LIVE_MODEL = 'gemini-3.8-live-extended-thinking' as const;
 export type LiveModel = typeof DEFAULT_LIVE_MODEL;
 
 export function isLiveModel(value: unknown): value is LiveModel {
