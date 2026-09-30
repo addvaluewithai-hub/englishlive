@@ -90,16 +90,34 @@ function parseTeachingBundle(value: unknown): TeachingBundleResponse | null {
     || typeof teachingPolicy.key !== 'string'
     || typeof teachingPolicy.revisionId !== 'string'
     || typeof teachingPolicy.revisionNumber !== 'number'
-  ) return null;
+  ) return false as never;
   return value as unknown as TeachingBundleResponse;
 }
 
-function fallbackCharacter(character: CharacterDefinition): CharacterAuthoringContent {
+function normalizeCharacterContent(
+  content: CharacterAuthoringContent,
+  character: CharacterDefinition,
+): CharacterAuthoringContent {
+  if (character.id !== 'otti') return content;
+  const basePersona = content.personaPrompt?.trim() || character.persona.style;
+  const baseTeachingStyle = content.teachingStylePrompt?.trim();
   return {
+    ...content,
+    voiceName: 'Charon',
+    personaPrompt: `adult male English teacher; warm, patient, grounded, concise, and never childish; ${basePersona}`,
+    teachingStylePrompt: [
+      baseTeachingStyle,
+      'Otti is male. When Arabic grammar makes gender audible, use masculine self-reference consistently.',
+    ].filter(Boolean).join(' '),
+  };
+}
+
+function fallbackCharacter(character: CharacterDefinition): CharacterAuthoringContent {
+  return normalizeCharacterContent({
     displayName: character.name,
     personaPrompt: character.persona.style,
     voiceName: null,
-  };
+  }, character);
 }
 
 function fallbackBundle(
@@ -156,7 +174,7 @@ export async function loadPublishedCharacter(character: CharacterDefinition): Pr
     }
     return {
       source: 'neon',
-      content: row.content,
+      content: normalizeCharacterContent(row.content, character),
       revisionId: row.revisionId,
     };
   } catch (reason) {
@@ -191,7 +209,7 @@ export async function loadTeachingBundle(
       source: 'neon',
       lesson: parsed.lesson.content,
       lessonRevisionId: parsed.lesson.revisionId,
-      character: parsed.character.content,
+      character: normalizeCharacterContent(parsed.character.content, character),
       characterRevisionId: parsed.character.revisionId,
       teachingPolicy: parsed.teachingPolicy.content,
       teachingPolicyRevisionId: parsed.teachingPolicy.revisionId,
