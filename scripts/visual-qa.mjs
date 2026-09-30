@@ -142,7 +142,10 @@ const scenarios = [
   { name: 'home', path: '/home' },
   { name: 'learn-levels', path: '/learn', full: true },
   { name: 'level-a1', path: '/learn/level/a1', full: true },
+  { name: 'level-b1', path: '/learn/level/b1', full: true },
   { name: 'unit-1', path: '/learn/unit/a1-u1-first-contact', full: true },
+  { name: 'b1-lesson-1', path: '/scene-lesson/b1-u1-l01-reconnect-without-script?character=otti' },
+  { name: 'b1-lesson-2', path: '/scene-lesson/b1-u1-l02-keep-conversation-going?character=otti' },
   ...characterSessionScenarios,
   {
     name: 'lesson-live-help',
