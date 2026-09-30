@@ -1,0 +1,87 @@
+import type { SpeakingLessonContract } from './lessonContracts';
+
+export const B1_CATCH_UP_CONTRACT: SpeakingLessonContract = {
+  scenarioId: 'b1-s1-l01',
+  sourceLessonIds: ['U1-L01', 'U1-L02', 'U1-L03', 'U1-L04'],
+  sourceLoad: {
+    abilities: 13,
+    phrases: 10,
+    grammar: 6,
+    words: 20,
+    pronunciation: 5,
+  },
+  languageGroundEn: [
+    'U1-L01 active ground: enter an unprepared familiar conversation, express/respond to feelings, plus source phrases get on with, hear of, too bad where context genuinely fits',
+    'U1-L02 active ground: maintain a discussion with acknowledgement, relevant follow-up and turn management; source phrases get to know, in touch, you see where natural',
+    'U1-L03 active ground: share familiar personal updates, react to good/bad news, initiate/maintain/close simple face-to-face conversation; source phrases break up, have … in common, respect for … where natural',
+    'U1-L04 active ground: explain a word/phrase in simple language, repeat back details to confirm understanding, and use a kind of … for simple circumlocution where useful',
+    'integrated grammar support only: do for emphasis, let me focus, negative tags/checking, speech-act verbs, events in progress, verb + pronoun + particle',
+    'pronunciation support: connected speech, consonant clarity, intonation/stance, chunking/monitoring/repair; intelligibility matters, not accent imitation',
+  ],
+  checks: [
+    {
+      id: 'enter_unprepared',
+      labelAr: 'ادخل من غير سكريبت',
+      requiredIndependent: 1,
+      descriptionEn: 'The learner independently responds to an unpredictable but familiar opening and establishes or advances a topic without being given a full model response.',
+    },
+    {
+      id: 'personal_update',
+      labelAr: 'احكي update',
+      requiredIndependent: 1,
+      descriptionEn: 'The learner independently shares one recent/familiar personal update with at least one useful detail, reason or feeling rather than only a bare fact.',
+    },
+    {
+      id: 'reaction',
+      labelAr: 'رد فعل مناسب',
+      requiredIndependent: 2,
+      descriptionEn: 'Across two distinct partner-news moments, the learner reacts appropriately to the actual content and shows interest/stance/feeling. A generic yes/good that ignores the news does not count.',
+    },
+    {
+      id: 'follow_up',
+      labelAr: 'Follow-up',
+      requiredIndependent: 2,
+      descriptionEn: 'The learner independently asks two relevant follow-up questions generated from what the partner actually said, not two pre-scripted unrelated questions.',
+    },
+    {
+      id: 'maintain_exchange',
+      labelAr: 'كمّل الحوار',
+      requiredIndependent: 3,
+      descriptionEn: 'Across three distinct turns, the learner helps maintain the conversation by acknowledging, adding a detail, reacting, asking a relevant question or otherwise creating the next move instead of only answering minimally.',
+    },
+    {
+      id: 'clarify_confirm_repair',
+      labelAr: 'وضّح أو أكّد',
+      requiredIndependent: 1,
+      descriptionEn: 'The learner independently repairs meaning by asking for clarification, confirming/repeating back a detail, reformulating, or correcting a mild misunderstanding created in the conversation.',
+    },
+    {
+      id: 'paraphrase_gap',
+      labelAr: 'لف حوالين الكلمة',
+      requiredIndependent: 1,
+      descriptionEn: 'When the exact word is unavailable or deliberately withheld, the learner independently communicates the idea with simple explanation, example, synonym or circumlocution. Using a kind of … is welcome but not mandatory.',
+    },
+    {
+      id: 'close_naturally',
+      labelAr: 'اقفل طبيعي',
+      requiredIndependent: 1,
+      descriptionEn: 'The learner independently signals or completes a natural end to the familiar conversation when the partner creates a reason to wrap up.',
+    },
+  ],
+  maxDurationSeconds: 600,
+  coachPromptEn: [
+    'MISSION: run one natural B1 catch-up conversation that applies reviewed Learn U1-L01, U1-L02, U1-L03 and U1-L04.',
+    'This is not a B1 grammar quiz and not a vocabulary checklist. The source items are the available ground; the live checks measure independent conversation behaviour and usable language in context.',
+    'Start unpredictably but familiarly. Let the learner establish the topic rather than immediately running a list of questions.',
+    'Share real conversational material yourself: one good-or-bad personal update, a feeling or reaction, and enough detail for genuine follow-up.',
+    'After every learner turn, silently consider the evidence checks and call record_lesson_evidence separately for every check genuinely evidenced by that learner turn.',
+    'Use independent only when the learner owns the move without receiving the exact wording immediately before it. If you supplied an exact phrase/model and the learner mainly repeats it, record supported and create a fresh opportunity later.',
+    'Do not announce checks, points, progress or skill names. The UI shows progress silently.',
+    'Engineer exactly one mild repair opportunity after the conversation is underway: misunderstand or remain unsure about one detail so the learner can clarify, confirm or reformulate. Do not make it frustrating.',
+    'Engineer one lexical-gap opportunity later: ask the learner to describe a familiar object/activity/idea while briefly withholding the exact English word, so they can explain around it. Accept any clear simple paraphrase; do not require a specific phrase.',
+    'Keep the talk on familiar personal/social territory. It can branch naturally, but if a required check remains, create a believable opportunity for it within the next one or two exchanges rather than wandering.',
+    'Do not correct every error. Prioritise communication, interactional independence, target repair behaviour and intelligibility. Recast lightly unless meaning breaks down or the learner asks for help.',
+    'Near the end, create a natural reason to wrap up, for example you need to leave soon. Give the learner a real chance to signal/complete the closing; do not close for them before that check can occur.',
+    'When the tool response says lesson_complete=true, ask no new question. Give one brief natural final response to the learner’s closing and end your turn without mentioning checks or scores.',
+  ].join('\n'),
+};
