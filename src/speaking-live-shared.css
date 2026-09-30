@@ -95,6 +95,100 @@
   background: linear-gradient(180deg, rgba(255,253,252,.72), #fff 22%);
 }
 
+.sp-live-lesson-progress {
+  position: absolute;
+  z-index: 7;
+  top: 12px;
+  right: 16px;
+  width: min(360px, calc(100% - 32px));
+  padding: 10px 12px;
+  border: 1px solid rgba(238, 210, 220, .9);
+  border-radius: 18px;
+  background: rgba(255,255,255,.91);
+  box-shadow: 0 10px 28px rgba(70, 42, 55, .08);
+  backdrop-filter: blur(12px);
+}
+
+.sp-live-lesson-progress > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: #6f7481;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.sp-live-lesson-progress > header strong {
+  direction: ltr;
+  color: var(--sp-pink);
+  font-size: 12px;
+}
+
+.sp-live-lesson-progress-bar {
+  height: 5px;
+  margin-top: 7px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: #f2e7eb;
+}
+
+.sp-live-lesson-progress-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--sp-pink), #ff77a5);
+  transition: width .24s ease;
+}
+
+.sp-live-lesson-checks {
+  display: flex;
+  gap: 5px;
+  margin-top: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.sp-live-lesson-checks::-webkit-scrollbar { display: none; }
+
+.sp-live-lesson-check {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 27px;
+  padding: 4px 7px;
+  border: 1px solid #ece6e8;
+  border-radius: 999px;
+  color: #7c8491;
+  background: rgba(255,255,255,.88);
+  font-size: 10px;
+}
+
+.sp-live-lesson-check i {
+  font-style: normal;
+  color: #b5bac3;
+}
+
+.sp-live-lesson-check b { font-weight: 900; }
+.sp-live-lesson-check small { direction: ltr; font-size: 9px; font-weight: 900; }
+
+.sp-live-lesson-check.is-supported {
+  border-color: #f0d69e;
+  background: #fffaf0;
+  color: #967029;
+}
+
+.sp-live-lesson-check.is-supported i { color: #d99b22; }
+
+.sp-live-lesson-check.is-complete {
+  border-color: #bfe5cd;
+  background: #f1fbf5;
+  color: #178451;
+}
+
+.sp-live-lesson-check.is-complete i { color: #15a35f; }
+
 .sp-help-sheet-inline {
   position: relative;
   inset: auto;
@@ -158,6 +252,17 @@
     width: min(305px, 78vw);
     height: 255px;
   }
+
+  .sp-live-lesson-progress {
+    top: 8px;
+    right: 8px;
+    width: calc(100% - 16px);
+    padding: 8px 9px;
+    border-radius: 15px;
+  }
+
+  .sp-live-lesson-checks { gap: 4px; }
+  .sp-live-lesson-check { min-height: 24px; padding: 3px 6px; font-size: 9.5px; }
 
   .sp-scenario-live .fs-exchange {
     padding-inline: 44px;
