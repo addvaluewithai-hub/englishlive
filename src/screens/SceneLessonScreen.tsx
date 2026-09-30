@@ -8,6 +8,20 @@ import { getCharacterDefinition } from '../character/registry';
 import { ConversationBoard } from '../components/ConversationBoard';
 import { ProductIcon } from '../components/ProductIcon';
 import { loadTeachingBundle } from '../content/client';
+import {
+  adaptLessonForKnownItems,
+  checkpointGroupsForLesson,
+  claimedKnownContext,
+  knownItemsForLesson,
+  type KnownLessonItemKind,
+} from '../lessonScenes/adaptive';
+import {
+  clearSceneLessonCheckpoint,
+  readSceneLessonCheckpoint,
+  writeSceneLessonCheckpoint,
+  type LessonSpeakingPace,
+  type StoredSceneLessonCheckpoint,
+} from '../lessonScenes/progressStore';
 import { getRequiredSceneLesson } from '../lessonScenes/catalog';
 import { SceneLessonRuntime } from '../lessonScenes/SceneLessonRuntime';
 import type { SceneLessonState } from '../lessonScenes/types';
@@ -38,6 +52,27 @@ const statusCopy: Record<LiveStatus, string> = {
   speaking: 'المدرس بيتكلم',
   reconnecting: 'بنعيد الاتصال',
   error: 'حاول تاني',
+};
+
+const paceCopy: Record<LessonSpeakingPace, { label: string; prompt: string }> = {
+  relaxed: {
+    label: 'هادي',
+    prompt: 'Use a relaxed teaching pace. Speak noticeably slower than ordinary conversation, with short clauses and small natural pauses. Never rush examples or questions.',
+  },
+  normal: {
+    label: 'طبيعي',
+    prompt: 'Use a clear normal teaching pace. Keep clauses short and leave natural space between ideas and questions.',
+  },
+  quick: {
+    label: 'سريع',
+    prompt: 'Use a brisk but still clear teaching pace. Keep teacher turns concise and never sacrifice intelligibility or learner thinking time.',
+  },
+};
+
+const knownKindCopy: Record<KnownLessonItemKind, string> = {
+  word: 'كلمات',
+  phrase: 'تعبيرات',
+  pattern: 'Patterns',
 };
 
 type CompactLogRole = 'AI' | 'YOU' | 'TOOL';
@@ -138,6 +173,8 @@ export function SceneLessonScreen() {
   const localLesson = getRequiredSceneLesson(lessonId);
   const profile = readLearnerProfile();
   const character = getCharacterDefinition(params.get('character') ?? profile?.characterId);
+  const knownItems = knownItemsForLesson(localLesson.id);
+  const initialCheckpoint = useRef<StoredSceneLessonCheckpoint | null>(readSceneLessonCheckpoint(localLesson.id));
 
   const host = useRef<CharacterHostHandle | null>(null);
   const transport = useRef<GeminiLiveTransport | null>(null);
@@ -160,7 +197,7 @@ export function SceneLessonScreen() {
   const [micOpen, setMicOpen] = useState(false);
   const [inputTranscript, setInputTranscript] = useState('');
   const [outputTranscript, setOutputTranscript] = useState('');
-  const [lessonState, setLessonState] = useState<SceneLessonState | null>(null);
+  const [lessonState, setLessonState] = useState<SceneLessonState | null>(initialCheckpoint.current?.state ?? null);
   const [activeBoard, setActiveBoard] = useState<SupportBoard | null>(null);
   const [performanceLabel, setPerformanceLabel] = useState('audio-driven locally');
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
@@ -168,6 +205,10 @@ export function SceneLessonScreen() {
   const [welcomeComplete, setWelcomeComplete] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [savedCheckpoint, setSavedCheckpoint] = useState<StoredSceneLessonCheckpoint | null>(initialCheckpoint.current);
+  const [knownItemIds, setKnownItemIds] = useState<string[]>(initialCheckpoint.current?.knownItemIds ?? []);
+  const [pace, setPace] = useState<LessonSpeakingPace>(initialCheckpoint.current?.pace ?? 'relaxed');
+  const [preflightReady, setPreflightReady] = useState(knownItems.length === 0 && !initialCheckpoint.current);
 
   function clearDecisionNudge() {
     if (decisionNudgeTimer.current !== null) window.clearTimeout(decisionNudgeTimer.current);
@@ -223,6 +264,50 @@ export function SceneLessonScreen() {
         }
       },
     }));
+  }
+
+  function persistCheckpoint(state: SceneLessonState) {
+    if (state.completedAt) {
+      clearSceneLessonCheckpoint(localLesson.id);
+      setSavedCheckpoint(null);
+      return;
+    }
+    writeSceneLessonCheckpoint({
+      lessonId: localLesson.id,
+      state,
+      knownItemIds: [...knownItemIds],
+      pace,
+    });
+    setSavedCheckpoint({
+      version: 1,
+      lessonId: localLesson.id,
+      state,
+      knownItemIds: [...knownItemIds],
+      pace,
+      updatedAt: new Date().toISOString(),
+    });
+  }
+
+  function toggleKnownItem(id: string) {
+    setKnownItemIds((current) => current.includes(id)
+      ? current.filter((item) => item !== id)
+      : [...current, id]);
+  }
+
+  function resumeCheckpoint() {
+    if (!savedCheckpoint) return;
+    setKnownItemIds([...savedCheckpoint.knownItemIds]);
+    setPace(savedCheckpoint.pace);
+    setPreflightReady(true);
+  }
+
+  function restartFresh() {
+    clearSceneLessonCheckpoint(localLesson.id);
+    setSavedCheckpoint(null);
+    setLessonState(null);
+    setKnownItemIds([]);
+    setPace('relaxed');
+    setPreflightReady(knownItems.length === 0);
   }
 
   async function copyCompactLog() {
@@ -321,7 +406,7 @@ export function SceneLessonScreen() {
   }, [status, character.id]);
 
   async function startLive() {
-    if (status !== 'idle' && status !== 'error') return;
+    if (!preflightReady || (status !== 'idle' && status !== 'error')) return;
     setStatus('connecting');
     setError(null);
     setCopyStatus('idle');
@@ -342,18 +427,27 @@ export function SceneLessonScreen() {
     compactLog.current = [];
 
     const bundle = await loadTeachingBundle(localLesson, character);
-    const sessionLesson = bundle.lesson;
+    const sessionLesson = adaptLessonForKnownItems(bundle.lesson, knownItemIds);
     const teacherName = bundle.character.displayName?.trim() || character.name;
+    const restoredState = savedCheckpoint?.state && savedCheckpoint.lessonId === localLesson.id
+      ? savedCheckpoint.state
+      : null;
     setActiveLesson(sessionLesson);
     setContentSource(bundle.source);
 
     const sceneRuntime = new SceneLessonRuntime(sessionLesson, {
-      onStateChange: setLessonState,
+      onStateChange: (state) => {
+        setLessonState(state);
+        persistCheckpoint(state);
+      },
       onBoardChange: setActiveBoard,
       policyPrompt: bundle.teachingPolicy.prompt,
+      adaptiveContext: claimedKnownContext(localLesson.id, knownItemIds),
+      restoredState,
     });
     runtime.current = sceneRuntime;
     setLessonState(sceneRuntime.snapshot);
+    persistCheckpoint(sceneRuntime.snapshot);
 
     const characterPerformance = new CharacterPerformanceController(() => host.current);
     performer.current = characterPerformance;
@@ -381,7 +475,9 @@ export function SceneLessonScreen() {
           holdMicForTeacherContinuation.current = true;
           sceneRuntime.markLessonOpeningComplete();
           setWelcomeComplete(true);
-          live.sendText('The spoken welcome is finished. Begin the CURRENT SCENE already provided in your system instruction. Its authored board is already visible if it has one. Teach the small target, interact naturally, and use complete_scene only when the learner can use it successfully enough.');
+          live.sendText(sceneRuntime.isResuming
+            ? 'The short resume greeting is finished. Continue from the CURRENT SCENE already provided. Do not repeat earlier completed scenes. Teach this small target naturally and use complete_scene only when the learner can use it successfully enough.'
+            : 'The spoken welcome is finished. Begin the CURRENT SCENE already provided in your system instruction. Its authored board is already visible if it has one. Teach the small target, interact naturally, and use complete_scene only when the learner can use it successfully enough.');
           return;
         }
 
@@ -455,9 +551,11 @@ export function SceneLessonScreen() {
     const persona = bundle.character.personaPrompt?.trim() || character.persona.style;
     const teachingStyle = bundle.character.teachingStylePrompt?.trim();
     const characterPrompt = [
-      `You are ${teacherName}, ${persona}, teaching one adult A1 learner in Englotti.`,
+      `You are ${teacherName}, ${persona}, teaching one adult ${sessionLesson.levelId.toUpperCase()} learner in Englotti.`,
+      character.id === 'otti' ? 'Otti is male: keep the personality and self-reference consistently masculine when Arabic grammar makes gender audible.' : '',
       'Be warm, patient and concise without sounding childish. Address the learner in singular Egyptian Arabic, not plural language and not formal يا فندم.',
-      'Speak at a calm teacher pace: short Arabic sentences and unhurried target English. Explanations are mostly simple Egyptian Arabic; target phrases and roleplay stay in English.',
+      paceCopy[pace].prompt,
+      'Target English should be clear and slightly slower when it is new. Do not machine-gun examples. One idea, one short pause, then the learner gets room to respond.',
       `Never call yourself another teacher name; when referring to yourself, always use ${teacherName}.`,
       'The learner microphone is intentionally closed while you are audibly teaching. They can explicitly interrupt you with the app control; otherwise finish one concise teaching turn and give them space.',
       teachingStyle,
@@ -475,8 +573,10 @@ export function SceneLessonScreen() {
           sceneRuntime.recordLearnerAudioLevel(level);
         },
       );
-      const opening = bundle.teachingPolicy.openingPrompt
-        || 'Start the Englotti lesson with ONLY the short human welcome described in your instructions. Do not begin the first scene in the same turn. Speak calmly and stop after the welcome.';
+      const opening = sceneRuntime.isResuming
+        ? 'Resume the interrupted lesson with ONLY the brief resume opening described in your instructions. Do not repeat the original welcome or earlier scenes. Stop after the short reconnection.'
+        : bundle.teachingPolicy.openingPrompt
+          || 'Start the Englotti lesson with ONLY the short human welcome described in your instructions. Do not begin the first scene in the same turn. Speak calmly and stop after the welcome.';
       live.sendText(opening);
     } catch (reason) {
       const message = reason instanceof Error ? reason.message : 'Could not start the lesson.';
@@ -501,9 +601,14 @@ export function SceneLessonScreen() {
   const completedScenes = lessonState
     ? activeLesson.scenes.filter((scene) => lessonState.scenes[scene.id]?.status === 'met').length
     : 0;
+  const savedCompletedScenes = savedCheckpoint
+    ? Object.values(savedCheckpoint.state.scenes).filter((scene) => scene.status === 'met').length
+    : 0;
   const lessonComplete = Boolean(lessonState?.completedAt);
   const quickActionsEnabled = welcomeComplete && learnerTurn && Boolean(transport.current?.connected);
   const board = welcomeComplete ? activeBoard : null;
+  const checkpointGroups = checkpointGroupsForLesson(activeLesson);
+  const preflightVisible = !preflightReady && !liveLesson && !connecting;
 
   return (
     <section className="premium-scene-lesson" dir="rtl" style={{ '--character-accent': character.accent } as CSSProperties}>
@@ -512,7 +617,7 @@ export function SceneLessonScreen() {
           <ProductIcon name="close" size={24} />
         </button>
         <div className="premium-lesson-title">
-          <small>A1 · الوحدة 1 · الدرس {activeLesson.order}</small>
+          <small>{activeLesson.levelId.toUpperCase()} · الوحدة · الدرس {activeLesson.order}</small>
           <strong>{activeLesson.title}</strong>
         </div>
         <button type="button" className="premium-top-icon" onClick={() => setToolsOpen(true)} aria-label="أدوات الدرس">
@@ -520,24 +625,102 @@ export function SceneLessonScreen() {
         </button>
       </header>
 
+      <div className="adaptive-checkpoint-bar" aria-label="مراحل الدرس">
+        {checkpointGroups.map((group) => {
+          const complete = lessonState ? group.scenes.every((scene) => lessonState.scenes[scene.id]?.status === 'met') : false;
+          const current = group.scenes.some((scene) => scene.id === currentScene?.id) && !lessonComplete;
+          return (
+            <span key={group.id} className={`${complete ? 'is-complete' : ''}${current ? ' is-current' : ''}`}>
+              <i />{group.label}
+            </span>
+          );
+        })}
+      </div>
+
       <div className="premium-lesson-progress" aria-label={`${completedScenes} of ${activeLesson.scenes.length} lesson scenes completed`}>
         {activeLesson.scenes.map((scene, index) => (
           <span
             key={scene.id}
+            title={scene.title}
             className={`${lessonState?.scenes[scene.id]?.status === 'met' ? 'is-complete' : ''}${index === sceneIndex && !lessonComplete ? ' is-current' : ''}`}
           />
         ))}
       </div>
 
-      <main className={`premium-lesson-stage${board ? ' has-board' : ''}`}>
+      <main className={`premium-lesson-stage${board ? ' has-board' : ''}${preflightVisible ? ' has-preflight' : ''}`}>
         <div className="premium-scene-caption">
-          <small>{welcomeComplete ? `الخطوة ${sceneIndex + 1} من ${activeLesson.scenes.length}` : 'بداية الدرس'}</small>
+          <small>{welcomeComplete ? `الخطوة ${sceneIndex + 1} من ${activeLesson.scenes.length}` : preflightVisible ? 'قبل ما نبدأ' : 'بداية الدرس'}</small>
           <strong>{welcomeComplete ? currentScene.title : `مع ${character.name}`}</strong>
         </div>
 
         <CharacterHost ref={host} character={character} className="premium-lesson-character" />
 
-        {board ? (
+        {preflightVisible ? (
+          <div className="adaptive-preflight-card">
+            {savedCheckpoint ? (
+              <>
+                <small>فيه تقدم محفوظ</small>
+                <h2>نكمل من حيث وقفنا؟</h2>
+                <p>خلصت {savedCompletedScenes} خطوة. هنرجع لأول خطوة لسه ما خلصتش، مش لأول الدرس.</p>
+                <div className="adaptive-preflight-actions">
+                  <button type="button" className="is-primary" onClick={resumeCheckpoint}>كمّل</button>
+                  <button type="button" onClick={restartFresh}>ابدأ من جديد</button>
+                </div>
+              </>
+            ) : (
+              <>
+                <small>اختصر اللي إنت عارفه</small>
+                <h2>إيه من دول مرتاح فيه فعلًا؟</h2>
+                <p>اختيارك يشيل الشرح الأساسي فقط. Otti ممكن يرجع يختبر الحاجة طبيعيًا بعدين عشان يتأكد إنها ثابتة.</p>
+
+                {(['word', 'phrase', 'pattern'] as const).map((kind) => {
+                  const items = knownItems.filter((item) => item.kind === kind);
+                  if (!items.length) return null;
+                  return (
+                    <div className="adaptive-known-group" key={kind}>
+                      <strong>{knownKindCopy[kind]}</strong>
+                      <div>
+                        {items.map((item) => (
+                          <button
+                            type="button"
+                            key={item.id}
+                            className={knownItemIds.includes(item.id) ? 'is-selected' : ''}
+                            onClick={() => toggleKnownItem(item.id)}
+                          >
+                            <span>{item.label}</span>
+                            {item.description ? <small>{item.description}</small> : null}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                <div className="adaptive-pace-picker">
+                  <strong>سرعة Otti</strong>
+                  <div>
+                    {(Object.keys(paceCopy) as LessonSpeakingPace[]).map((value) => (
+                      <button
+                        type="button"
+                        key={value}
+                        className={pace === value ? 'is-selected' : ''}
+                        onClick={() => setPace(value)}
+                      >
+                        {paceCopy[value].label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <button type="button" className="adaptive-preflight-confirm" onClick={() => setPreflightReady(true)}>
+                  جهز الدرس بالخطة دي
+                </button>
+              </>
+            )}
+          </div>
+        ) : null}
+
+        {board && !preflightVisible ? (
           <div className="premium-board-layer" aria-live="polite">
             <ConversationBoard board={board} />
           </div>
@@ -550,8 +733,8 @@ export function SceneLessonScreen() {
         <div className="premium-live-status" aria-live="polite">
           <span className={`premium-status-dot status-${status}`} />
           <div>
-            <strong>{lessonComplete ? 'الدرس خلص' : learnerTurn ? 'دورك تتكلم' : statusCopy[status]}</strong>
-            <small>{learnerTurn ? 'المايك مفتوح تلقائيًا' : teacherSpeaking ? 'لو محتاج توقفه اضغط مقاطعة' : character.name}</small>
+            <strong>{lessonComplete ? 'الدرس خلص' : preflightVisible ? 'اختار اللي عارفه الأول' : learnerTurn ? 'دورك تتكلم' : statusCopy[status]}</strong>
+            <small>{preflightVisible ? `Otti · ${paceCopy[pace].label}` : learnerTurn ? 'المايك مفتوح تلقائيًا' : teacherSpeaking ? 'لو محتاج توقفه اضغط مقاطعة' : character.name}</small>
           </div>
         </div>
 
@@ -577,9 +760,9 @@ export function SceneLessonScreen() {
               <span>{learnerTurn ? 'دورك' : 'استنى'}</span>
             </button>
           ) : (
-            <button type="button" className="premium-main-control is-start" onClick={() => void startLive()} disabled={connecting}>
+            <button type="button" className="premium-main-control is-start" onClick={() => void startLive()} disabled={connecting || !preflightReady}>
               <ProductIcon name="play" size={26} />
-              <span>{connecting ? 'لحظة…' : error ? 'حاول تاني' : 'ابدأ'}</span>
+              <span>{connecting ? 'لحظة…' : !preflightReady ? 'جهز الدرس' : error ? 'حاول تاني' : savedCheckpoint ? 'كمّل' : 'ابدأ'}</span>
             </button>
           )}
 
@@ -646,6 +829,8 @@ export function SceneLessonScreen() {
               <span>Tools: complete_scene + show_board</span>
               <span>Mic: {micOpen ? 'open' : 'closed'}</span>
               <span>Content: {contentSource}</span>
+              <span>Pace: {pace}</span>
+              <span>Known skipped: {knownItemIds.length}</span>
               <span>Performance: {performanceLabel}</span>
             </details>
           </section>
