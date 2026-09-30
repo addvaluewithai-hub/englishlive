@@ -1,3 +1,10 @@
+/* The adaptive checkpoint row is an extra direct child of the lesson shell.
+ * The original lesson layout has four rows (header, progress, stage, footer).
+ * Keep the stage as the only flexible row after inserting checkpoints. */
+.premium-scene-lesson {
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto !important;
+}
+
 .adaptive-checkpoint-bar {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
