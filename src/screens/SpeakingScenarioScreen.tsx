@@ -14,21 +14,32 @@ export function SpeakingScenarioScreen() {
   const { scenarioId } = useParams();
   const scenario = speakingScenarioById(scenarioId);
   const [difficulty, setDifficulty] = useState<SpeakingDifficulty>('recommended');
+  const isCurriculumLesson = Boolean(scenario.curriculum);
+  const closeTo = isCurriculumLesson ? '/speak' : `/speak/world/${scenario.worldId}`;
+  const liveTo = isCurriculumLesson
+    ? `/speak/live/${scenario.id}`
+    : `/speak/live/${scenario.id}?difficulty=${difficulty}`;
 
   return (
     <section
       className="sp-start-page"
       dir="rtl"
-      style={{ backgroundImage: `linear-gradient(rgba(255,255,255,.22),rgba(255,255,255,.22)), url(${speakingAssets.airportBanner})` }}
+      style={{ backgroundImage: `linear-gradient(rgba(255,255,255,.22),rgba(255,255,255,.22)), url(${isCurriculumLesson ? scenario.image : speakingAssets.airportBanner})` }}
     >
       <div className="sp-start-backdrop" />
       <article className="sp-start-sheet">
-        <Link to={`/speak/world/${scenario.worldId}`} className="sp-start-close" aria-label="إغلاق"><ProductIcon name="close" size={28} /></Link>
+        <Link to={closeTo} className="sp-start-close" aria-label="إغلاق"><ProductIcon name="close" size={28} /></Link>
         <span className="sp-sheet-handle" />
 
         <div className="sp-start-art">
           <img src={scenario.liveCharacterImage ?? scenario.image} alt="" />
         </div>
+
+        {scenario.curriculum ? (
+          <div className="sp-curriculum-chip">
+            {scenario.curriculum.level} • الوحدة {scenario.curriculum.unit} • الدرس {scenario.curriculum.position} من {scenario.curriculum.totalInUnit}
+          </div>
+        ) : null}
 
         <h1>{scenario.titleAr}</h1>
 
@@ -51,21 +62,28 @@ export function SpeakingScenarioScreen() {
 
         <div className="sp-duration">◷ حوالي {scenario.durationMinutes} دقائق</div>
 
-        <section className="sp-difficulty-section">
-          <div className="sp-difficulty-heading"><strong>اختر مستوى الصعوبة</strong><span>▥</span></div>
-          <div className="sp-difficulty-options">
-            {(Object.keys(difficultyCopy) as SpeakingDifficulty[]).map((key) => (
-              <button key={key} type="button" className={difficulty === key ? 'is-selected' : ''} onClick={() => setDifficulty(key)}>
-                <span>{difficultyCopy[key].icon}</span>{difficultyCopy[key].title}
-              </button>
-            ))}
-          </div>
-          <p>✨ {scenario.readinessReasonAr} ✨</p>
-        </section>
+        {isCurriculumLesson ? (
+          <section className="sp-curriculum-fixed">
+            <strong>مستوى الدرس A1</strong>
+            <p>مش محتاج تختار صعوبة. السرعة والمساعدة ممكن تتكيف أثناء الكلام، لكن هدف الدرس واللغة المطلوبة يفضلوا داخل A1.</p>
+          </section>
+        ) : (
+          <section className="sp-difficulty-section">
+            <div className="sp-difficulty-heading"><strong>اختر مستوى الصعوبة</strong><span>▥</span></div>
+            <div className="sp-difficulty-options">
+              {(Object.keys(difficultyCopy) as SpeakingDifficulty[]).map((key) => (
+                <button key={key} type="button" className={difficulty === key ? 'is-selected' : ''} onClick={() => setDifficulty(key)}>
+                  <span>{difficultyCopy[key].icon}</span>{difficultyCopy[key].title}
+                </button>
+              ))}
+            </div>
+            <p>✨ {scenario.readinessReasonAr} ✨</p>
+          </section>
+        )}
 
-        <Link className="sp-start-button" to={`/speak/live/${scenario.id}?difficulty=${difficulty}`}>
+        <Link className="sp-start-button" to={liveTo}>
           <ProductIcon name="speak" size={32} />
-          <span>ابدأ المحادثة</span>
+          <span>{isCurriculumLesson ? 'ابدأ الدرس' : 'ابدأ المحادثة'}</span>
           <ProductIcon name="chevron" size={25} />
         </Link>
       </article>
