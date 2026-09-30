@@ -38,6 +38,8 @@ export class SceneLessonRuntime {
   private readonly listeners = new Set<(state: SceneLessonState) => void>();
   private readonly onBoardChange?: (board: SupportBoard | null) => void;
   private readonly policyPrompt: string;
+  private readonly adaptiveContext: string;
+  private readonly resumedFromCheckpoint: boolean;
 
   constructor(
     readonly lesson: SceneLessonDefinition,
@@ -45,13 +47,20 @@ export class SceneLessonRuntime {
       onStateChange?: (state: SceneLessonState) => void;
       onBoardChange?: (board: SupportBoard | null) => void;
       policyPrompt?: string;
+      adaptiveContext?: string;
+      restoredState?: SceneLessonState | null;
     } = {},
   ) {
     if (!lesson.scenes.length) throw new Error('Scene lesson requires at least one scene.');
-    this.state = this.createInitialState();
+    this.state = this.createInitialState(options.restoredState ?? null);
+    this.resumedFromCheckpoint = Boolean(
+      options.restoredState
+      && Object.values(options.restoredState.scenes).some((scene) => scene.status === 'met'),
+    );
     if (options.onStateChange) this.listeners.add(options.onStateChange);
     this.onBoardChange = options.onBoardChange;
     this.policyPrompt = options.policyPrompt?.trim() ?? '';
+    this.adaptiveContext = options.adaptiveContext?.trim() ?? '';
     markProductLessonStarted(lesson.id);
     this.tools = [this.completeSceneTool(), this.showBoardTool()];
   }
@@ -69,13 +78,38 @@ export class SceneLessonRuntime {
     return this.activeBoard;
   }
 
+  get isResuming() {
+    return this.resumedFromCheckpoint;
+  }
+
+  get completedSceneCount() {
+    return this.lesson.scenes.filter((scene) => this.state.scenes[scene.id]?.status === 'met').length;
+  }
+
   get systemPrompt() {
     const publishedPolicy = this.policyPrompt
       ? `\nPUBLISHED TEACHING POLICY\n${this.policyPrompt}\n`
       : '';
+    const adaptive = this.adaptiveContext
+      ? `\n${this.adaptiveContext}\n`
+      : '';
+    const opening = this.resumedFromCheckpoint
+      ? `
+RESUME OPENING
+- This session is resuming an interrupted lesson. Do NOT repeat the original welcome, lesson overview, or already completed scenes.
+- Your FIRST audible turn should be one short Egyptian-Arabic reconnection such as "رجعنا، نكمل من هنا." Mention the current practical point in a few words, then stop.
+- The application will then tell you to continue the CURRENT SCENE.
+`
+      : `
+OPENING
+- Your FIRST audible turn is only a short human welcome in Egyptian Arabic: greet the learner, say today's lesson title and practical outcome, explain that you will go step by step, and reassure them briefly about mistakes.
+- Keep it around 15–25 seconds and stop. Do NOT begin the current scene in the same turn.
+- The application will then tell you to begin the CURRENT SCENE.
+`;
+
     return `
 You are delivering one authored Englotti lesson as a natural live lesson with very small application-owned scenes.
-${publishedPolicy}
+${publishedPolicy}${adaptive}
 LESSON
 ${this.lesson.levelId.toUpperCase()} · ${this.lesson.unitTitle} · ${this.lesson.title}
 Primary learner performance: ${this.lesson.performance}
@@ -113,12 +147,7 @@ TEXT CHAT AND QUICK HELP
 - "مش فاهم" means explain the current point again more simply in Egyptian Arabic.
 - "عيد تاني" means repeat the last point more slowly.
 - "مثال تاني" means give one short example using only current-scene language.
-
-OPENING
-- Your FIRST audible turn is only a short human welcome in Egyptian Arabic: greet the learner, say today's lesson title and practical outcome, explain that you will go step by step, and reassure them briefly about mistakes.
-- Keep it around 15–25 seconds and stop. Do NOT begin the current scene in the same turn.
-- The application will then tell you to begin the CURRENT SCENE.
-
+${opening}
 CURRENT SCENE
 ${JSON.stringify(this.scenePayload(this.currentScene), null, 2)}
 `.trim();
@@ -146,18 +175,34 @@ ${JSON.stringify(this.scenePayload(this.currentScene), null, 2)}
 
   markPartnerTurnComplete() {}
 
-  private createInitialState(): SceneLessonState {
+  private createInitialState(restored: SceneLessonState | null): SceneLessonState {
     const scenes: Record<string, SceneLessonSceneState> = {};
-    this.lesson.scenes.forEach((scene, index) => {
+    for (const scene of this.lesson.scenes) {
+      const previous = restored?.lessonId === this.lesson.id ? restored.scenes[scene.id] : undefined;
+      const met = previous?.status === 'met';
       scenes[scene.id] = {
-        status: index === 0 ? 'active' : 'pending',
-        evidence: [],
+        status: met ? 'met' : 'pending',
+        evidence: met ? clone(previous?.evidence ?? []) : [],
+        metAt: met ? previous?.metAt : undefined,
       };
-    });
+    }
+
+    const restoredCurrent = restored?.lessonId === this.lesson.id
+      && this.lesson.scenes.some((scene) => scene.id === restored.currentSceneId)
+      ? restored.currentSceneId
+      : null;
+    const firstUnmet = this.lesson.scenes.find((scene) => scenes[scene.id].status !== 'met')?.id;
+    const currentSceneId = restoredCurrent && scenes[restoredCurrent]?.status !== 'met'
+      ? restoredCurrent
+      : firstUnmet ?? this.lesson.scenes.at(-1)!.id;
+
+    if (!restored?.completedAt) scenes[currentSceneId].status = 'active';
+
     return {
       lessonId: this.lesson.id,
-      currentSceneId: this.lesson.scenes[0].id,
+      currentSceneId,
       scenes,
+      completedAt: restored?.completedAt,
       updatedAt: new Date().toISOString(),
     };
   }
