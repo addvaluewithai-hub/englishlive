@@ -135,6 +135,11 @@ async function runAnalysis(
       interactionFocus: session.scenarioSnapshot.interactionFocus,
       durationSeconds: session.durationSeconds,
       transcript: session.transcript,
+      curriculumLevel: session.scenarioSnapshot.curriculumLevel,
+      lessonCode: session.scenarioSnapshot.lessonCode,
+      targetLanguageEn: session.scenarioSnapshot.targetLanguageEn,
+      correctionFocusEn: session.scenarioSnapshot.correctionFocusEn,
+      boundariesEn: session.scenarioSnapshot.boundariesEn,
     });
     const analysisJson = JSON.stringify(result.recap);
     const summaryJson = JSON.stringify({
