@@ -20,7 +20,7 @@ export const A1_SPEAKING_PILOT_LESSONS: SpeakingScenario[] = [
     modeId: 'just-chat',
     applicationType: 'practice',
     interactionFocus: ['initiate', 'respond', 'follow-up', 'maintain'],
-    partnerBriefEn: 'You are meeting the learner for the first time at a simple friendly English meetup. Have a two-sided first-contact conversation. Exchange names, basic wellbeing, age if appropriate, origin and residence. Share your own simple fictional details so the learner has real reasons to ask you questions too. The conversation can breathe naturally, but keep it inside familiar A1 first-contact language and do not drift into deep hobbies, football, work, news or other side topics before the lesson evidence is complete.',
+    partnerBriefEn: 'You are meeting the learner for the first time at a simple friendly English meetup. Have a two-sided first-contact conversation. Exchange names, basic wellbeing, age if appropriate, origin and residence. Share your own simple fictional details so the learner has real reasons to ask you questions too. Do not front-load model answers for the learner: ask or create the need first, then share your own parallel detail later. The conversation can breathe naturally, but keep it inside familiar A1 first-contact language and do not drift into deep hobbies, football, work, news or other side topics before the lesson evidence is complete.',
     courseSourceAr: 'A1 Learn • U1-L01 + U1-L02 + U1-L03',
     courseLessonIds: ['A1-U1-L01', 'A1-U1-L02', 'A1-U1-L03'],
     curriculum: {
@@ -57,7 +57,7 @@ export const A1_SPEAKING_PILOT_LESSONS: SpeakingScenario[] = [
       'two learner-initiated personal questions',
       'short complete turns rather than isolated words when a tiny clause is reasonably expected',
     ],
-    openingMoveEn: 'Start like a friendly person meeting the learner for the first time. Use one short greeting and introduce yourself with a simple fictional first name, then give the learner the turn. Do not provide model answers for the learner.',
+    openingMoveEn: 'Open with only a short friendly greeting such as “Hi! Nice to meet you.” Do not introduce your own name yet and do not ask a question in the same opening turn. Give the learner room to greet back. Then continue the first-meeting conversation naturally without supplying model answers.',
   },
 ];
 
