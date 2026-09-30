@@ -34,6 +34,8 @@ const progress = {
 
 const scenarios = [
   { name: 'speaking-home', path: '/speak', full: true },
+  { name: 'speaking-lesson-start', path: '/speak/scenario/a1-s1-l01', full: true },
+  { name: 'speaking-lesson-live', path: '/speak/live/a1-s1-l01', full: true },
   { name: 'speaking-world-travel', path: '/speak/world/travel', full: true },
   { name: 'speaking-scenario', path: '/speak/scenario/hotel-room-problem', full: true },
   { name: 'speaking-live', path: '/speak/live/hotel-room-problem?difficulty=recommended', full: true },

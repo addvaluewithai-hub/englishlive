@@ -37,14 +37,17 @@ export function SpeakingScenarioScreen() {
 
         {scenario.curriculum ? (
           <div className="sp-curriculum-chip">
-            {scenario.curriculum.level} • الوحدة {scenario.curriculum.unit} • الدرس {scenario.curriculum.position} من {scenario.curriculum.totalInUnit}
+            {scenario.curriculum.level} • {scenario.curriculum.lessonCode} • من 3 دروس Learn
           </div>
         ) : null}
 
         <h1>{scenario.titleAr}</h1>
 
-        {isCurriculumLesson && scenario.skillFocusAr ? (
-          <div className="sp-curriculum-chip">مهارة الكلام: {scenario.skillFocusAr}</div>
+        {isCurriculumLesson ? (
+          <div className="sp-role-row">
+            <span>👤 أنت: <strong>{scenario.learnerRoleAr}</strong></span>
+            <span>🐙 Otti: <strong>{scenario.aiRoleAr}</strong></span>
+          </div>
         ) : (
           <div className="sp-role-row">
             <span>👤 أنت: <strong>{scenario.learnerRoleAr}</strong></span>
@@ -54,11 +57,11 @@ export function SpeakingScenarioScreen() {
 
         <section className="sp-goal-card">
           <span className="sp-goal-icon">◎</span>
-          <div><strong>{isCurriculumLesson ? 'هدف التدريب' : 'الهدف'}</strong><p>{scenario.goalAr}</p></div>
+          <div><strong>{isCurriculumLesson ? 'هنطلع بإيه؟' : 'الهدف'}</strong><p>{scenario.goalAr}</p></div>
         </section>
 
         <section className="sp-uses-card">
-          <div className="sp-uses-title"><strong>{isCurriculumLesson ? 'هتتدرّب على:' : 'هتستخدم:'}</strong><span>✦</span></div>
+          <div className="sp-uses-title"><strong>{isCurriculumLesson ? 'الـchecks اللي هتظهر في التقدم:' : 'هتستخدم:'}</strong><span>✦</span></div>
           <div className="sp-use-chips">
             {scenario.usesAr.map((item) => <span key={item}>{item}</span>)}
           </div>
@@ -66,19 +69,19 @@ export function SpeakingScenarioScreen() {
 
         {isCurriculumLesson && scenario.practiceStepsAr?.length ? (
           <section className="sp-uses-card">
-            <div className="sp-uses-title"><strong>شكل الدرس:</strong><span>↗</span></div>
+            <div className="sp-uses-title"><strong>إزاي الدرس بيشتغل؟</strong><span>↗</span></div>
             <div className="sp-use-chips">
               {scenario.practiceStepsAr.map((item, index) => <span key={item}>{index + 1}. {item}</span>)}
             </div>
           </section>
         ) : null}
 
-        <div className="sp-duration">◷ حوالي {scenario.durationMinutes} دقائق</div>
+        <div className="sp-duration">◷ غالبًا {scenario.durationMinutes} دقائق — وممكن يخلص أسرع لو الـchecks اكتملت</div>
 
         {isCurriculumLesson ? (
           <section className="sp-curriculum-fixed">
-            <strong>اللغة مش موضوع الدرس</strong>
-            <p>Otti هيستخدم لغة A1 موجودة عندك كأداة للتدريب. الحكم هنا على مهارة الكلام نفسها، مش إنك تكرر جملة من Learn.</p>
+            <strong>مش اختبار حفظ، ومش شات مفتوح بلا هدف</strong>
+            <p>Otti هيرغي معاك طبيعي باستخدام لغة Learn اللي خدتها قبل كده. في الخلفية بيسجل evidence لما تستخدمها فعلًا؛ مش هيقولك “برافو خلصنا check”، لكن هتشوف التقدم في الشاشة.</p>
           </section>
         ) : (
           <section className="sp-difficulty-section">
@@ -96,7 +99,7 @@ export function SpeakingScenarioScreen() {
 
         <Link className="sp-start-button" to={liveTo}>
           <ProductIcon name="speak" size={32} />
-          <span>{isCurriculumLesson ? 'ابدأ تدريب الكلام' : 'ابدأ المحادثة'}</span>
+          <span>{isCurriculumLesson ? 'ابدأ المحادثة' : 'ابدأ المحادثة'}</span>
           <ProductIcon name="chevron" size={25} />
         </Link>
       </article>
