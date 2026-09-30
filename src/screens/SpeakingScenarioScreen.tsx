@@ -43,29 +43,42 @@ export function SpeakingScenarioScreen() {
 
         <h1>{scenario.titleAr}</h1>
 
-        <div className="sp-role-row">
-          <span>👤 أنت: <strong>{scenario.learnerRoleAr}</strong></span>
-          <span>🐙 Otti: <strong>{scenario.aiRoleAr}</strong></span>
-        </div>
+        {isCurriculumLesson && scenario.skillFocusAr ? (
+          <div className="sp-curriculum-chip">مهارة الكلام: {scenario.skillFocusAr}</div>
+        ) : (
+          <div className="sp-role-row">
+            <span>👤 أنت: <strong>{scenario.learnerRoleAr}</strong></span>
+            <span>🐙 Otti: <strong>{scenario.aiRoleAr}</strong></span>
+          </div>
+        )}
 
         <section className="sp-goal-card">
           <span className="sp-goal-icon">◎</span>
-          <div><strong>الهدف</strong><p>{scenario.goalAr}</p></div>
+          <div><strong>{isCurriculumLesson ? 'هدف التدريب' : 'الهدف'}</strong><p>{scenario.goalAr}</p></div>
         </section>
 
         <section className="sp-uses-card">
-          <div className="sp-uses-title"><strong>هتستخدم:</strong><span>✦</span></div>
+          <div className="sp-uses-title"><strong>{isCurriculumLesson ? 'هتتدرّب على:' : 'هتستخدم:'}</strong><span>✦</span></div>
           <div className="sp-use-chips">
             {scenario.usesAr.map((item) => <span key={item}>{item}</span>)}
           </div>
         </section>
 
+        {isCurriculumLesson && scenario.practiceStepsAr?.length ? (
+          <section className="sp-uses-card">
+            <div className="sp-uses-title"><strong>شكل الدرس:</strong><span>↗</span></div>
+            <div className="sp-use-chips">
+              {scenario.practiceStepsAr.map((item, index) => <span key={item}>{index + 1}. {item}</span>)}
+            </div>
+          </section>
+        ) : null}
+
         <div className="sp-duration">◷ حوالي {scenario.durationMinutes} دقائق</div>
 
         {isCurriculumLesson ? (
           <section className="sp-curriculum-fixed">
-            <strong>مستوى الدرس A1</strong>
-            <p>مش محتاج تختار صعوبة. السرعة والمساعدة ممكن تتكيف أثناء الكلام، لكن هدف الدرس واللغة المطلوبة يفضلوا داخل A1.</p>
+            <strong>اللغة مش موضوع الدرس</strong>
+            <p>Otti هيستخدم لغة A1 موجودة عندك كأداة للتدريب. الحكم هنا على مهارة الكلام نفسها، مش إنك تكرر جملة من Learn.</p>
           </section>
         ) : (
           <section className="sp-difficulty-section">
@@ -83,7 +96,7 @@ export function SpeakingScenarioScreen() {
 
         <Link className="sp-start-button" to={liveTo}>
           <ProductIcon name="speak" size={32} />
-          <span>{isCurriculumLesson ? 'ابدأ الدرس' : 'ابدأ المحادثة'}</span>
+          <span>{isCurriculumLesson ? 'ابدأ تدريب الكلام' : 'ابدأ المحادثة'}</span>
           <ProductIcon name="chevron" size={25} />
         </Link>
       </article>
