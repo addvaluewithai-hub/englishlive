@@ -1,4 +1,4 @@
-const STORAGE_KEY = 'englotti:speaking-a1-pilot-completed-v2';
+const STORAGE_KEY = 'englotti:speaking-a1-pilot-completed-v3';
 
 export function readA1SpeakingPilotProgress() {
   if (typeof window === 'undefined') return [] as string[];
@@ -10,8 +10,8 @@ export function readA1SpeakingPilotProgress() {
   }
 }
 
-export function markA1SpeakingPilotLessonComplete(lessonId: string) {
-  if (typeof window === 'undefined') return;
+export function markA1SpeakingPilotLessonComplete(lessonId: string, evidenceVerified = false) {
+  if (typeof window === 'undefined' || !evidenceVerified) return;
   const completed = new Set(readA1SpeakingPilotProgress());
   completed.add(lessonId);
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify([...completed]));
