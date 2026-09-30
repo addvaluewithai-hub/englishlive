@@ -47,6 +47,11 @@ export interface SpeakingScenarioSnapshot {
   usesAr: string[];
   curriculumRefs: string[];
   interactionFocus: string[];
+  curriculumLevel?: string;
+  lessonCode?: string;
+  targetLanguageEn?: string[];
+  correctionFocusEn?: string[];
+  boundariesEn?: string[];
 }
 
 export type SpeakingSessionStatus = 'active' | 'completed' | 'abandoned' | 'error';
