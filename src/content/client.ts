@@ -90,7 +90,7 @@ function parseTeachingBundle(value: unknown): TeachingBundleResponse | null {
     || typeof teachingPolicy.key !== 'string'
     || typeof teachingPolicy.revisionId !== 'string'
     || typeof teachingPolicy.revisionNumber !== 'number'
-  ) return false as never;
+  ) return null;
   return value as unknown as TeachingBundleResponse;
 }
 
