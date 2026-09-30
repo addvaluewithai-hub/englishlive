@@ -3,6 +3,8 @@ import { apiUrl } from '../config/api';
 import {
   A1_LEVEL_PRODUCT,
   A1_UNIT_1_PRODUCT,
+  B1_LEVEL_PRODUCT,
+  B1_UNIT_1_PRODUCT,
   type ProductLevelDefinition,
   type ProductUnitDefinition,
 } from '../productV2/course';
@@ -29,8 +31,8 @@ const CEFR_PRESENTATION: Record<string, { arabicTitle: string; description: stri
     description: 'بناء ثقتك في التحدث وفهم المواقف اليومية الأكثر تنوعًا.',
   },
   b1: {
-    arabicTitle: 'المتوسط',
-    description: 'التواصل بثقة في مواقف الحياة والعمل والدراسة.',
+    arabicTitle: B1_LEVEL_PRODUCT.arabicTitle,
+    description: B1_LEVEL_PRODUCT.description,
   },
   b2: {
     arabicTitle: 'ما فوق المتوسط',
@@ -46,13 +48,12 @@ const CEFR_PRESENTATION: Record<string, { arabicTitle: string; description: stri
   },
 };
 
-function localFallbackCatalog(): ProductCatalog {
-  const connectedUnits = A1_LEVEL_PRODUCT.connectedUnits;
-  const lessonSlotCount = connectedUnits.reduce((sum, unit) => sum + unit.lessons.length, 0);
-  const level: ProductLevelDefinition = {
-    ...A1_LEVEL_PRODUCT,
+function connectedLocalLevel(level: ProductLevelDefinition): ProductLevelDefinition {
+  const connectedUnits = level.connectedUnits;
+  return {
+    ...level,
     unitCount: connectedUnits.length,
-    lessonSlotCount,
+    lessonSlotCount: connectedUnits.reduce((sum, unit) => sum + unit.lessons.length, 0),
     outline: connectedUnits.map((unit) => ({
       id: unit.id,
       order: unit.order,
@@ -62,12 +63,16 @@ function localFallbackCatalog(): ProductCatalog {
       connected: true,
     })),
   };
+}
 
+const LOCAL_B1_PILOT_LEVEL = connectedLocalLevel(B1_LEVEL_PRODUCT);
+
+function localFallbackCatalog(): ProductCatalog {
   return {
     source: 'local-fallback',
     courseSlug: 'englotti-english',
     courseTitle: 'Englotti English',
-    levels: [level],
+    levels: [connectedLocalLevel(A1_LEVEL_PRODUCT), LOCAL_B1_PILOT_LEVEL],
   };
 }
 
@@ -83,6 +88,12 @@ function presentationForUnit(id: string, title: string) {
     return {
       arabicTitle: A1_UNIT_1_PRODUCT.arabicTitle,
       description: A1_UNIT_1_PRODUCT.description,
+    };
+  }
+  if (id === B1_UNIT_1_PRODUCT.id) {
+    return {
+      arabicTitle: B1_UNIT_1_PRODUCT.arabicTitle,
+      description: B1_UNIT_1_PRODUCT.description,
     };
   }
   return {
@@ -144,6 +155,10 @@ function toProductCatalog(payload: PublishedCatalogResponse): ProductCatalog {
       };
     })
     .filter((level) => level.connectedUnits.length > 0);
+
+  // The first two B1 Learn lessons are an explicit hardcoded pilot. Keep them visible
+  // until B1 is published in Neon, then the published level takes over automatically.
+  if (!levels.some((level) => level.id.toLowerCase() === 'b1')) levels.push(LOCAL_B1_PILOT_LEVEL);
 
   if (!levels.length) throw new Error('Published catalog is empty.');
   return {
