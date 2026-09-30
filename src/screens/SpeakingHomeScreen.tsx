@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ProductIcon } from '../components/ProductIcon';
 import { speakingAssets } from '../speaking/assets';
-import { A1_SPEAKING_PILOT_LESSONS } from '../speaking/catalog';
+import { A1_SPEAKING_PILOT_LESSONS, B1_SPEAKING_PREVIEW_LESSONS } from '../speaking/catalog';
 import { readA1SpeakingPilotProgress, resetA1SpeakingPilotProgress } from '../speaking/roadmapProgress';
 
 export function SpeakingHomeScreen() {
@@ -10,6 +10,7 @@ export function SpeakingHomeScreen() {
   const completedSet = new Set(completed);
   const completedCount = A1_SPEAKING_PILOT_LESSONS.filter((lesson) => completedSet.has(lesson.id)).length;
   const currentLesson = A1_SPEAKING_PILOT_LESSONS[0];
+  const b1PreviewLesson = B1_SPEAKING_PREVIEW_LESSONS[0];
   const progressPercent = A1_SPEAKING_PILOT_LESSONS.length
     ? Math.round((completedCount / A1_SPEAKING_PILOT_LESSONS.length) * 100)
     : 0;
@@ -23,12 +24,12 @@ export function SpeakingHomeScreen() {
     <section className="sp-home sp-roadmap-home" dir="rtl">
       <header className="sp-roadmap-hero">
         <div className="sp-roadmap-hero-copy">
-          <span className="sp-eyebrow">Speaking A1 • Pilot</span>
+          <span className="sp-eyebrow">Speaking • Pilot</span>
           <h1>استخدم اللي اتعلمته</h1>
-          <p>النسخة دي فيها درس واحد بس. بناخد لغة Learn اللي اتعلمتها ونخليها تطلع منك جوه محادثة حقيقية، والدرس يقفل لما الـevidence المطلوب يظهر.</p>
+          <p>بناخد لغة Learn اللي اتعلمتها ونخليها تطلع منك جوه محادثة حقيقية، والدرس يقفل لما الـevidence المطلوب يظهر.</p>
           <div className="sp-roadmap-progress-copy">
             <strong>{completedCount} / 1</strong>
-            <span>درس تجريبي</span>
+            <span>A1 pilot</span>
           </div>
           <div className="sp-roadmap-progress-bar" aria-label={`اكتملت ${progressPercent}% من النسخة التجريبية`}>
             <span style={{ width: `${progressPercent}%` }} />
@@ -77,11 +78,46 @@ export function SpeakingHomeScreen() {
         {currentLesson ? (
           <Link className="sp-roadmap-continue" to={`/speak/scenario/${currentLesson.id}`}>
             <ProductIcon name="speak" size={29} />
-            <span>{completedCount ? 'جرّب الدرس تاني' : 'ابدأ درس المحادثة'}</span>
+            <span>{completedCount ? 'جرّب درس A1 تاني' : 'ابدأ درس A1'}</span>
             <ProductIcon name="chevron" size={24} />
           </Link>
         ) : null}
       </section>
+
+      {b1PreviewLesson ? (
+        <section className="sp-roadmap-unit">
+          <header className="sp-roadmap-unit-header">
+            <div>
+              <span className="sp-roadmap-level-chip">B1 Preview • Learn U1-L01 → U1-L04</span>
+              <h2>Independent conversation</h2>
+              <p>هنا الفرق مش كلمات أصعب وخلاص: المطلوب إنك تدخل في حوار من غير سكريبت، تحافظ عليه، تتفاعل مع خبر، تعمل follow-up، وتصلّح المعنى لما يحصل gap.</p>
+            </div>
+            <span className="sp-roadmap-unit-count">B1</span>
+          </header>
+
+          <div className="sp-roadmap-list">
+            <Link className="sp-roadmap-lesson is-current" to={`/speak/scenario/${b1PreviewLesson.id}`}>
+              <span className="sp-roadmap-step" aria-hidden="true">B1</span>
+              <div className="sp-roadmap-lesson-copy">
+                <small>{b1PreviewLesson.curriculum?.lessonCode} • {b1PreviewLesson.skillFocusAr}</small>
+                <strong>{b1PreviewLesson.titleAr}</strong>
+                <p>{b1PreviewLesson.goalAr}</p>
+                <div className="sp-roadmap-lesson-meta">
+                  <span>◷ حوالي {b1PreviewLesson.durationMinutes} دقائق</span>
+                  <span className="is-now">جرّبه للمقارنة</span>
+                </div>
+              </div>
+              <span className="sp-roadmap-arrow" aria-hidden="true">‹</span>
+            </Link>
+          </div>
+
+          <Link className="sp-roadmap-continue" to={`/speak/scenario/${b1PreviewLesson.id}`}>
+            <ProductIcon name="speak" size={29} />
+            <span>جرّب درس B1</span>
+            <ProductIcon name="chevron" size={24} />
+          </Link>
+        </section>
+      ) : null}
 
       <section className="sp-roadmap-secondary">
         <div>
@@ -91,7 +127,7 @@ export function SpeakingHomeScreen() {
         <Link to="/speak/just-chat">محادثة حرة</Link>
       </section>
 
-      {completedCount > 0 ? <button className="sp-roadmap-reset" type="button" onClick={resetPilot}>إعادة تجربة الدرس من الأول</button> : null}
+      {completedCount > 0 ? <button className="sp-roadmap-reset" type="button" onClick={resetPilot}>إعادة تجربة درس A1 من الأول</button> : null}
     </section>
   );
 }
