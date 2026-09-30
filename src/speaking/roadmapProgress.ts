@@ -11,7 +11,7 @@ export function readA1SpeakingPilotProgress() {
 }
 
 export function markA1SpeakingPilotLessonComplete(lessonId: string, evidenceVerified = false) {
-  if (typeof window === 'undefined' || !evidenceVerified) return;
+  if (typeof window === 'undefined' || !evidenceVerified || !lessonId.startsWith('a1-')) return;
   const completed = new Set(readA1SpeakingPilotProgress());
   completed.add(lessonId);
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify([...completed]));
