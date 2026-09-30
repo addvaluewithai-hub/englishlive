@@ -1,4 +1,5 @@
 import { A1_SPEAKING_PILOT_LESSONS, a1SpeakingPilotLessonById } from './a1Pilot';
+import { B1_SPEAKING_PREVIEW_LESSONS, b1SpeakingPreviewLessonById } from './b1Pilot';
 import { speakingAssets } from './assets';
 
 export type SpeakingReadiness = 'ready' | 'challenge' | 'later';
@@ -19,7 +20,7 @@ export type SpeakingInteractionSkill =
   | 'opinion';
 
 export type SpeakingCurriculumMeta = {
-  level: 'A1';
+  level: 'A1' | 'B1';
   unit: number;
   unitTitleAr: string;
   lessonCode: string;
@@ -222,15 +223,17 @@ export const FEATURED_SPEAKING_SCENARIO: SpeakingScenario = {
   courseLessonIds: ['A1-U1-L01', 'A1-U1-L03', 'A1-U1-L04'],
 };
 
-export { A1_SPEAKING_PILOT_LESSONS };
+export { A1_SPEAKING_PILOT_LESSONS, B1_SPEAKING_PREVIEW_LESSONS };
 
 export function speakingWorldById(worldId?: string) {
   return SPEAKING_WORLDS.find((world) => world.id === worldId) ?? SPEAKING_WORLDS[1];
 }
 
 export function speakingScenarioById(scenarioId?: string) {
-  const curriculumLesson = a1SpeakingPilotLessonById(scenarioId);
-  if (curriculumLesson) return curriculumLesson;
+  const a1CurriculumLesson = a1SpeakingPilotLessonById(scenarioId);
+  if (a1CurriculumLesson) return a1CurriculumLesson;
+  const b1CurriculumLesson = b1SpeakingPreviewLessonById(scenarioId);
+  if (b1CurriculumLesson) return b1CurriculumLesson;
   if (scenarioId === FEATURED_SPEAKING_SCENARIO.id) return FEATURED_SPEAKING_SCENARIO;
   for (const world of SPEAKING_WORLDS) {
     for (const group of world.groups) {
