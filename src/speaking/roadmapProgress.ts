@@ -1,4 +1,4 @@
-const STORAGE_KEY = 'englotti:speaking-a1-pilot-completed-v1';
+const STORAGE_KEY = 'englotti:speaking-a1-pilot-completed-v2';
 
 export function readA1SpeakingPilotProgress() {
   if (typeof window === 'undefined') return [] as string[];
