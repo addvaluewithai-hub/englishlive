@@ -87,21 +87,22 @@ export function useLessonEvidenceRuntime(scenarioId: string) {
       ].join(' '),
       behavior: 'BLOCKING',
       parameters: {
-        type: 'object',
-        additionalProperties: false,
+        // This object is sent directly over the raw v1beta WebSocket, not via an SDK.
+        // Use protobuf enum spellings and only fields supported by FunctionDeclaration.parameters.
+        type: 'OBJECT',
         properties: {
           check_id: {
-            type: 'string',
+            type: 'STRING',
             enum: contract.checks.map((check) => check.id),
             description: 'The lesson check evidenced by the learner turn.',
           },
           level: {
-            type: 'string',
+            type: 'STRING',
             enum: ['supported', 'independent'],
             description: 'How independently the learner demonstrated the check.',
           },
           learner_excerpt: {
-            type: 'string',
+            type: 'STRING',
             description: 'Exact short excerpt from the learner turn that supports this evidence.',
           },
         },
