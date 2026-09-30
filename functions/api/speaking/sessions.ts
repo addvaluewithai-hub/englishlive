@@ -20,6 +20,7 @@ export const onRequestPost = async ({ request, env }: PagesContext) => {
     const body = await request.json().catch(() => null) as Record<string, unknown> | null;
     const scenarioId = typeof body?.scenarioId === 'string' ? body.scenarioId.trim().slice(0, 160) : '';
     const difficulty = sanitizeSpeakingDifficulty(body?.difficulty);
+    const sessionKind = body?.sessionKind === 'guided_practice' ? 'guided_practice' : 'world_scenario';
     const characterSlug = typeof body?.characterSlug === 'string' ? body.characterSlug.trim().slice(0, 120) : '';
     const snapshot = sanitizeSpeakingScenarioSnapshot(body?.scenarioSnapshot);
     if (!scenarioId || !characterSlug || !snapshot.titleAr || !snapshot.goalAr) {
@@ -46,7 +47,10 @@ export const onRequestPost = async ({ request, env }: PagesContext) => {
     }
 
     const snapshotJson = JSON.stringify(snapshot);
-    const metadataJson = JSON.stringify({ scenarioId, runtime: 'speaking-hub-v1' });
+    const metadataJson = JSON.stringify({
+      scenarioId,
+      runtime: sessionKind === 'guided_practice' ? 'speaking-roadmap-a1-pilot' : 'speaking-hub-v1',
+    });
     const rows = await sql`
       insert into speaking_sessions (
         user_id,
@@ -60,7 +64,7 @@ export const onRequestPost = async ({ request, env }: PagesContext) => {
         analysis_status
       ) values (
         ${auth.userId},
-        'world_scenario',
+        ${sessionKind},
         ${String(character.id)}::uuid,
         ${String(character.revision_id)}::uuid,
         ${difficulty},
