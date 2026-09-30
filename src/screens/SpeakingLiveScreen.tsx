@@ -18,6 +18,7 @@ import {
   saveSpeakingTranscript,
 } from '../speaking/api';
 import { speakingScenarioById, type SpeakingDifficulty } from '../speaking/catalog';
+import { LessonEvidenceProgress, useLessonEvidenceRuntime } from '../speaking/lessonEvidenceRuntime';
 import type { SpeakingTurn, SpeakingTurnSpeaker } from '../speaking/types';
 
 function pcmSampleRate(mimeType: string) {
@@ -66,6 +67,7 @@ export function SpeakingLiveScreen() {
   const navigate = useNavigate();
   const scenario = speakingScenarioById(scenarioId);
   const isCurriculumLesson = Boolean(scenario.curriculum);
+  const lessonEvidence = useLessonEvidenceRuntime(scenario.id);
   const profile = readLearnerProfile();
   const character = getCharacterDefinition('otti');
   const visualQa = import.meta.env.VITE_VISUAL_QA === '1';
@@ -199,6 +201,7 @@ export function SpeakingLiveScreen() {
     setLearnerDraft('');
     setTeacherDraft('');
     manualInterrupt.current = false;
+    lessonEvidence.reset();
 
     try {
       const publishedCharacter = await loadPublishedCharacter(character);
@@ -236,6 +239,7 @@ export function SpeakingLiveScreen() {
         },
         onOutputTranscript: (text) => {
           if (manualInterrupt.current) return;
+          lessonEvidence.noteTeacherOutput();
           setLearnerMicEnabled(false);
           queue.pushTranscript(text);
           const next = appendTranscript(teacherDraftRef.current, text);
@@ -261,9 +265,12 @@ export function SpeakingLiveScreen() {
           manualInterrupt.current = false;
           flushTeacherDraft();
           queue.markTurnComplete();
+          if (lessonEvidence.consumeAutoFinishAfterTurn()) {
+            window.setTimeout(() => void finishConversation(), 450);
+          }
         },
         onError: (message) => setError(message),
-      }, []);
+      }, lessonEvidence.tools);
       transport.current = live;
 
       const mic = new MicrophonePcmStream();
@@ -295,6 +302,7 @@ export function SpeakingLiveScreen() {
         `Learner role: ${scenario.learnerRoleAr}. Practical goal: ${scenario.goalAr}.`,
         productiveBoundary,
         curriculumContract,
+        lessonEvidence.promptEn,
         learnerContext,
         'Conversation comes first. Stay in role and react to meaning. Do not explain the exercise, quiz the learner, or turn every turn into a question.',
         'Contribute information, answer naturally, use follow-ups when useful, and let the learner initiate or repair when the situation creates a reason to do so.',
@@ -302,7 +310,7 @@ export function SpeakingLiveScreen() {
         'Speak English by default. If the learner explicitly asks for Arabic help, give one brief Egyptian-Arabic clarification and return to English.',
         'Never assign a CEFR level, numeric score, mastery claim, pronunciation score, accent judgment, or unsupported assessment during the conversation.',
         'Keep each spoken turn concise so the learner gets most of the speaking time.',
-      ].join('\n');
+      ].filter(Boolean).join('\n');
 
       await queue.unlock();
       await live.connect(prompt, { voiceName: characterConfig.voiceName ?? undefined });
@@ -417,8 +425,8 @@ export function SpeakingLiveScreen() {
     const instructions = {
       simplify: 'Rephrase only your last point in simpler English, then stay in role and continue.',
       arabic: 'Briefly explain only your last point in Egyptian Arabic, then return to English and continue the roleplay.',
-      example: 'Give one very short English example the learner could use in this situation, then give them the turn.',
-      'say-it': 'The learner needs production help. Ask in Egyptian Arabic what they want to say if the intent is unclear; otherwise give one short natural English phrase they can use, then resume the roleplay.',
+      example: 'Give one very short English example the learner could use in this situation, then give them the turn. Any evidence copied from this exact example is supported, not independent.',
+      'say-it': 'The learner needs production help. Ask in Egyptian Arabic what they want to say if the intent is unclear; otherwise give one short natural English phrase they can use, then resume the roleplay. Any evidence copied from this exact phrase is supported, not independent.',
     } as const;
     live.sendText(instructions[kind]);
     setHelpOpen(false);
@@ -487,6 +495,8 @@ export function SpeakingLiveScreen() {
           <span className="fs-live-wave" aria-hidden="true"><i /><i /><i /></span>
           <span><strong>{statusText.title}</strong><small>{statusText.body}</small></span>
         </div>
+
+        <LessonEvidenceProgress runtime={lessonEvidence} />
 
         <button type="button" className="fs-history-button" onClick={() => setHistoryOpen(true)} aria-label="سجل المحادثة">
           <span aria-hidden="true">↶</span>
