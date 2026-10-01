@@ -35,6 +35,11 @@ const progress = {
 const scenarios = [
   { name: 'practice-home', path: '/practice', full: true },
   { name: 'practice-a1-people-world', path: '/practice/A1/world/people-social', full: true },
+  { name: 'practice-a1-food-world', path: '/practice/A1/world/food-shopping', full: true },
+  { name: 'practice-order-start', path: '/practice/mission/a1-order-a-drink', full: true },
+  { name: 'practice-order-live', path: '/practice/live/a1-order-a-drink', full: true },
+  { name: 'practice-order-live-hint', path: '/practice/live/a1-order-a-drink', click: '.practice-hint-toggle', full: true },
+  { name: 'practice-order-complete', path: '/practice/complete/a1-order-a-drink', full: true },
   { name: 'practice-b1-travel-world', path: '/practice/B1/world/travel-transport', full: true },
   { name: 'legacy-speak-alias', path: '/speak', full: true },
   { name: 'speaking-lesson-start', path: '/speak/scenario/a1-s1-l01', full: true },
@@ -81,6 +86,10 @@ try {
       await page.goto(`${baseUrl}${scenario.path}`, { waitUntil: 'networkidle' });
       await page.locator('body').waitFor({ state: 'visible' });
       await page.waitForTimeout(150);
+      if (scenario.click) {
+        await page.locator(scenario.click).click();
+        await page.waitForTimeout(80);
+      }
 
       await page.screenshot({
         path: path.join(outputDir, `${viewport.name}--${scenario.name}.png`),
