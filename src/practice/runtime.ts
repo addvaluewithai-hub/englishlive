@@ -4,6 +4,17 @@ import { practiceMissionContractBySlug } from './missions/catalog';
 import type { PracticeMissionBeat } from './types';
 
 export type PracticeSupportLevel = 0 | 1 | 2 | 3;
+export type PracticeSupportSummary = {
+  intentHints: number;
+  usefulLanguageReveals: number;
+  fullHelpReveals: number;
+};
+
+const emptySupportSummary = (): PracticeSupportSummary => ({
+  intentHints: 0,
+  usefulLanguageReveals: 0,
+  fullHelpReveals: 0,
+});
 
 export function usePracticeMissionRuntime(scenarioId?: string) {
   const contract = practiceMissionContractBySlug(scenarioId);
@@ -11,6 +22,8 @@ export function usePracticeMissionRuntime(scenarioId?: string) {
   const [activeBeatId, setActiveBeatId] = useState<string | null>(firstBeatId);
   const activeBeatIdRef = useRef<string | null>(firstBeatId);
   const [supportLevel, setSupportLevel] = useState<PracticeSupportLevel>(0);
+  const supportLevelRef = useRef<PracticeSupportLevel>(0);
+  const supportSummaryRef = useRef<PracticeSupportSummary>(emptySupportSummary());
   const finishAfterClosingRef = useRef(false);
   const finalClosingOutputRef = useRef(false);
 
@@ -18,7 +31,9 @@ export function usePracticeMissionRuntime(scenarioId?: string) {
     const next = contract?.beats[0]?.id ?? null;
     activeBeatIdRef.current = next;
     setActiveBeatId(next);
+    supportLevelRef.current = 0;
     setSupportLevel(0);
+    supportSummaryRef.current = emptySupportSummary();
     finishAfterClosingRef.current = false;
     finalClosingOutputRef.current = false;
   }
@@ -32,7 +47,10 @@ export function usePracticeMissionRuntime(scenarioId?: string) {
     const changed = activeBeatIdRef.current !== beat.id;
     activeBeatIdRef.current = beat.id;
     setActiveBeatId(beat.id);
-    if (changed) setSupportLevel(0);
+    if (changed) {
+      supportLevelRef.current = 0;
+      setSupportLevel(0);
+    }
 
     if (beat.type === 'ending') {
       finishAfterClosingRef.current = true;
@@ -93,11 +111,27 @@ export function usePracticeMissionRuntime(scenarioId?: string) {
   ].join('\n\n') : '';
 
   function revealSupport(level: Exclude<PracticeSupportLevel, 0>) {
-    setSupportLevel((current) => Math.max(current, level) as PracticeSupportLevel);
+    const previous = supportLevelRef.current;
+    if (level > previous) {
+      const summary = supportSummaryRef.current;
+      supportSummaryRef.current = {
+        intentHints: summary.intentHints + (previous < 1 && level >= 1 ? 1 : 0),
+        usefulLanguageReveals: summary.usefulLanguageReveals + (previous < 2 && level >= 2 ? 1 : 0),
+        fullHelpReveals: summary.fullHelpReveals + (previous < 3 && level >= 3 ? 1 : 0),
+      };
+    }
+    const next = Math.max(previous, level) as PracticeSupportLevel;
+    supportLevelRef.current = next;
+    setSupportLevel(next);
   }
 
   function hideSupport() {
+    supportLevelRef.current = 0;
     setSupportLevel(0);
+  }
+
+  function getSupportSummary() {
+    return { ...supportSummaryRef.current };
   }
 
   function noteTeacherOutput() {
@@ -120,6 +154,7 @@ export function usePracticeMissionRuntime(scenarioId?: string) {
     reset,
     revealSupport,
     hideSupport,
+    getSupportSummary,
     noteTeacherOutput,
     consumeAutoFinishAfterTurn,
   };
