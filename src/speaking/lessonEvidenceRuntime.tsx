@@ -7,7 +7,7 @@ import {
   type LessonEvidenceLevel,
   type LessonEvidenceState,
 } from './lessonContracts';
-import { markA1SpeakingPilotLessonComplete } from './roadmapProgress';
+import { markLearnLessonComplete } from './roadmapProgress';
 import { useRound2PracticeRuntime } from './round2PracticeRuntime';
 
 function normalizedEvidence(value: string) {
@@ -62,7 +62,7 @@ export function useLessonEvidenceRuntime(scenarioId: string) {
     if (summary.lessonComplete && !lessonCompleteRef.current) {
       lessonCompleteRef.current = true;
       finishAfterClosingRef.current = true;
-      markA1SpeakingPilotLessonComplete(scenarioId, true);
+      if (!round2.active) markLearnLessonComplete(scenarioId, true);
     }
 
     const normalInstruction = summary.lessonComplete
