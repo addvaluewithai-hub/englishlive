@@ -101,6 +101,7 @@ export function App() {
           <Route path="/studio/curriculum" element={<RequireAuth requireProfile={false}><StudioCurriculumScreen /></RequireAuth>} />
           <Route path="/home" element={<RequireAuth><HomeScreen /></RequireAuth>} />
           <Route path="/learn" element={<RequireAuth><LearnScreen /></RequireAuth>} />
+          <Route path="/learn/lesson/:lessonId" element={<RequireAuth><LearnV2LessonScreen /></RequireAuth>} />
           <Route path="/learn/pilot/:lessonId" element={<RequireAuth><LearnV2LessonScreen /></RequireAuth>} />
           <Route path="/learn/level/:levelId" element={<RequireAuth><LevelScreen /></RequireAuth>} />
           <Route path="/learn/unit/:unitId" element={<RequireAuth><UnitScreen /></RequireAuth>} />
