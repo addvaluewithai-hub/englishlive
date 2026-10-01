@@ -1,6 +1,7 @@
 import { useRef, useState, useSyncExternalStore } from 'react';
 import type { LiveClientTool } from '../live/tools';
 import { learnV2GuidedConversationByScenarioId } from './learnV2Guided';
+import { markLearnLessonComplete } from './roadmapProgress';
 
 export type Round2AttemptOutcome = 'accepted' | 'retry_required';
 
@@ -63,24 +64,13 @@ export function useRound2PracticeRuntime(scenarioId: string, enabled: boolean) {
     const step = guided.steps[currentStep];
 
     if (!step) {
-      return {
-        error: 'Round 2 is already complete. Do not create another practice step.',
-        round_complete: true,
-      };
+      return { error: 'Round 2 is already complete. Do not create another practice step.', round_complete: true };
     }
     if (requestedStep !== currentStep) {
-      return {
-        error: `Wrong Round 2 step. The active step is ${currentStep}.`,
-        active_step_index: currentStep,
-        instruction: 'Stay on the active step. Do not advance the conversation.',
-      };
+      return { error: `Wrong Round 2 step. The active step is ${currentStep}.`, active_step_index: currentStep, instruction: 'Stay on the active step. Do not advance the conversation.' };
     }
     if (!excerpt) {
-      return {
-        error: 'learner_excerpt is required and must come from the learner attempt.',
-        active_step_index: currentStep,
-        instruction: 'Do not advance the conversation.',
-      };
+      return { error: 'learner_excerpt is required and must come from the learner attempt.', active_step_index: currentStep, instruction: 'Do not advance the conversation.' };
     }
 
     if (outcome === 'retry_required') {
@@ -106,6 +96,7 @@ export function useRound2PracticeRuntime(scenarioId: string, enabled: boolean) {
     const nextStep = guided.steps[nextIndex];
 
     if (!nextStep) {
+      markLearnLessonComplete(scenarioId, true);
       finalClosingPendingRef.current = true;
       finalClosingOutputRef.current = false;
       return {
@@ -144,19 +135,9 @@ export function useRound2PracticeRuntime(scenarioId: string, enabled: boolean) {
       parameters: {
         type: 'OBJECT',
         properties: {
-          step_index: {
-            type: 'INTEGER',
-            description: 'Zero-based active Round 2 step index. Use the active step stated in the prompt/tool response.',
-          },
-          outcome: {
-            type: 'STRING',
-            enum: ['accepted', 'retry_required'],
-            description: 'Whether the learner produced acceptable English for the current intent or must retry after correction.',
-          },
-          learner_excerpt: {
-            type: 'STRING',
-            description: 'Exact short learner excerpt being judged.',
-          },
+          step_index: { type: 'INTEGER', description: 'Zero-based active Round 2 step index. Use the active step stated in the prompt/tool response.' },
+          outcome: { type: 'STRING', enum: ['accepted', 'retry_required'], description: 'Whether the learner produced acceptable English for the current intent or must retry after correction.' },
+          learner_excerpt: { type: 'STRING', description: 'Exact short learner excerpt being judged.' },
         },
         required: ['step_index', 'outcome', 'learner_excerpt'],
       },
