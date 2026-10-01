@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { ProductIcon } from '../components/ProductIcon';
 import { apiUrl } from '../config/api';
 import { learnV2LessonById, type LearnV2ListeningClip } from '../learnV2/catalog';
+import { learnUnitForLesson } from '../learnV2/roadmap';
 
 const STEP_LABELS = [
   { key: 'goal', title: 'الهدف', icon: '◎' },
@@ -43,8 +44,8 @@ export function LearnV2LessonScreen() {
   if (!lesson) {
     return (
       <section className="v2-empty-screen" dir="rtl">
-        <h1>الدرس التجريبي مش موجود</h1>
-        <p>ارجع لصفحة Learn واختار واحد من دروس الـpilot.</p>
+        <h1>الدرس مش موجود</h1>
+        <p>ارجع لخريطة Learn واختار درس متاح من المستوى.</p>
         <Link className="v2-primary-button" to="/learn">الرجوع لـ Learn</Link>
       </section>
     );
@@ -93,6 +94,10 @@ export function LearnV2LessonScreen() {
     setTranscriptsOpen((current) => ({ ...current, [clipId]: !current[clipId] }));
   }
 
+  const unit = learnUnitForLesson(lesson);
+  const backPath = unit
+    ? `/learn/level/${lesson.level.toLowerCase()}#unit-${unit.id}`
+    : `/learn/level/${lesson.level.toLowerCase()}`;
   const useItems = lesson.prepItems.filter((item) => item.role === 'use');
   const hearItems = lesson.prepItems.filter((item) => item.role === 'hear');
   const next = nextStep(step);
@@ -101,9 +106,9 @@ export function LearnV2LessonScreen() {
   return (
     <section className="lv2-lesson" dir="rtl">
       <header className="lv2-hero">
-        <Link className="lv2-back" to="/learn" aria-label="الرجوع لـ Learn"><ProductIcon name="chevron" size={22} /></Link>
+        <Link className="lv2-back" to={backPath} aria-label="الرجوع لخريطة المستوى"><ProductIcon name="chevron" size={22} /></Link>
         <div className="lv2-hero-copy">
-          <span className="lv2-code">Learn V2 • Pilot • {lesson.code}</span>
+          <span className="lv2-code">{lesson.code}</span>
           <h1><bdi dir="ltr">{lesson.titleEn}</bdi></h1>
           <p>{lesson.titleAr} • حوالي {lesson.estimatedMinutes} دقيقة</p>
         </div>
@@ -133,8 +138,8 @@ export function LearnV2LessonScreen() {
               {lesson.goalExample.map((line) => <p key={line}>{line}</p>)}
             </div>
             <div className="lv2-principle">
-              <strong>الفكرة هنا</strong>
-              <p>مش هنخلي Otti يشرح لك الدرس كله live. هنجهّز اللغة الأول، نسمعها في موقف طبيعي، وبعدها الـAI يدخل بس وقت التطبيق الحقيقي.</p>
+              <strong>طريقة الدرس</strong>
+              <p>هنجهّز اللغة الأول، نفهم الفكرة المهمة، نسمعها في موقف طبيعي، وبعدها تستخدمها بنفسك في محادثة حقيقية.</p>
             </div>
           </article>
         ) : null}
@@ -283,14 +288,14 @@ export function LearnV2LessonScreen() {
             <h2>{lesson.missionTitleAr}</h2>
             <p className="lv2-lead">{lesson.missionSetupAr}</p>
             <section className="lv2-mission-language">
-              <strong>Useful language — افتحها كمرجع، مش checklist</strong>
+              <strong>Useful language — مرجع سريع، مش checklist</strong>
               <div>{lesson.missionUsefulLanguage.map((item) => <span key={item} dir="ltr">{item}</span>)}</div>
             </section>
             <section className="lv2-help-explainer">
-              <span>؟</span>
+              <span>2×</span>
               <div>
-                <strong>المساعدة جزء من التعلم، مش غش</strong>
-                <p>جوه المحادثة تقدر تطلب تلميح، كلمات مفيدة أو جملة تساعدك تبدأ. الكلام اللي تاخده جاهز يتسجل practice بمساعدة؛ ولما تستخدم الحاجة من نفسك يبقى independent evidence.</p>
+                <strong>هتعمل المحادثة مرتين</strong>
+                <p>أول مرة الردود الإنجليزية هتظهر لك ككروت صغيرة. بعدها تعيد نفس الموقف والمعنى يظهر بالعربي وإنت تنتج الإنجليزي بنفسك. ولو احتجت تفهم كلام Otti، زر «اشرح بالعربي» موجود جوه المحادثة.</p>
               </div>
             </section>
             <Link className="lv2-mission-button" to={`/speak/live/${lesson.missionScenarioId}`}>
@@ -304,7 +309,7 @@ export function LearnV2LessonScreen() {
       </main>
 
       <footer className="lv2-footer">
-        {previous ? <button type="button" className="lv2-secondary" onClick={() => setStep(previous)}>السابق</button> : <Link className="lv2-secondary" to="/learn">Learn</Link>}
+        {previous ? <button type="button" className="lv2-secondary" onClick={() => setStep(previous)}>السابق</button> : <Link className="lv2-secondary" to={backPath}>المستوى</Link>}
         {next ? <button type="button" className="lv2-primary" onClick={() => setStep(next)}>التالي <span>←</span></button> : null}
       </footer>
     </section>
