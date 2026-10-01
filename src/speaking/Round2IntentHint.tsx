@@ -6,11 +6,13 @@ export function Round2IntentHint({
   round,
   learnerTurn,
   turns,
+  stepIndex,
 }: {
   scenarioId: string;
   round: string | null;
   learnerTurn: boolean;
   turns: SpeakingTurn[];
+  stepIndex: number;
 }) {
   if (round !== 'independent' || !learnerTurn) return null;
 
@@ -20,8 +22,7 @@ export function Round2IntentHint({
   const lastTurn = turns.at(-1);
   if (lastTurn?.speaker !== 'teacher') return null;
 
-  const completedLearnerTurns = turns.filter((turn) => turn.speaker === 'learner').length;
-  const step = guided.steps[completedLearnerTurns];
+  const step = guided.steps[stepIndex];
   if (!step?.round2HintAr) return null;
 
   return (
