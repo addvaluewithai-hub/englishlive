@@ -46,6 +46,25 @@ const ADAPTIVE_PLANS: Record<string, AdaptiveLessonPlan> = {
       { id: 'pattern-speech-act', kind: 'pattern', label: 'I suggest… / I promise…', description: 'state the conversational act', sceneIds: ['speech-act-verb-support'] },
     ],
   },
+  'b1-u1-l03-personal-updates-feelings-reactions': {
+    lessonId: 'b1-u1-l03-personal-updates-feelings-reactions',
+    items: [
+      { id: 'phrase-break-up', kind: 'phrase', label: 'break up', sceneIds: ['break-up-teach-use'] },
+      { id: 'phrase-have-in-common', kind: 'phrase', label: 'have … in common', sceneIds: ['have-in-common-teach-use'] },
+      { id: 'phrase-respect-for', kind: 'phrase', label: 'respect for …', sceneIds: ['respect-for-teach-use'] },
+      { id: 'word-engaged', kind: 'word', label: 'engaged', sceneIds: ['word-engaged-teach-use'] },
+      { id: 'word-annoyed', kind: 'word', label: 'annoyed', sceneIds: ['word-annoyed-teach-use'] },
+      { id: 'word-disappointing', kind: 'word', label: 'disappointing', sceneIds: ['word-disappointing-teach-use'] },
+      { id: 'word-confident', kind: 'word', label: 'confident', sceneIds: ['word-confident-teach-use'] },
+      { id: 'word-brave', kind: 'word', label: 'brave', sceneIds: ['word-brave-teach-use'] },
+      { id: 'word-gentle', kind: 'word', label: 'gentle', sceneIds: ['word-gentle-teach-use'] },
+      { id: 'word-honest', kind: 'word', label: 'honest', sceneIds: ['word-honest-teach-use'] },
+      { id: 'word-passion', kind: 'word', label: 'passion', sceneIds: ['word-passion-teach-use'] },
+      { id: 'word-relaxed', kind: 'word', label: 'relaxed', sceneIds: ['word-relaxed-teach-use'] },
+      { id: 'word-worry', kind: 'word', label: 'worry / worried', sceneIds: ['word-worry-teach-use'] },
+      { id: 'pattern-events-progress', kind: 'pattern', label: "I'm …-ing", description: 'current update', sceneIds: ['events-in-progress-support'] },
+    ],
+  },
 };
 
 export function adaptivePlanForLesson(lessonId: string): AdaptiveLessonPlan | null {
