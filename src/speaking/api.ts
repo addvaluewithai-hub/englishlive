@@ -50,6 +50,13 @@ export async function saveSpeakingTranscript(sessionId: string, transcript: Spea
   }));
 }
 
+export async function finalizeSpeakingSessionWithoutAnalysis(sessionId: string, transcript: SpeakingTurn[], durationSeconds: number) {
+  return sessionFrom(await authorizedJson(`/api/speaking/sessions/${encodeURIComponent(sessionId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ transcript, durationSeconds, complete: true }),
+  }));
+}
+
 export async function completeSpeakingSession(sessionId: string, transcript: SpeakingTurn[], durationSeconds: number) {
   return sessionFrom(await authorizedJson(`/api/speaking/sessions/${encodeURIComponent(sessionId)}`, {
     method: 'PUT',
