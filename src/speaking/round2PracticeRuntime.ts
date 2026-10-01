@@ -33,6 +33,8 @@ export function useRound2StepIndex(scenarioId: string) {
 export function useRound2PracticeRuntime(scenarioId: string, enabled: boolean) {
   const guided = enabled ? learnV2GuidedConversationByScenarioId(scenarioId) : undefined;
   const stepRef = useRef(0);
+  const finalClosingPendingRef = useRef(false);
+  const finalClosingOutputRef = useRef(false);
   const [stepIndex, setStepIndex] = useState(0);
 
   function setStep(next: number) {
@@ -41,8 +43,14 @@ export function useRound2PracticeRuntime(scenarioId: string, enabled: boolean) {
     publishStep(scenarioId, next);
   }
 
+  function isCompleteNow() {
+    return Boolean(guided && stepRef.current >= guided.steps.length);
+  }
+
   function reset() {
     setStep(0);
+    finalClosingPendingRef.current = false;
+    finalClosingOutputRef.current = false;
   }
 
   function judgeAttempt(args: Record<string, unknown>) {
@@ -98,13 +106,15 @@ export function useRound2PracticeRuntime(scenarioId: string, enabled: boolean) {
     const nextStep = guided.steps[nextIndex];
 
     if (!nextStep) {
+      finalClosingPendingRef.current = true;
+      finalClosingOutputRef.current = false;
       return {
         recorded: true,
         outcome,
         step_advanced: true,
         active_step_index: nextIndex,
         round_complete: true,
-        instruction: `The final Round 2 learner step is accepted. Give one short natural closing close to: “${guided.closingMoveEn}” Do not ask a new question or add another target.`,
+        instruction: `The final Round 2 learner step is accepted. Give one short natural closing close to: “${guided.closingMoveEn}” Do not ask a new question or add another target. This is the final spoken turn; the app will end the conversation after you finish it.`,
       };
     }
 
@@ -171,17 +181,31 @@ export function useRound2PracticeRuntime(scenarioId: string, enabled: boolean) {
     'Do not advance because the learner merely spoke. Advance only when judge_round2_attempt returns step_advanced=true.',
     'A corrected model you supplied does not itself prove success. The learner must make a fresh spoken attempt after the correction.',
     'Do not nitpick non-target mistakes that do not block the current communicative intent. This gate is for the CURRENT TARGET only.',
+    'When the final step is accepted, give the authored short closing and stop. The app will close the session automatically; do not wait for the learner to end it.',
     sequence,
   ].join('\n\n') : '';
+
+  function noteTeacherOutput() {
+    if (finalClosingPendingRef.current && isCompleteNow()) finalClosingOutputRef.current = true;
+  }
+
+  function consumeAutoFinishAfterTurn() {
+    if (!finalClosingPendingRef.current || !finalClosingOutputRef.current || !isCompleteNow()) return false;
+    finalClosingPendingRef.current = false;
+    finalClosingOutputRef.current = false;
+    return true;
+  }
 
   return {
     active: Boolean(guided),
     guided,
     stepIndex,
     isComplete: Boolean(guided && stepIndex >= guided.steps.length),
-    isCompleteNow: () => Boolean(guided && stepRef.current >= guided.steps.length),
+    isCompleteNow,
     tools,
     promptEn,
     reset,
+    noteTeacherOutput,
+    consumeAutoFinishAfterTurn,
   };
 }
