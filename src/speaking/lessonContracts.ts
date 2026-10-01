@@ -1,5 +1,5 @@
 import { B1_CATCH_UP_CONTRACT } from './b1LessonContract';
-import { LEARN_V2_A1_U1_L01_CONTRACT, LEARN_V2_B1_U1_L01_CONTRACT } from './learnV2LessonContracts';
+import { LEARN_V2_LESSON_CONTRACTS } from './learnV2LessonContracts';
 
 export type LessonEvidenceLevel = 'supported' | 'independent';
 
@@ -119,12 +119,11 @@ const FIRST_CONTACT_CONTRACT: SpeakingLessonContract = {
   ].join('\n'),
 };
 
-const CONTRACTS: Record<string, SpeakingLessonContract> = {
-  [FIRST_CONTACT_CONTRACT.scenarioId]: FIRST_CONTACT_CONTRACT,
-  [B1_CATCH_UP_CONTRACT.scenarioId]: B1_CATCH_UP_CONTRACT,
-  [LEARN_V2_A1_U1_L01_CONTRACT.scenarioId]: LEARN_V2_A1_U1_L01_CONTRACT,
-  [LEARN_V2_B1_U1_L01_CONTRACT.scenarioId]: LEARN_V2_B1_U1_L01_CONTRACT,
-};
+const CONTRACTS: Record<string, SpeakingLessonContract> = Object.fromEntries([
+  FIRST_CONTACT_CONTRACT,
+  B1_CATCH_UP_CONTRACT,
+  ...LEARN_V2_LESSON_CONTRACTS,
+].map((contract) => [contract.scenarioId, contract]));
 
 export function speakingLessonContractByScenarioId(id?: string) {
   return id ? CONTRACTS[id] : undefined;
