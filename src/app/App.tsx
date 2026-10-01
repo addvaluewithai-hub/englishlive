@@ -16,12 +16,13 @@ import { LevelScreen } from '../screens/LevelScreen';
 import { LessonReviewScreen } from '../screens/LessonReviewScreen';
 import { LessonScreen } from '../screens/LessonScreen';
 import { OnboardingScreen } from '../screens/OnboardingScreen';
+import { PracticeHomeScreen } from '../screens/PracticeHomeScreen';
+import { PracticeWorldScreen } from '../screens/PracticeWorldScreen';
 import { PrimaryProgressScreen as ProgressScreen } from '../screens/PrimaryProgressScreen';
 import { ReviewScreen } from '../screens/ReviewScreen';
 import { SceneLessonCompleteScreen } from '../screens/SceneLessonCompleteScreen';
 import { SceneLessonScreen } from '../screens/SceneLessonScreen';
 import { SessionScreen } from '../screens/SessionScreen';
-import { SpeakingHomeScreen } from '../screens/SpeakingHomeScreen';
 import { SpeakingLiveEntryScreen } from '../screens/SpeakingLiveEntryScreen';
 import { SpeakingProgressScreen } from '../screens/SpeakingProgressScreen';
 import { SpeakingRecapScreen } from '../screens/SpeakingRecapScreen';
@@ -76,8 +77,8 @@ export function App() {
             <span>Englotti</span>
           </Link>
           {isSession ? (
-            <Link className="header-action quiet-link" to={isFreeSpeakSession || isSpeakingLive ? '/speak' : '/learn'}>
-              {isFreeSpeakSession || isSpeakingLive ? 'الرجوع للمحادثة' : 'Leave session'}
+            <Link className="header-action quiet-link" to={isFreeSpeakSession || isSpeakingLive ? '/practice' : '/learn'}>
+              {isFreeSpeakSession || isSpeakingLive ? 'الرجوع للتدريب' : 'Leave session'}
             </Link>
           ) : isReview ? (
             <Link className="header-action quiet-link" to="/learn">Back to Learn</Link>
@@ -110,7 +111,9 @@ export function App() {
           <Route path="/scene-lesson/:lessonId" element={<RequireAuth><SceneLessonScreen /></RequireAuth>} />
           <Route path="/lesson-complete/:lessonId" element={<RequireAuth><SceneLessonCompleteScreen /></RequireAuth>} />
           <Route path="/lesson-review/:runId" element={<RequireAuth><LessonReviewScreen /></RequireAuth>} />
-          <Route path="/speak" element={<RequireAuth><SpeakingHomeScreen /></RequireAuth>} />
+          <Route path="/practice" element={<RequireAuth><PracticeHomeScreen /></RequireAuth>} />
+          <Route path="/practice/:levelId/world/:worldId" element={<RequireAuth><PracticeWorldScreen /></RequireAuth>} />
+          <Route path="/speak" element={<RequireAuth><PracticeHomeScreen /></RequireAuth>} />
           <Route path="/speak/world/:worldId" element={<RequireAuth><SpeakingWorldScreen /></RequireAuth>} />
           <Route path="/speak/scenario/:scenarioId" element={<RequireAuth><SpeakingScenarioScreen /></RequireAuth>} />
           <Route path="/speak/live/:scenarioId" element={<RequireAuth><SpeakingLiveEntryScreen /></RequireAuth>} />
@@ -131,7 +134,7 @@ export function App() {
         <nav className="v2-bottom-nav" aria-label="Primary navigation" dir="rtl">
           <NavLink end to="/home" className={navClass}><ProductIcon name="home" /><span>الرئيسية</span></NavLink>
           <NavLink to="/learn" className={navClass}><ProductIcon name="learn" /><span>التعلم</span></NavLink>
-          <NavLink to="/speak" className={navClass}><ProductIcon name="speak" /><span>المحادثة</span></NavLink>
+          <NavLink to="/practice" className={navClass}><ProductIcon name="speak" /><span>التدريب</span></NavLink>
           <NavLink to="/account" className={navClass}><ProductIcon name="profile" /><span>حسابي</span></NavLink>
         </nav>
       ) : null}
