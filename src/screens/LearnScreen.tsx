@@ -3,6 +3,7 @@ import { useProductCatalog } from '../catalog/client';
 import { getCharacterDefinition } from '../character/registry';
 import { ProductIcon } from '../components/ProductIcon';
 import { learnArt } from '../learn/assets';
+import { LEARN_V2_LESSONS } from '../learnV2/catalog';
 import { productUnitProgress, readProductCourseProgress, takePendingProductLessonCompletion } from '../productV2/progress';
 import { readLearnerProfile } from '../product/profile';
 
@@ -96,6 +97,29 @@ export function LearnScreen() {
           <p>ستة مستويات مرتبة بعناية، تاخدك خطوة بخطوة من الأساسيات إلى الطلاقة.</p>
         </div>
       </header>
+
+      <section className="learn-v2-pilot">
+        <header>
+          <div>
+            <span>Learn V2 • Pilot</span>
+            <h2>جرّب شكل الدرس الجديد</h2>
+            <p>محتوى authored ثابت → Listening طبيعي → AI conversation في التطبيق فقط.</p>
+          </div>
+          <span>تجربة</span>
+        </header>
+        <div className="learn-v2-pilot-grid">
+          {LEARN_V2_LESSONS.map((lesson) => (
+            <Link key={lesson.id} className="learn-v2-pilot-card" to={`/learn/pilot/${lesson.id}`}>
+              <span>{lesson.level}</span>
+              <div>
+                <strong><bdi dir="ltr">{lesson.titleEn}</bdi></strong>
+                <small>{lesson.titleAr} • حوالي {lesson.estimatedMinutes} دقيقة</small>
+              </div>
+              <ProductIcon name="chevron" size={23} />
+            </Link>
+          ))}
+        </div>
+      </section>
 
       <div className="journey-level-card-list">
         {LEVEL_PRESENTATION.map((presentation) => {
