@@ -37,6 +37,7 @@ export const PRACTICE_WORLDS: PracticeWorld[] = [
 
 export type PracticeMission = {
   id: string;
+  sourceId?: string;
   level: PracticeLevelId;
   worldId: PracticeWorldId;
   titleAr: string;
@@ -47,8 +48,8 @@ export type PracticeMission = {
   livePath?: string;
 };
 
-// Product-structure seeds only. The authored mission contracts will be added
-// one by one from the dedicated speaking-practice source-of-truth repository.
+// Product-structure seeds only. Authored live missions are runtime mirrors of
+// reviewed contracts in the dedicated speaking-practice source-of-truth repo.
 export const PRACTICE_MISSIONS: PracticeMission[] = [
   {
     id: 'a1-meet-someone-new',
@@ -62,13 +63,15 @@ export const PRACTICE_MISSIONS: PracticeMission[] = [
   },
   {
     id: 'a1-order-a-drink',
+    sourceId: 'practice.a1.food.order-drink.v1',
     level: 'A1',
     worldId: 'food-shopping',
     titleAr: 'اطلب مشروب',
     titleEn: 'Order a drink',
-    descriptionAr: 'اطلب اللي عايزه، اختار تفصيلة، واقفل الطلب طبيعي.',
+    descriptionAr: 'اطلب اللي عايزه، اختار الحجم، كمّل الدفع، واقفل الطلب طبيعي.',
     durationMinutes: 4,
-    status: 'planned',
+    status: 'live',
+    livePath: '/practice/mission/a1-order-a-drink',
   },
   {
     id: 'a1-ask-for-directions',
