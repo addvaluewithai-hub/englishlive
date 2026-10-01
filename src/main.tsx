@@ -38,6 +38,7 @@ import './speaking-v1-polish.css';
 import './speaking-live-shared.css';
 import './speaking-roadmap.css';
 import './scene-adaptive.css';
+import './learn-v2.css';
 
 const root = document.getElementById('root');
 if (!root) throw new Error('Englotti root element was not found.');
