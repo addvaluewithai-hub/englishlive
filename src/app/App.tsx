@@ -21,7 +21,7 @@ import { SceneLessonCompleteScreen } from '../screens/SceneLessonCompleteScreen'
 import { SceneLessonScreen } from '../screens/SceneLessonScreen';
 import { SessionScreen } from '../screens/SessionScreen';
 import { SpeakingHomeScreen } from '../screens/SpeakingHomeScreen';
-import { SpeakingLiveScreen } from '../screens/SpeakingLiveScreen';
+import { SpeakingLiveEntryScreen } from '../screens/SpeakingLiveEntryScreen';
 import { SpeakingProgressScreen } from '../screens/SpeakingProgressScreen';
 import { SpeakingRecapScreen } from '../screens/SpeakingRecapScreen';
 import { SpeakingScenarioScreen } from '../screens/SpeakingScenarioScreen';
@@ -111,7 +111,7 @@ export function App() {
           <Route path="/speak" element={<RequireAuth><SpeakingHomeScreen /></RequireAuth>} />
           <Route path="/speak/world/:worldId" element={<RequireAuth><SpeakingWorldScreen /></RequireAuth>} />
           <Route path="/speak/scenario/:scenarioId" element={<RequireAuth><SpeakingScenarioScreen /></RequireAuth>} />
-          <Route path="/speak/live/:scenarioId" element={<RequireAuth><SpeakingLiveScreen /></RequireAuth>} />
+          <Route path="/speak/live/:scenarioId" element={<RequireAuth><SpeakingLiveEntryScreen /></RequireAuth>} />
           <Route path="/speak/progress" element={<RequireAuth><SpeakingProgressScreen /></RequireAuth>} />
           <Route path="/speak/scenario-recap/:sessionId" element={<RequireAuth><SpeakingRecapScreen /></RequireAuth>} />
           <Route path="/speak/recap/:sessionId" element={<RequireAuth><FreeSpeakRecapScreen /></RequireAuth>} />
