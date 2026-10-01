@@ -10,6 +10,7 @@ import { FreeSpeakSessionScreen } from '../screens/FreeSpeakSessionScreen';
 import { HomeScreen } from '../screens/HomeScreen';
 import { LandingScreen } from '../screens/LandingScreen';
 import { LearnScreen } from '../screens/LearnScreen';
+import { LearnV2LessonScreen } from '../screens/LearnV2LessonScreen';
 import { LevelScreen } from '../screens/LevelScreen';
 import { LessonReviewScreen } from '../screens/LessonReviewScreen';
 import { LessonScreen } from '../screens/LessonScreen';
@@ -100,6 +101,7 @@ export function App() {
           <Route path="/studio/curriculum" element={<RequireAuth requireProfile={false}><StudioCurriculumScreen /></RequireAuth>} />
           <Route path="/home" element={<RequireAuth><HomeScreen /></RequireAuth>} />
           <Route path="/learn" element={<RequireAuth><LearnScreen /></RequireAuth>} />
+          <Route path="/learn/pilot/:lessonId" element={<RequireAuth><LearnV2LessonScreen /></RequireAuth>} />
           <Route path="/learn/level/:levelId" element={<RequireAuth><LevelScreen /></RequireAuth>} />
           <Route path="/learn/unit/:unitId" element={<RequireAuth><UnitScreen /></RequireAuth>} />
           <Route path="/lesson/:lessonId" element={<RequireAuth><LessonScreen /></RequireAuth>} />
