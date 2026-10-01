@@ -102,15 +102,15 @@ export function LearnScreen() {
         <header>
           <div>
             <span>Learn V2 • Pilot</span>
-            <h2>جرّب شكل الدرس الجديد</h2>
-            <p>محتوى authored ثابت → Listening طبيعي → AI conversation في التطبيق فقط.</p>
+            <h2>أول 10 دروس A1 بالشكل الجديد</h2>
+            <p>مسار متسلسل: authored learning → Listening طبيعي → AI conversation للتطبيق. وB1 sample لسه موجود للمقارنة.</p>
           </div>
           <span>تجربة</span>
         </header>
         <div className="learn-v2-pilot-grid">
           {LEARN_V2_LESSONS.map((lesson) => (
             <Link key={lesson.id} className="learn-v2-pilot-card" to={`/learn/pilot/${lesson.id}`}>
-              <span>{lesson.level}</span>
+              <span>{lesson.level === 'A1' ? `U${lesson.unit}-L${String(lesson.lesson).padStart(2, '0')}` : `${lesson.level} · U${lesson.unit}-L${String(lesson.lesson).padStart(2, '0')}`}</span>
               <div>
                 <strong><bdi dir="ltr">{lesson.titleEn}</bdi></strong>
                 <small>{lesson.titleAr} • حوالي {lesson.estimatedMinutes} دقيقة</small>
