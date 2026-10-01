@@ -19,6 +19,7 @@ import {
 } from '../speaking/api';
 import { speakingScenarioById, type SpeakingDifficulty } from '../speaking/catalog';
 import { LessonEvidenceProgress, useLessonEvidenceRuntime } from '../speaking/lessonEvidenceRuntime';
+import { Round2IntentHint } from '../speaking/Round2IntentHint';
 import type { SpeakingTurn, SpeakingTurnSpeaker } from '../speaking/types';
 
 function pcmSampleRate(mimeType: string) {
@@ -72,6 +73,7 @@ export function SpeakingLiveScreen() {
   const character = getCharacterDefinition('otti');
   const visualQa = import.meta.env.VITE_VISUAL_QA === '1';
   const difficultyParam = params.get('difficulty');
+  const round = params.get('round');
   const difficulty: SpeakingDifficulty = isCurriculumLesson
     ? 'recommended'
     : difficultyParam === 'easier' || difficultyParam === 'challenge'
@@ -537,6 +539,8 @@ export function SpeakingLiveScreen() {
       </div>
 
       <div className="fs-live-controls">
+        <Round2IntentHint scenarioId={scenario.id} round={round} learnerTurn={learnerTurn} turns={turns} />
+
         {keyboardOpen ? (
           <form className="fs-type-row" onSubmit={submitText}>
             <input
