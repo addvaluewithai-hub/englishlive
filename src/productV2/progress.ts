@@ -4,10 +4,11 @@ const STORAGE_KEY = 'englishlive.product-course.v1';
 const COMPLETION_HANDOFF_KEY = 'englishlive.product-course.pending-completion';
 
 // Temporary pilot bypass for the active B1 lesson experiment. Keep progression
-// rules unchanged everywhere else; this only lets testers enter L02 directly
-// even if local completion state for L01 is stale or missing.
+// rules unchanged everywhere else; this only lets testers enter the active B1
+// pilot lessons directly even if earlier local completion state is stale/missing.
 const PILOT_ALWAYS_UNLOCKED_LESSONS = new Set([
   'b1-u1-l02-keep-conversation-going',
+  'b1-u1-l03-personal-updates-feelings-reactions',
 ]);
 
 const PILOT_UNLOCK_MARKER_AT = '2000-01-01T00:00:00.000Z';
