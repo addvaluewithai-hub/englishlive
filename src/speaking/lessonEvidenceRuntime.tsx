@@ -65,6 +65,10 @@ export function useLessonEvidenceRuntime(scenarioId: string) {
       markA1SpeakingPilotLessonComplete(scenarioId, true);
     }
 
+    const normalInstruction = summary.lessonComplete
+      ? 'All required lesson evidence is complete. Ask no new question. Give one short natural closing line for the conversation without mentioning checks, progress, scores or the tool, then end your turn.'
+      : 'Continue the conversation naturally. Do not mention this check.';
+
     return {
       recorded: true,
       check_id: check.id,
@@ -73,11 +77,9 @@ export function useLessonEvidenceRuntime(scenarioId: string) {
       completed_units: summary.completedUnits,
       total_units: summary.totalUnits,
       remaining_check_ids: summary.remainingCheckIds,
-      instruction: summary.lessonComplete
-        ? round2.active && !round2.isCompleteNow()
-          ? 'Lesson evidence may be complete, but Round 2 is NOT complete. Do not close or advance outside the authored Round 2 gate. Continue only according to judge_round2_attempt until every step has been accepted.'
-          : 'All required lesson evidence is complete. Ask no new question. Give one short natural closing line for the conversation without mentioning checks, progress, scores or the tool, then end your turn.'
-        : 'Continue the conversation naturally. Do not mention this check. In gated Round 2, never use this evidence tool as permission to advance; only judge_round2_attempt can advance the authored practice step.',
+      instruction: round2.active
+        ? 'STOP before speaking. This evidence result does NOT authorize any partner response or step advance. You MUST now call judge_round2_attempt on this same learner attempt. Follow only that gate tool response for correction/retry or progression.'
+        : normalInstruction,
     };
   }
 
