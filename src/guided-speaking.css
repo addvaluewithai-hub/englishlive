@@ -98,6 +98,45 @@
   color: #7e625b;
 }
 
+.round2-intent-card {
+  width: min(620px, calc(100% - 24px));
+  margin: 0 auto 8px;
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 12px 14px;
+  border-radius: 17px;
+  border: 1px solid rgba(74, 106, 166, .16);
+  background: linear-gradient(180deg, #f7f9ff 0%, #fff 100%);
+  box-shadow: 0 10px 24px rgba(50, 69, 104, .07);
+  text-align: right;
+}
+
+.round2-intent-card > span {
+  flex: 0 0 auto;
+  font-size: 19px;
+  line-height: 1.35;
+}
+
+.round2-intent-card > div {
+  min-width: 0;
+}
+
+.round2-intent-card small {
+  display: block;
+  margin-bottom: 3px;
+  color: #6d7890;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.round2-intent-card strong {
+  display: block;
+  color: #28334a;
+  font-size: 15px;
+  line-height: 1.55;
+}
+
 .guided-mic-row {
   display: flex;
   justify-content: center;
@@ -212,7 +251,8 @@
 }
 
 @media (max-width: 640px) {
-  .guided-response-card {
+  .guided-response-card,
+  .round2-intent-card {
     width: calc(100% - 18px);
     padding: 12px 13px 13px;
     border-radius: 16px;
