@@ -15,7 +15,7 @@ import { LevelScreen } from '../screens/LevelScreen';
 import { LessonReviewScreen } from '../screens/LessonReviewScreen';
 import { LessonScreen } from '../screens/LessonScreen';
 import { OnboardingScreen } from '../screens/OnboardingScreen';
-import { ProgressScreen } from '../screens/ProgressScreen';
+import { PrimaryProgressScreen as ProgressScreen } from '../screens/PrimaryProgressScreen';
 import { ReviewScreen } from '../screens/ReviewScreen';
 import { SceneLessonCompleteScreen } from '../screens/SceneLessonCompleteScreen';
 import { SceneLessonScreen } from '../screens/SceneLessonScreen';
