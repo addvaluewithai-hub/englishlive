@@ -1,0 +1,238 @@
+.guided-live .fs-live-stage {
+  min-height: 0;
+}
+
+.guided-round-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .84);
+  border: 1px solid rgba(73, 45, 38, .1);
+  font-size: 12px;
+  font-weight: 800;
+  color: #7a5147;
+}
+
+.guided-progress {
+  width: min(480px, calc(100% - 36px));
+  margin: 8px auto 0;
+  display: flex;
+  gap: 6px;
+  direction: ltr;
+}
+
+.guided-progress i {
+  display: block;
+  flex: 1;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(89, 67, 60, .14);
+  transition: background .2s ease, transform .2s ease;
+}
+
+.guided-progress i.is-done {
+  background: rgba(46, 143, 102, .65);
+}
+
+.guided-progress i.is-current {
+  background: rgba(231, 116, 88, .8);
+  transform: scaleY(1.15);
+}
+
+.guided-exchange {
+  padding-bottom: 18px;
+}
+
+.guided-controls {
+  gap: 10px;
+}
+
+.guided-response-card {
+  width: min(620px, calc(100% - 24px));
+  margin: 0 auto;
+  padding: 14px 16px 15px;
+  border-radius: 18px;
+  border: 1px solid rgba(232, 111, 81, .22);
+  background: linear-gradient(180deg, #fff9f5 0%, #fff 100%);
+  box-shadow: 0 12px 30px rgba(99, 58, 45, .08);
+  text-align: right;
+}
+
+.guided-response-card > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.guided-response-card > div span {
+  font-size: 11px;
+  letter-spacing: .08em;
+  font-weight: 900;
+  color: #d45f43;
+}
+
+.guided-response-card > div small {
+  font-size: 12px;
+  color: #80675f;
+}
+
+.guided-response-card > strong {
+  display: block;
+  font-size: clamp(18px, 4.6vw, 24px);
+  line-height: 1.45;
+  font-weight: 800;
+  color: #2d2725;
+  text-align: left;
+  unicode-bidi: plaintext;
+}
+
+.guided-response-card > p {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.55;
+  color: #7e625b;
+}
+
+.guided-mic-row {
+  display: flex;
+  justify-content: center;
+  min-height: 82px;
+  align-items: center;
+}
+
+.guided-mic-row .fs-mic-control:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+.guided-error {
+  width: min(620px, calc(100% - 24px));
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: #fff2ef;
+  color: #8a3c2c;
+}
+
+.guided-error p {
+  margin: 0;
+  font-size: 13px;
+}
+
+.guided-error button {
+  border: 0;
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-weight: 800;
+  background: #fff;
+  color: inherit;
+}
+
+.guided-finish {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: radial-gradient(circle at 50% 15%, #fff7f2 0, #fff 48%, #f8f2ef 100%);
+}
+
+.guided-finish-card {
+  width: min(560px, 100%);
+  padding: 28px 24px;
+  border-radius: 28px;
+  background: #fff;
+  box-shadow: 0 24px 70px rgba(77, 48, 40, .12);
+  border: 1px solid rgba(80, 50, 42, .08);
+  text-align: center;
+}
+
+.guided-finish-card > svg,
+.guided-finish-card > .otti-mark {
+  width: 82px;
+  height: 82px;
+  margin: 0 auto 12px;
+}
+
+.guided-finish-card > span {
+  display: inline-flex;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #eef8f2;
+  color: #2e8a61;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.guided-finish-card h1 {
+  margin: 14px 0 8px;
+  font-size: clamp(25px, 6vw, 34px);
+  color: #2c2523;
+}
+
+.guided-finish-card p {
+  margin: 0 auto 22px;
+  max-width: 430px;
+  line-height: 1.75;
+  color: #6f5a53;
+}
+
+.guided-finish-primary,
+.guided-finish-secondary {
+  text-decoration: none;
+}
+
+.guided-finish-primary {
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border-radius: 17px;
+  background: #eb7659;
+  color: #fff;
+  font-weight: 900;
+  box-shadow: 0 12px 28px rgba(235, 118, 89, .22);
+}
+
+.guided-finish-secondary {
+  display: inline-block;
+  margin-top: 14px;
+  color: #755f58;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+@media (max-width: 640px) {
+  .guided-response-card {
+    width: calc(100% - 18px);
+    padding: 12px 13px 13px;
+    border-radius: 16px;
+  }
+
+  .guided-response-card > div {
+    display: block;
+  }
+
+  .guided-response-card > div small {
+    display: block;
+    margin-top: 2px;
+  }
+
+  .guided-finish {
+    padding: 16px;
+  }
+
+  .guided-finish-card {
+    padding: 24px 18px;
+    border-radius: 24px;
+  }
+}
