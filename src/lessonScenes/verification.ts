@@ -120,6 +120,62 @@ const PILOT_CONTRACTS: Record<string, Record<string, SceneVerificationContract>>
       ['Teacher use of a target counted as learner evidence', 'A visible checklist-style request to use named targets'],
     ),
   },
+  'b1-u1-l03-personal-updates-feelings-reactions': {
+    'personal-update-diagnostic': interactive(
+      'Across changed personal updates, the learner responds to the meaning with an appropriate stance and creates a natural connected next move over several actual learner turns.',
+      ['A generic “okay” or “nice” with no meaningful reaction or continuation', 'A single teacher-supplied follow-up repeated by the learner'],
+    ),
+    'good-bad-news-reactions': interactive(
+      'The learner responds appropriately to both ordinary positive and negative personal news and adds a small connected move rather than only naming a memorised phrase.',
+      ['Using the same enthusiastic reaction for clearly negative news', 'Repeating the model immediately with no changed news'],
+    ),
+    'break-up-teach-use': productive('The learner independently uses break up appropriately in a changed relationship-ending personal-news context.'),
+    'have-in-common-teach-use': productive('The learner independently uses have … in common to describe a concrete shared interest, quality or experience in a changed pair/context.'),
+    'respect-for-teach-use': productive('The learner independently expresses respect for a fresh person, quality, effort or achievement and makes the reason understandable.'),
+    'personal-phrase-retrieval': retrieval('At least two different L03 phrases are recovered from meaning in changed personal situations without naming the exact English first.'),
+    'word-engaged-teach-use': productive('The learner independently uses engaged for the agreed-to-marry personal-news meaning in a changed person/context.'),
+    'word-annoyed-teach-use': productive('The learner independently uses annoyed for a fresh concrete irritation and makes the cause understandable.'),
+    'word-disappointing-teach-use': productive('The learner independently uses disappointing to describe a fresh result or experience that was worse than hoped, rather than only echoing the teacher.'),
+    'word-confident-teach-use': productive('The learner independently uses confident about a fresh concrete task, event or performance situation.'),
+    'word-brave-teach-use': productive('The learner independently uses brave for a fresh person/action that faces something difficult or frightening with courage.'),
+    'word-gentle-teach-use': productive('The learner independently uses gentle for fresh calm, kind or careful behaviour in a concrete situation.'),
+    'word-honest-teach-use': productive('The learner independently uses honest for fresh truthful or open behaviour in a concrete situation.'),
+    'word-passion-teach-use': productive('The learner independently uses passion for a fresh strong lasting interest or enthusiasm.'),
+    'word-relaxed-teach-use': productive('The learner independently uses relaxed for a fresh calm/not-tense state and gives enough context for the meaning to be clear.'),
+    'word-worry-teach-use': productive('The learner independently uses worry/worried to express or respond to a fresh ordinary concern in a natural way.'),
+    'personal-vocabulary-integration': interactive(
+      'Across a real multi-turn sequence of personal updates, the learner uses several different L03 context words for their actual meanings, including items from more than one meaning group and any weak earlier items that the teacher intentionally revisits.',
+      ['Listing vocabulary words without using them to describe the people, feelings or events in the exchange', 'Teacher descriptions counted as learner vocabulary use'],
+    ),
+    'events-in-progress-support': integratedSupport(
+      'The learner gives a fresh current personal update using a simple in-progress form when the meaning calls for something happening now or around now.',
+      ['Reciting a tense rule without producing a meaningful current update'],
+    ),
+    'polite-excuse-teach-use': interactive(
+      'Across at least two changed familiar social situations when practical, the learner makes a polite excuse with an appropriate brief acknowledgement/reason and keeps the social tone intact.',
+      ['A bare “no” with no polite social move when the situation calls for one', 'Immediate repetition of the teacher’s full excuse as the only evidence'],
+    ),
+    'follow-everyday-update-conversation': receptive(
+      'The learner identifies both the main personal update and one key feeling or reason from a fresh everyday exchange. Requesting a reasonable repetition does not count against success.',
+      ['Only identifying the general topic while missing the requested update or feeling/reason'],
+    ),
+    'consonant-clarity-support': integratedSupport(
+      'In a meaningful short update, the learner makes one or two selected L03 words intelligible enough that the intended word/message is clear; native-like accent or isolated perfection is not required.',
+      ['Teacher-only pronunciation', 'A claim of precise accent quality without communicative evidence'],
+    ),
+    'intonation-stance-support': integratedSupport(
+      'Across changed positive and negative updates, the learner’s broad intended stance is perceptible in their natural short reactions, without requiring a specific native intonation contour.',
+      ['Accent imitation by itself', 'Teacher modelling counted as learner stance evidence'],
+    ),
+    'mixed-surprise-retrieval': retrieval(
+      'Across fresh personal situations, the learner recovers at least three delayed needs from different categories: one L03 phrase, one context word, and one social reaction or polite excuse, without being told the exact target first.',
+      ['A visible checklist request naming the targets', 'Counting a revealed answer as delayed retrieval without a changed retry'],
+    ),
+    'fresh-personal-update-transfer': interactive(
+      'The learner sustains a genuinely fresh personal-news conversation for several learner turns, both reacts and contributes, expresses a feeling or stance, follows up naturally, and recovers relevant L03 language when the evolving meaning invites it.',
+      ['A conversation dominated by teacher target-language production', 'A final quiz where the learner is told which vocabulary items to insert'],
+    ),
+  },
 };
 
 const FALLBACK_BY_KIND: Record<SceneInteractionKind, SceneVerificationContract> = {
