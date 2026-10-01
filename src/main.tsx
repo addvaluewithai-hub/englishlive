@@ -43,6 +43,7 @@ import './guided-speaking.css';
 import './speaking-learn-live-tuning.css';
 import './learn-primary-overrides.css';
 import './practice.css';
+import './practice-mission.css';
 
 const root = document.getElementById('root');
 if (!root) throw new Error('Englotti root element was not found.');
