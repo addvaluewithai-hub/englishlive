@@ -203,6 +203,7 @@ export const onRequestPatch = async ({ request, env, params }: PagesContext) => 
     const body = await request.json().catch(() => null) as Record<string, unknown> | null;
     const transcript = sanitizeSpeakingTranscript(body?.transcript);
     const durationSeconds = clampSpeakingDuration(body?.durationSeconds);
+    const complete = body?.complete === true;
     const transcriptJson = JSON.stringify(transcript);
     const sql = getSql(env);
     const rows = await sql`
@@ -210,6 +211,8 @@ export const onRequestPatch = async ({ request, env, params }: PagesContext) => 
       set
         transcript = ${transcriptJson}::jsonb,
         duration_seconds = greatest(duration_seconds, ${durationSeconds}),
+        status = case when ${complete} then 'completed' else status end,
+        ended_at = case when ${complete} then coalesce(ended_at, now()) else ended_at end,
         updated_at = now()
       where id = ${sessionId}::uuid
         and user_id = ${auth.userId}
