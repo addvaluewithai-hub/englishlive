@@ -16,7 +16,10 @@ import { LevelScreen } from '../screens/LevelScreen';
 import { LessonReviewScreen } from '../screens/LessonReviewScreen';
 import { LessonScreen } from '../screens/LessonScreen';
 import { OnboardingScreen } from '../screens/OnboardingScreen';
+import { PracticeCompleteScreen } from '../screens/PracticeCompleteScreen';
 import { PracticeHomeScreen } from '../screens/PracticeHomeScreen';
+import { PracticeLiveScreen } from '../screens/PracticeLiveScreen';
+import { PracticeMissionScreen } from '../screens/PracticeMissionScreen';
 import { PracticeWorldScreen } from '../screens/PracticeWorldScreen';
 import { PrimaryProgressScreen as ProgressScreen } from '../screens/PrimaryProgressScreen';
 import { ReviewScreen } from '../screens/ReviewScreen';
@@ -45,21 +48,22 @@ export function App() {
   const isLegacySession = location.pathname.startsWith('/session/');
   const isLesson = location.pathname.startsWith('/lesson/');
   const isSceneLesson = location.pathname.startsWith('/scene-lesson/');
+  const isPracticeLive = location.pathname.startsWith('/practice/live/');
   const isFreeSpeakRecap = location.pathname.startsWith('/speak/recap/');
   const isSpeakingRecap = location.pathname.startsWith('/speak/scenario-recap/');
   const isSpeakingScenario = location.pathname.startsWith('/speak/scenario/');
   const isSpeakingLive = location.pathname.startsWith('/speak/live/');
   const isFreeSpeakSession = /^\/speak\/(?!recap(?:\/|$)|scenario-recap(?:\/|$)|world(?:\/|$)|scenario(?:\/|$)|progress(?:\/|$)|live(?:\/|$))[^/]+/.test(location.pathname);
-  const isSession = isLegacySession || isLesson || isSceneLesson || isFreeSpeakSession || isSpeakingLive;
+  const isSession = isLegacySession || isLesson || isSceneLesson || isFreeSpeakSession || isSpeakingLive || isPracticeLive;
   const isReview = location.pathname.startsWith('/review/') || location.pathname.startsWith('/lesson-review/');
   const isApp = !isLanding && !isAuth && !isOnboarding && !isStudio && !isSession && !isReview && !isSpeakingScenario;
-  const usesProductV2 = isApp || isAuth || isOnboarding || isSceneLesson || isStudio || isFreeSpeakSession || isSpeakingScenario || isSpeakingLive;
+  const usesProductV2 = isApp || isAuth || isOnboarding || isSceneLesson || isStudio || isFreeSpeakSession || isSpeakingScenario || isSpeakingLive || isPracticeLive;
   const showProductHeader = isApp && !isCompletion;
-  const hideGlobalHeader = isLanding || isAuth || isOnboarding || isStudio || isCompletion || isSceneLesson || isFreeSpeakSession || isSpeakingScenario || isSpeakingLive;
+  const hideGlobalHeader = isLanding || isAuth || isOnboarding || isStudio || isCompletion || isSceneLesson || isFreeSpeakSession || isSpeakingScenario || isSpeakingLive || isPracticeLive;
   const showBottomNav = isApp && !isCompletion;
 
   return (
-    <div className={`app-shell${isSession ? ' is-session' : ''}${isSceneLesson ? ' is-scene-lesson' : ''}${isFreeSpeakSession ? ' is-free-speak-session' : ''}${isSpeakingLive ? ' is-speaking-live' : ''}${isSpeakingScenario ? ' is-speaking-scenario' : ''}${isFreeSpeakRecap ? ' is-free-speak-recap' : ''}${isSpeakingRecap ? ' is-speaking-recap' : ''}${isCompletion ? ' is-completion' : ''}${isLanding ? ' is-landing' : ''}${isStudio ? ' is-studio' : ''}${usesProductV2 ? ' is-product-v2' : ''}`}>
+    <div className={`app-shell${isSession ? ' is-session' : ''}${isSceneLesson ? ' is-scene-lesson' : ''}${isFreeSpeakSession ? ' is-free-speak-session' : ''}${isSpeakingLive ? ' is-speaking-live' : ''}${isPracticeLive ? ' is-practice-live' : ''}${isSpeakingScenario ? ' is-speaking-scenario' : ''}${isFreeSpeakRecap ? ' is-free-speak-recap' : ''}${isSpeakingRecap ? ' is-speaking-recap' : ''}${isCompletion ? ' is-completion' : ''}${isLanding ? ' is-landing' : ''}${isStudio ? ' is-studio' : ''}${usesProductV2 ? ' is-product-v2' : ''}`}>
       {hideGlobalHeader ? null : showProductHeader ? (
         <header className="v2-app-header">
           <Link to="/home" className="v2-brand" aria-label="Englotti home">
@@ -77,8 +81,8 @@ export function App() {
             <span>Englotti</span>
           </Link>
           {isSession ? (
-            <Link className="header-action quiet-link" to={isFreeSpeakSession || isSpeakingLive ? '/practice' : '/learn'}>
-              {isFreeSpeakSession || isSpeakingLive ? 'الرجوع للتدريب' : 'Leave session'}
+            <Link className="header-action quiet-link" to={isFreeSpeakSession || isSpeakingLive || isPracticeLive ? '/practice' : '/learn'}>
+              {isFreeSpeakSession || isSpeakingLive || isPracticeLive ? 'الرجوع للتدريب' : 'Leave session'}
             </Link>
           ) : isReview ? (
             <Link className="header-action quiet-link" to="/learn">Back to Learn</Link>
@@ -86,7 +90,7 @@ export function App() {
         </header>
       )}
 
-      <main className={isSceneLesson ? 'app-main app-main-session v2-scene-main' : isFreeSpeakSession ? 'app-main app-main-session free-speak-v2-main' : isSpeakingLive ? 'app-main app-main-session sp-live-main' : isSpeakingScenario ? 'v2-app-main sp-start-main' : isSession ? 'app-main app-main-session' : usesProductV2 ? 'v2-app-main' : 'app-main'}>
+      <main className={isSceneLesson ? 'app-main app-main-session v2-scene-main' : isFreeSpeakSession ? 'app-main app-main-session free-speak-v2-main' : isSpeakingLive || isPracticeLive ? 'app-main app-main-session sp-live-main' : isSpeakingScenario ? 'v2-app-main sp-start-main' : isSession ? 'app-main app-main-session' : usesProductV2 ? 'v2-app-main' : 'app-main'}>
         {isStudio ? (
           <nav className="studio-global-nav" aria-label="Studio navigation" dir="rtl">
             <Link className={location.pathname === '/studio' ? 'is-active' : ''} to="/studio">JSON Authoring</Link>
@@ -113,6 +117,9 @@ export function App() {
           <Route path="/lesson-review/:runId" element={<RequireAuth><LessonReviewScreen /></RequireAuth>} />
           <Route path="/practice" element={<RequireAuth><PracticeHomeScreen /></RequireAuth>} />
           <Route path="/practice/:levelId/world/:worldId" element={<RequireAuth><PracticeWorldScreen /></RequireAuth>} />
+          <Route path="/practice/mission/:missionId" element={<RequireAuth><PracticeMissionScreen /></RequireAuth>} />
+          <Route path="/practice/live/:missionId" element={<RequireAuth><PracticeLiveScreen /></RequireAuth>} />
+          <Route path="/practice/complete/:missionId" element={<RequireAuth><PracticeCompleteScreen /></RequireAuth>} />
           <Route path="/speak" element={<RequireAuth><PracticeHomeScreen /></RequireAuth>} />
           <Route path="/speak/world/:worldId" element={<RequireAuth><SpeakingWorldScreen /></RequireAuth>} />
           <Route path="/speak/scenario/:scenarioId" element={<RequireAuth><SpeakingScenarioScreen /></RequireAuth>} />
