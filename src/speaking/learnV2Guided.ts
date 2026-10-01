@@ -87,7 +87,7 @@ export const LEARN_V2_A1_GUIDED_CONVERSATIONS: LearnV2GuidedConversation[] = [
       {
         partnerIntentEn: 'Say you are a graphic designer, then ask what the learner does.',
         partnerExampleEn: 'I’m a graphic designer. What about you?',
-        learnerCardEn: 'I’m a [your job]. / I study [your subject].',
+        learnerCardEn: 'Nice. I’m a [your job]. / I study [your subject].',
         noteAr: 'اختار الجملة اللي تناسبك، أو اختر role خيالي.',
       },
     ],
@@ -111,7 +111,7 @@ export const LEARN_V2_A1_GUIDED_CONVERSATIONS: LearnV2GuidedConversation[] = [
       {
         partnerIntentEn: 'Spell Nassar clearly, one letter at a time.',
         partnerExampleEn: 'N-A-S-S-A-R.',
-        learnerCardEn: 'Thanks. My email is [a made-up email].',
+        learnerCardEn: 'Thanks — Nassar. My email is [a made-up email].',
         noteAr: 'استخدم أي email خيالي — مش مطلوب بيانات حقيقية.',
       },
     ],
@@ -120,26 +120,27 @@ export const LEARN_V2_A1_GUIDED_CONVERSATIONS: LearnV2GuidedConversation[] = [
   {
     scenarioId: 'learn-v2-a1-u1-l06',
     titleAr: 'لقاء اجتماعي — مع كروت مساعدة',
-    introAr: 'هتشوف introduction وخبر كويس وخبر مش لطيف وclosing. اقرأ reaction المناسبة بصوتك.',
+    introAr: 'هتقدّم شخص، ترد على خبر كويس وخبر مش لطيف، وتقفل اللقاء. استخدم اسم خيالي لو حبيت.',
     steps: [
       {
-        partnerIntentEn: 'Introduce your friend Lina in one short social line.',
-        partnerExampleEn: 'Hi! This is my friend Lina.',
-        learnerCardEn: 'Hi, Lina. Nice to meet you.',
+        partnerIntentEn: 'Greet and ask who is with the learner, creating a simple reason for them to introduce another person.',
+        partnerExampleEn: 'Hi! Who’s with you?',
+        learnerCardEn: 'This is my friend [a name].',
+        noteAr: 'الاسم ممكن يكون خيالي تمامًا.',
       },
       {
-        partnerIntentEn: 'Share simple good news about Lina getting a new job.',
-        partnerExampleEn: 'Lina got a new job today!',
+        partnerIntentEn: 'Acknowledge the introduction, then share simple good news that you got a new job today.',
+        partnerExampleEn: 'Nice to meet you both. I got a new job today!',
         learnerCardEn: 'That’s great!',
       },
       {
-        partnerIntentEn: 'Add a small negative update: Lina is worried because her first day starts very early.',
-        partnerExampleEn: 'She’s happy, but she’s a little worried about her first day.',
+        partnerIntentEn: 'Add a small negative update: you are worried because the first day starts very early.',
+        partnerExampleEn: 'I’m happy, but I’m a little worried about my first day.',
         learnerCardEn: 'Oh no. I’m sorry.',
       },
       {
         partnerIntentEn: 'Say you need to leave now.',
-        partnerExampleEn: 'We have to go now.',
+        partnerExampleEn: 'I have to go now.',
         learnerCardEn: 'See you!',
       },
     ],
@@ -186,7 +187,7 @@ export const LEARN_V2_A1_GUIDED_CONVERSATIONS: LearnV2GuidedConversation[] = [
       {
         partnerIntentEn: 'Ask one simple question about brothers or sisters.',
         partnerExampleEn: 'Have you got any brothers or sisters?',
-        learnerCardEn: 'I’ve got [number] [brother / brothers / sister / sisters]. What about you?',
+        learnerCardEn: 'I’ve got [number] [brother / brothers / sister / sisters]. Have you got any brothers or sisters?',
       },
       {
         partnerIntentEn: 'Say you have one brother, then ask who the learner lives with.',
