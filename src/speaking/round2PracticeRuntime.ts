@@ -1,17 +1,48 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useSyncExternalStore } from 'react';
 import type { LiveClientTool } from '../live/tools';
 import { learnV2GuidedConversationByScenarioId } from './learnV2Guided';
 
 export type Round2AttemptOutcome = 'accepted' | 'retry_required';
 
-export function useRound2PracticeRuntime(scenarioId: string, round: string | null) {
-  const guided = round === 'independent' ? learnV2GuidedConversationByScenarioId(scenarioId) : undefined;
+const stepByScenario = new Map<string, number>();
+const listenersByScenario = new Map<string, Set<() => void>>();
+
+function publishStep(scenarioId: string, stepIndex: number) {
+  stepByScenario.set(scenarioId, stepIndex);
+  listenersByScenario.get(scenarioId)?.forEach((listener) => listener());
+}
+
+function subscribeStep(scenarioId: string, listener: () => void) {
+  const listeners = listenersByScenario.get(scenarioId) ?? new Set<() => void>();
+  listeners.add(listener);
+  listenersByScenario.set(scenarioId, listeners);
+  return () => {
+    listeners.delete(listener);
+    if (!listeners.size) listenersByScenario.delete(scenarioId);
+  };
+}
+
+export function useRound2StepIndex(scenarioId: string) {
+  return useSyncExternalStore(
+    (listener) => subscribeStep(scenarioId, listener),
+    () => stepByScenario.get(scenarioId) ?? 0,
+    () => 0,
+  );
+}
+
+export function useRound2PracticeRuntime(scenarioId: string, enabled: boolean) {
+  const guided = enabled ? learnV2GuidedConversationByScenarioId(scenarioId) : undefined;
   const stepRef = useRef(0);
   const [stepIndex, setStepIndex] = useState(0);
 
+  function setStep(next: number) {
+    stepRef.current = next;
+    setStepIndex(next);
+    publishStep(scenarioId, next);
+  }
+
   function reset() {
-    stepRef.current = 0;
-    setStepIndex(0);
+    setStep(0);
   }
 
   function judgeAttempt(args: Record<string, unknown>) {
@@ -63,8 +94,7 @@ export function useRound2PracticeRuntime(scenarioId: string, round: string | nul
     }
 
     const nextIndex = currentStep + 1;
-    stepRef.current = nextIndex;
-    setStepIndex(nextIndex);
+    setStep(nextIndex);
     const nextStep = guided.steps[nextIndex];
 
     if (!nextStep) {
@@ -149,6 +179,7 @@ export function useRound2PracticeRuntime(scenarioId: string, round: string | nul
     guided,
     stepIndex,
     isComplete: Boolean(guided && stepIndex >= guided.steps.length),
+    isCompleteNow: () => Boolean(guided && stepRef.current >= guided.steps.length),
     tools,
     promptEn,
     reset,
