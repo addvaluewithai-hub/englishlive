@@ -1,6 +1,7 @@
 import { A1_SPEAKING_PILOT_LESSONS, a1SpeakingPilotLessonById } from './a1Pilot';
 import { B1_SPEAKING_PREVIEW_LESSONS, b1SpeakingPreviewLessonById } from './b1Pilot';
 import { speakingAssets } from './assets';
+import { learnV2SpeakingMissionById } from './learnV2Missions';
 
 export type SpeakingReadiness = 'ready' | 'challenge' | 'later';
 export type SpeakingDifficulty = 'easier' | 'recommended' | 'challenge';
@@ -57,6 +58,9 @@ export type SpeakingScenario = {
   boundariesEn?: string[];
   correctionFocusEn?: string[];
   openingMoveEn?: string;
+  learnMission?: boolean;
+  hideEvidenceProgress?: boolean;
+  returnPath?: string;
 };
 
 export type SpeakingGroup = {
@@ -230,6 +234,8 @@ export function speakingWorldById(worldId?: string) {
 }
 
 export function speakingScenarioById(scenarioId?: string) {
+  const learnV2Mission = learnV2SpeakingMissionById(scenarioId);
+  if (learnV2Mission) return learnV2Mission;
   const a1CurriculumLesson = a1SpeakingPilotLessonById(scenarioId);
   if (a1CurriculumLesson) return a1CurriculumLesson;
   const b1CurriculumLesson = b1SpeakingPreviewLessonById(scenarioId);
