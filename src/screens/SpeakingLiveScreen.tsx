@@ -280,19 +280,25 @@ export function SpeakingLiveScreen() {
       const learnerContext = profile
         ? `The learner's first name is ${profile.firstName || 'not provided'}. Their main reason for English is to ${goalPrompt(profile.goals[0] ?? 'everyday')}. Their self-description is: ${comfortLabel(profile.comfort)} Use this only to pace support naturally.`
         : 'No learner profile is available. Keep the interaction accessible and supportive.';
-      const productiveBoundary = scenario.targetLanguageEn?.length
-        ? `This lesson's productive target language is bounded to: ${scenario.targetLanguageEn.join('; ')}. Create natural opportunities for these resources, but never feed the learner a complete answer before they try.`
-        : scenario.usesAr.length
-          ? `The course says this scenario should recycle these already-taught abilities: ${scenario.usesAr.join('; ')}. Treat these as productive expectations. You may use a small amount of incidental comprehensible English, but never require unfamiliar specialist language to succeed.`
-          : 'Keep productive expectations simple and appropriate to the scenario.';
+      const productiveBoundary = scenario.learnMission && scenario.targetLanguageEn?.length
+        ? `This Learn mission's language ground is: ${scenario.targetLanguageEn.join('; ')}. Respect any receptive/support labels literally: receptive items are there for comprehension and context, not required learner production. Do not turn the language ground into a checklist.`
+        : scenario.targetLanguageEn?.length
+          ? `This lesson's productive target language is bounded to: ${scenario.targetLanguageEn.join('; ')}. Create natural opportunities for these resources, but never feed the learner a complete answer before they try.`
+          : scenario.usesAr.length
+            ? `The course says this scenario should recycle these already-taught abilities: ${scenario.usesAr.join('; ')}. Treat these as productive expectations. You may use a small amount of incidental comprehensible English, but never require unfamiliar specialist language to succeed.`
+            : 'Keep productive expectations simple and appropriate to the scenario.';
       const curriculumContract = scenario.curriculum
         ? [
-            `This is Speaking ${scenario.curriculum.level} curriculum lesson ${scenario.curriculum.lessonCode}, not free chat and not a difficulty variant.`,
+            scenario.learnMission
+              ? `This is the live application mission inside Learn ${scenario.curriculum.lessonCode}. The teaching/preparation happened before this conversation; do not reteach it unless the learner asks for help.`
+              : `This is Speaking ${scenario.curriculum.level} curriculum lesson ${scenario.curriculum.lessonCode}, not free chat and not a difficulty variant.`,
             `Stay inside this oral outcome: ${scenario.goalAr}`,
             scenario.boundariesEn?.length ? `Hard lesson boundaries: ${scenario.boundariesEn.join(' | ')}` : '',
             scenario.correctionFocusEn?.length ? `Correction priorities: ${scenario.correctionFocusEn.join('; ')}.` : '',
             'Correct or briefly recast errors that affect meaning or the current lesson target. If a non-target error is clear enough and communication succeeds, keep the exchange moving instead of opening a new grammar lesson.',
-            'Use short, clear A1 turns and one idea at a time. Adapt support through repetition, rephrasing, wait time or a small hint; never raise the productive language target above this lesson.',
+            scenario.curriculum.level === 'A1'
+              ? 'Use short, clear A1 turns and one idea at a time. Adapt support through repetition, rephrasing, wait time or a small hint; never raise the productive language target above this lesson.'
+              : 'Use natural, concise B1 turns. Give the learner real conversational material and enough wait time to formulate a response; support only when useful rather than simplifying the interaction into A1-style prompts.',
             'Give the learner multiple natural chances to produce the target independently. Do not turn the lesson into explanation, drilling, or a fixed script.',
           ].filter(Boolean).join('\n')
         : difficultyPrompt[difficulty];
@@ -415,8 +421,12 @@ export function SpeakingLiveScreen() {
     setKeyboardOpen(false);
   }
 
-  function askForHelp(kind: 'simplify' | 'arabic' | 'example' | 'say-it') {
+  function askForHelp(kind: 'simplify' | 'arabic' | 'example' | 'say-it' | 'hint' | 'words' | 'wait') {
     if (visualQa) {
+      setHelpOpen(false);
+      return;
+    }
+    if (kind === 'wait') {
       setHelpOpen(false);
       return;
     }
@@ -427,6 +437,8 @@ export function SpeakingLiveScreen() {
       arabic: 'Briefly explain only your last point in Egyptian Arabic, then return to English and continue the roleplay.',
       example: 'Give one very short English example the learner could use in this situation, then give them the turn. Any evidence copied from this exact example is supported, not independent.',
       'say-it': 'The learner needs production help. Ask in Egyptian Arabic what they want to say if the intent is unclear; otherwise give one short natural English phrase they can use, then resume the roleplay. Any evidence copied from this exact phrase is supported, not independent.',
+      hint: 'Give one brief Egyptian-Arabic hint about the communicative move the learner could make next, without supplying the exact English sentence. Then stop and give them the turn.',
+      words: 'Offer up to three short useful English words or chunks from this lesson that could help in the current moment. Do not combine them into a complete answer. Then give the learner the turn.',
     } as const;
     live.sendText(instructions[kind]);
     setHelpOpen(false);
@@ -435,9 +447,10 @@ export function SpeakingLiveScreen() {
   async function finishConversation() {
     if (ending) return;
     const sessionId = cloudSessionId.current;
+    const returnQuery = scenario.returnPath ? `?returnTo=${encodeURIComponent(scenario.returnPath)}` : '';
     if (!sessionId) {
       await stopTransport();
-      navigate(`/speak/scenario/${scenario.id}`);
+      navigate(scenario.returnPath || `/speak/scenario/${scenario.id}`);
       return;
     }
     setEnding(true);
@@ -448,14 +461,14 @@ export function SpeakingLiveScreen() {
     await stopTransport();
     try {
       const completed = await completeSpeakingSession(sessionId, snapshot, seconds);
-      navigate(`/speak/scenario-recap/${sessionId}`, { replace: true, state: { session: completed } });
+      navigate(`/speak/scenario-recap/${sessionId}${returnQuery}`, { replace: true, state: { session: completed } });
     } catch {
       try {
         await saveSpeakingTranscript(sessionId, snapshot, seconds);
       } catch {
         // The most recent autosave may already contain the transcript.
       }
-      navigate(`/speak/scenario-recap/${sessionId}`, { replace: true });
+      navigate(`/speak/scenario-recap/${sessionId}${returnQuery}`, { replace: true });
     }
   }
 
@@ -496,7 +509,7 @@ export function SpeakingLiveScreen() {
           <span><strong>{statusText.title}</strong><small>{statusText.body}</small></span>
         </div>
 
-        <LessonEvidenceProgress runtime={lessonEvidence} />
+        {scenario.hideEvidenceProgress ? null : <LessonEvidenceProgress runtime={lessonEvidence} />}
 
         <button type="button" className="fs-history-button" onClick={() => setHistoryOpen(true)} aria-label="سجل المحادثة">
           <span aria-hidden="true">↶</span>
@@ -540,10 +553,21 @@ export function SpeakingLiveScreen() {
         {helpOpen ? (
           <section className="sp-help-sheet sp-help-sheet-inline" aria-label="مساعدة المحادثة">
             <strong>أساعدك إزاي؟</strong>
-            <button type="button" onClick={() => askForHelp('simplify')}>قولها أبسط</button>
-            <button type="button" onClick={() => askForHelp('arabic')}>اشرح بالعربي</button>
-            <button type="button" onClick={() => askForHelp('example')}>اديني مثال</button>
-            <button type="button" onClick={() => askForHelp('say-it')}>أقولها إزاي؟</button>
+            {scenario.learnMission ? (
+              <>
+                <button type="button" onClick={() => askForHelp('wait')}>خد وقتي — اقفل البوكس بس</button>
+                <button type="button" onClick={() => askForHelp('hint')}>اديني تلميح</button>
+                <button type="button" onClick={() => askForHelp('words')}>وريني كلمات مفيدة</button>
+                <button type="button" onClick={() => askForHelp('say-it')}>أقولها إزاي؟</button>
+              </>
+            ) : (
+              <>
+                <button type="button" onClick={() => askForHelp('simplify')}>قولها أبسط</button>
+                <button type="button" onClick={() => askForHelp('arabic')}>اشرح بالعربي</button>
+                <button type="button" onClick={() => askForHelp('example')}>اديني مثال</button>
+                <button type="button" onClick={() => askForHelp('say-it')}>أقولها إزاي؟</button>
+              </>
+            )}
           </section>
         ) : null}
 
@@ -555,7 +579,7 @@ export function SpeakingLiveScreen() {
             disabled={!learnerTurn}
           >
             <span>؟</span>
-            <strong>مش فاهم</strong>
+            <strong>{scenario.learnMission ? 'مساعدة' : 'مش فاهم'}</strong>
           </button>
 
           <button
