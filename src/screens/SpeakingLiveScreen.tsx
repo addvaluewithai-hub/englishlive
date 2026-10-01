@@ -15,9 +15,11 @@ import { comfortLabel, goalPrompt, readLearnerProfile } from '../product/profile
 import {
   completeSpeakingSession,
   createSpeakingSession,
+  finalizeSpeakingSessionWithoutAnalysis,
   saveSpeakingTranscript,
 } from '../speaking/api';
 import { speakingScenarioById, type SpeakingDifficulty } from '../speaking/catalog';
+import { buildSpeakingDebugLog, copyTextWithFallback } from '../speaking/debugLog';
 import { LessonEvidenceProgress, useLessonEvidenceRuntime } from '../speaking/lessonEvidenceRuntime';
 import { Round2IntentHint } from '../speaking/Round2IntentHint';
 import type { SpeakingTurn, SpeakingTurnSpeaker } from '../speaking/types';
@@ -91,7 +93,6 @@ export function SpeakingLiveScreen() {
   const learnerDraftRef = useRef('');
   const teacherDraftRef = useRef('');
   const saveTimer = useRef<number | null>(null);
-  const exchangeRef = useRef<HTMLDivElement | null>(null);
   const manualInterrupt = useRef(false);
 
   const [status, setStatus] = useState<LiveStatus>('idle');
@@ -102,11 +103,10 @@ export function SpeakingLiveScreen() {
   const [teacherDraft, setTeacherDraft] = useState('');
   const [teacherDisplayName, setTeacherDisplayName] = useState(character.name);
   const [keyboardOpen, setKeyboardOpen] = useState(false);
-  const [helpOpen, setHelpOpen] = useState(false);
-  const [historyOpen, setHistoryOpen] = useState(false);
   const [typedText, setTypedText] = useState('');
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [ending, setEnding] = useState(false);
+  const [logCopied, setLogCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   function durationSeconds() {
@@ -159,16 +159,6 @@ export function SpeakingLiveScreen() {
     setTeacherDraft('');
     pushTurn('teacher', value);
   }
-
-  useEffect(() => {
-    const container = exchangeRef.current;
-    if (!container) return;
-    const frame = window.requestAnimationFrame(() => {
-      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      container.scrollTo({ top: container.scrollHeight, behavior: reduced ? 'auto' : 'smooth' });
-    });
-    return () => window.cancelAnimationFrame(frame);
-  }, [turns, learnerDraft, teacherDraft]);
 
   useEffect(() => {
     if (status === 'connecting' || status === 'reconnecting') performer.current?.thinking();
@@ -268,7 +258,7 @@ export function SpeakingLiveScreen() {
           flushTeacherDraft();
           queue.markTurnComplete();
           if (lessonEvidence.consumeAutoFinishAfterTurn()) {
-            window.setTimeout(() => void finishConversation(), 450);
+            window.setTimeout(() => void finishConversation(), 300);
           }
         },
         onError: (message) => setError(message),
@@ -423,44 +413,71 @@ export function SpeakingLiveScreen() {
     setKeyboardOpen(false);
   }
 
-  function askForHelp(kind: 'simplify' | 'arabic' | 'example' | 'say-it' | 'hint' | 'words' | 'wait') {
-    if (visualQa) {
-      setHelpOpen(false);
-      return;
-    }
-    if (kind === 'wait') {
-      setHelpOpen(false);
-      return;
-    }
+  function explainLastTurnInArabic() {
+    if (visualQa) return;
     const live = transport.current;
     if (!live?.connected || status !== 'listening' || !micOpen) return;
-    const instructions = {
-      simplify: 'Rephrase only your last point in simpler English, then stay in role and continue.',
-      arabic: 'Briefly explain only your last point in Egyptian Arabic, then return to English and continue the roleplay.',
-      example: 'Give one very short English example the learner could use in this situation, then give them the turn. Any evidence copied from this exact example is supported, not independent.',
-      'say-it': 'The learner needs production help. Ask in Egyptian Arabic what they want to say if the intent is unclear; otherwise give one short natural English phrase they can use, then resume the roleplay. Any evidence copied from this exact phrase is supported, not independent.',
-      hint: 'Give one brief Egyptian-Arabic hint about the communicative move the learner could make next, without supplying the exact English sentence. Then stop and give them the turn.',
-      words: 'Offer up to three short useful English words or chunks from this lesson that could help in the current moment. Do not combine them into a complete answer. Then give the learner the turn.',
-    } as const;
-    live.sendText(instructions[kind]);
-    setHelpOpen(false);
+    live.sendText([
+      'UI HELP EVENT — this is NOT a learner answer and must NOT be judged as a Round 2 attempt.',
+      'Do not call judge_round2_attempt or record_lesson_evidence because of this UI event.',
+      'Explain only your immediately previous spoken English turn in clear Egyptian Arabic.',
+      'Start with the overall meaning, then briefly break down any important word, phrase or structure so the learner genuinely understands it.',
+      'Do not advance the scenario, do not answer on the learner’s behalf, and do not reveal the English answer expected from the learner.',
+      'Then stop and give the learner the turn again.',
+    ].join(' '));
+  }
+
+  async function copyDebugLog() {
+    const text = buildSpeakingDebugLog({
+      title: scenario.titleAr,
+      lessonCode: scenario.curriculum?.lessonCode,
+      roundLabel: round === 'independent' ? 'Round 2 — Arabic intent / independent English' : 'Live conversation',
+      teacherName: teacherDisplayName,
+      status,
+      turns: turnsRef.current,
+      learnerDraft: learnerDraftRef.current,
+      teacherDraft: teacherDraftRef.current,
+    });
+    try {
+      await copyTextWithFallback(text);
+      setLogCopied(true);
+      window.setTimeout(() => setLogCopied(false), 1400);
+    } catch {
+      setError('تعذر نسخ اللوج.');
+    }
   }
 
   async function finishConversation() {
     if (ending) return;
     const sessionId = cloudSessionId.current;
-    const returnQuery = scenario.returnPath ? `?returnTo=${encodeURIComponent(scenario.returnPath)}` : '';
     if (!sessionId) {
       await stopTransport();
       navigate(scenario.returnPath || `/speak/scenario/${scenario.id}`);
       return;
     }
+
     setEnding(true);
     flushLearnerDraft();
     flushTeacherDraft();
     const snapshot = turnsRef.current;
     const seconds = durationSeconds();
     await stopTransport();
+
+    if (scenario.learnMission) {
+      try {
+        await finalizeSpeakingSessionWithoutAnalysis(sessionId, snapshot, seconds);
+      } catch {
+        try {
+          await saveSpeakingTranscript(sessionId, snapshot, seconds);
+        } catch {
+          // Best effort only; live learning should not be blocked by storage cleanup.
+        }
+      }
+      navigate(scenario.returnPath || '/learn', { replace: true });
+      return;
+    }
+
+    const returnQuery = scenario.returnPath ? `?returnTo=${encodeURIComponent(scenario.returnPath)}` : '';
     try {
       const completed = await completeSpeakingSession(sessionId, snapshot, seconds);
       navigate(`/speak/scenario-recap/${sessionId}${returnQuery}`, { replace: true, state: { session: completed } });
@@ -478,14 +495,12 @@ export function SpeakingLiveScreen() {
   const teacherSpeaking = status === 'speaking';
   const learnerTurn = status === 'listening' && micOpen;
   const statusText = statusCopy[status];
-  const visibleTurns: SpeakingTurn[] = [
-    ...turns,
-    ...(learnerDraft.trim() ? [{ id: 'draft-learner', speaker: 'learner' as const, text: learnerDraft, atMs: elapsedSeconds * 1000 }] : []),
-    ...(teacherDraft.trim() ? [{ id: 'draft-teacher', speaker: 'teacher' as const, text: teacherDraft, atMs: elapsedSeconds * 1000 }] : []),
-  ].slice(-8);
+  const latestTeacherText = teacherDraft.trim()
+    || [...turns].reverse().find((turn) => turn.speaker === 'teacher')?.text
+    || '';
 
   return (
-    <section className="fs-live sp-scenario-live" dir="rtl">
+    <section className={`fs-live sp-scenario-live${scenario.learnMission ? ' sp-learn-mission-live' : ''}`} dir="rtl">
       <header className="fs-live-header sp-scenario-live-header">
         <button type="button" className="fs-live-close" onClick={() => void finishConversation()} aria-label="إنهاء المحادثة" disabled={ending}>
           <ProductIcon name="close" size={28} />
@@ -502,6 +517,13 @@ export function SpeakingLiveScreen() {
         className="fs-live-stage sp-scenario-stage"
         style={{ backgroundImage: `linear-gradient(180deg, rgba(255,247,243,.08), rgba(255,250,247,.68) 72%, #fffdfc 100%), url(${scenario.image})` }}
       >
+        {latestTeacherText ? (
+          <article className="sp-otti-transcript" aria-live="polite">
+            <small><bdi dir="ltr">{teacherDisplayName}</bdi></small>
+            <p dir="auto">{latestTeacherText}</p>
+          </article>
+        ) : null}
+
         <div className="fs-live-character sp-scenario-character">
           <CharacterHost ref={host} character={character} className="fs-live-character-host" />
         </div>
@@ -513,29 +535,10 @@ export function SpeakingLiveScreen() {
 
         {scenario.hideEvidenceProgress ? null : <LessonEvidenceProgress runtime={lessonEvidence} />}
 
-        <button type="button" className="fs-history-button" onClick={() => setHistoryOpen(true)} aria-label="سجل المحادثة">
-          <span aria-hidden="true">↶</span>
+        <button type="button" className="sp-copy-log-button" onClick={() => void copyDebugLog()} aria-label="نسخ لوج المحادثة">
+          <span aria-hidden="true">⧉</span>
+          <strong>{logCopied ? 'Copied' : 'Copy log'}</strong>
         </button>
-
-        <div ref={exchangeRef} className="fs-exchange" aria-live="polite">
-          {visibleTurns.length ? visibleTurns.map((turn) => turn.speaker === 'teacher' ? (
-            <article key={turn.id} className={`fs-bubble fs-bubble-teacher${turn.id.startsWith('draft-') ? ' is-draft' : ''}`}>
-              <span className="fs-bubble-avatar" aria-hidden="true"><OttiMark /></span>
-              <small><bdi dir="ltr">{teacherDisplayName}</bdi></small>
-              <p dir="auto">{turn.text}</p>
-            </article>
-          ) : (
-            <article key={turn.id} className={`fs-bubble fs-bubble-learner${turn.id.startsWith('draft-') ? ' is-draft' : ''}`}>
-              <span className="fs-learner-dot" aria-hidden="true"><ProductIcon name="profile" size={20} /></span>
-              <p dir="auto">{turn.text}</p>
-            </article>
-          )) : (
-            <article className="fs-bubble fs-bubble-teacher is-placeholder">
-              <span className="fs-bubble-avatar" aria-hidden="true"><OttiMark /></span>
-              <p>{connecting ? 'بنجهز الموقف…' : 'Otti هيبدأ الموقف برسالة قصيرة.'}</p>
-            </article>
-          )}
-        </div>
       </div>
 
       <div className="fs-live-controls">
@@ -554,36 +557,15 @@ export function SpeakingLiveScreen() {
           </form>
         ) : null}
 
-        {helpOpen ? (
-          <section className="sp-help-sheet sp-help-sheet-inline" aria-label="مساعدة المحادثة">
-            <strong>أساعدك إزاي؟</strong>
-            {scenario.learnMission ? (
-              <>
-                <button type="button" onClick={() => askForHelp('wait')}>خد وقتي — اقفل البوكس بس</button>
-                <button type="button" onClick={() => askForHelp('hint')}>اديني تلميح</button>
-                <button type="button" onClick={() => askForHelp('words')}>وريني كلمات مفيدة</button>
-                <button type="button" onClick={() => askForHelp('say-it')}>أقولها إزاي؟</button>
-              </>
-            ) : (
-              <>
-                <button type="button" onClick={() => askForHelp('simplify')}>قولها أبسط</button>
-                <button type="button" onClick={() => askForHelp('arabic')}>اشرح بالعربي</button>
-                <button type="button" onClick={() => askForHelp('example')}>اديني مثال</button>
-                <button type="button" onClick={() => askForHelp('say-it')}>أقولها إزاي؟</button>
-              </>
-            )}
-          </section>
-        ) : null}
-
         <div className="fs-control-row">
           <button
             type="button"
-            className="fs-help-control"
-            onClick={() => setHelpOpen((value) => !value)}
+            className="fs-help-control sp-arabic-explain-button"
+            onClick={explainLastTurnInArabic}
             disabled={!learnerTurn}
           >
-            <span>؟</span>
-            <strong>{scenario.learnMission ? 'مساعدة' : 'مش فاهم'}</strong>
+            <span>ع</span>
+            <strong>اشرح بالعربي</strong>
           </button>
 
           <button
@@ -614,25 +596,13 @@ export function SpeakingLiveScreen() {
         {error ? <p className="fs-live-error" role="alert">{error}</p> : null}
       </div>
 
-      {historyOpen ? (
-        <div className="fs-history-backdrop" role="presentation" onClick={() => setHistoryOpen(false)}>
-          <aside className="fs-history-sheet" role="dialog" aria-modal="true" aria-label="سجل المحادثة" onClick={(event) => event.stopPropagation()}>
-            <header><strong>سجل المحادثة</strong><button type="button" onClick={() => setHistoryOpen(false)}><ProductIcon name="close" size={22} /></button></header>
-            <div className="fs-history-list">
-              {turns.length ? turns.map((turn) => (
-                <article key={turn.id} className={turn.speaker === 'learner' ? 'is-learner' : 'is-teacher'}>
-                  <small>{turn.speaker === 'learner' ? 'أنت' : teacherDisplayName}</small>
-                  <p dir="auto">{turn.text}</p>
-                </article>
-              )) : <p className="fs-history-empty">لسه ما بدأناش كلام.</p>}
-            </div>
-          </aside>
-        </div>
-      ) : null}
-
       {ending ? (
         <div className="fs-ending-overlay" aria-live="polite">
-          <div><OttiMark /><strong>بنجهّز ملخص المحادثة…</strong><span><i /><i /><i /></span></div>
+          <div>
+            <OttiMark />
+            <strong>{scenario.learnMission ? 'تمام — بنرجع للدرس…' : 'بنجهّز ملخص المحادثة…'}</strong>
+            <span><i /><i /><i /></span>
+          </div>
         </div>
       ) : null}
     </section>
