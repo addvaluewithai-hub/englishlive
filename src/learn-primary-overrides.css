@@ -1,10 +1,1 @@
-.lv2-code {
-  display: none;
-}
-
-/* The old mission explainer described the pilot popup/help ladder. The live
-   lesson now teaches through Guided Round 1, Arabic intent hints in Round 2,
-   and one direct Arabic-explanation control, so that pilot copy is retired. */
-.lv2-help-explainer {
-  display: none;
-}
+/* Reserved for primary Learn-specific polish after the pilot-to-roadmap migration. */
