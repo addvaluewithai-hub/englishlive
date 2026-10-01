@@ -33,7 +33,10 @@ const progress = {
 };
 
 const scenarios = [
-  { name: 'speaking-home', path: '/speak', full: true },
+  { name: 'practice-home', path: '/practice', full: true },
+  { name: 'practice-a1-people-world', path: '/practice/A1/world/people-social', full: true },
+  { name: 'practice-b1-travel-world', path: '/practice/B1/world/travel-transport', full: true },
+  { name: 'legacy-speak-alias', path: '/speak', full: true },
   { name: 'speaking-lesson-start', path: '/speak/scenario/a1-s1-l01', full: true },
   { name: 'speaking-lesson-live', path: '/speak/live/a1-s1-l01', full: true },
   { name: 'speaking-b1-start', path: '/speak/scenario/b1-s1-l01', full: true },
