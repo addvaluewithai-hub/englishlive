@@ -3,6 +3,13 @@ import type { ProductUnitDefinition } from './course';
 const STORAGE_KEY = 'englishlive.product-course.v1';
 const COMPLETION_HANDOFF_KEY = 'englishlive.product-course.pending-completion';
 
+// Temporary pilot bypass for the active B1 lesson experiment. Keep progression
+// rules unchanged everywhere else; this only lets testers enter L02 directly
+// even if local completion state for L01 is stale or missing.
+const PILOT_ALWAYS_UNLOCKED_LESSONS = new Set([
+  'b1-u1-l02-keep-conversation-going',
+]);
+
 export interface ProductLessonProgress {
   lessonId: string;
   startedAt?: string;
@@ -107,6 +114,7 @@ export function productUnitProgress(unit: ProductUnitDefinition, progress = read
 }
 
 export function isProductLessonUnlocked(unit: ProductUnitDefinition, lessonId: string, progress = readProductCourseProgress()) {
+  if (PILOT_ALWAYS_UNLOCKED_LESSONS.has(lessonId)) return true;
   const index = unit.lessons.findIndex((lesson) => lesson.id === lessonId);
   if (index <= 0) return true;
   if (progress.lessons[lessonId]?.completedAt || progress.lessons[lessonId]?.startedAt) return true;
