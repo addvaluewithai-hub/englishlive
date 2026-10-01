@@ -136,11 +136,13 @@ export function useLessonEvidenceRuntime(scenarioId: string) {
   const promptEn = [round2.promptEn, evidencePromptEn].filter(Boolean).join('\n\n');
 
   function noteTeacherOutput() {
+    round2.noteTeacherOutput();
     if (finishAfterClosingRef.current) finalClosingOutputRef.current = true;
   }
 
   function consumeAutoFinishAfterTurn() {
-    if (round2.active && !round2.isCompleteNow()) return false;
+    if (round2.consumeAutoFinishAfterTurn()) return true;
+    if (round2.active) return false;
     if (!finishAfterClosingRef.current || !finalClosingOutputRef.current) return false;
     finishAfterClosingRef.current = false;
     finalClosingOutputRef.current = false;
