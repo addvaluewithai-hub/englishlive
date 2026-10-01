@@ -44,6 +44,18 @@ export function usePracticeMissionRuntime(scenarioId?: string) {
     const beat = contract.beats.find((candidate) => candidate.id === beatId);
     if (!beat) return { error: `Unknown Practice beat: ${beatId}` };
 
+    const current = contract.beats.find((candidate) => candidate.id === activeBeatIdRef.current) ?? null;
+    const allowedToAdvance = !current || beat.id === current.id || beat.id === current.next;
+    if (!allowedToAdvance) {
+      return {
+        error: `Beat skip rejected: ${current?.id ?? 'none'} -> ${beat.id}`,
+        active_beat: current?.id ?? null,
+        instruction: current
+          ? `Stay on ${current.id}. You may repeat it or advance only to ${current.next ?? 'no further beat'} after the learner completes the current intent.`
+          : 'Return to the first authored beat.',
+      };
+    }
+
     const changed = activeBeatIdRef.current !== beat.id;
     activeBeatIdRef.current = beat.id;
     setActiveBeatId(beat.id);
@@ -75,6 +87,7 @@ export function usePracticeMissionRuntime(scenarioId?: string) {
         'Before every partner turn that creates a learner response opportunity, call this silently with the beat you are opening.',
         'If you are correcting, clarifying or retrying the same learner intent, call the same beat again.',
         'Only advance after the learner genuinely completes the current communicative intent.',
+        'The runtime also rejects beat skipping; move only to the authored next beat.',
         'Use close only after the final required learner intent is complete.',
         'Never mention this tool to the learner.',
       ].join(' '),
