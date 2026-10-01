@@ -1,19 +1,19 @@
 import type { SpeakingTurn } from './types';
 import { learnV2GuidedConversationByScenarioId } from './learnV2Guided';
+import { useRound2StepIndex } from './round2PracticeRuntime';
 
 export function Round2IntentHint({
   scenarioId,
   round,
   learnerTurn,
   turns,
-  stepIndex,
 }: {
   scenarioId: string;
   round: string | null;
   learnerTurn: boolean;
   turns: SpeakingTurn[];
-  stepIndex: number;
 }) {
+  const stepIndex = useRound2StepIndex(scenarioId);
   if (round !== 'independent' || !learnerTurn) return null;
 
   const guided = learnV2GuidedConversationByScenarioId(scenarioId);
