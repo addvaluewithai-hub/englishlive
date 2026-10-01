@@ -44,9 +44,10 @@ function allowedOrigin(request: Request) {
   return null;
 }
 
-function corsHeaders(request: Request) {
+function corsHeaders(request: Request): Record<string, string> {
   const origin = allowedOrigin(request);
-  return origin ? { 'access-control-allow-origin': origin, vary: 'origin' } : {};
+  if (!origin) return {};
+  return { 'access-control-allow-origin': origin, vary: 'origin' };
 }
 
 function base64Bytes(value: string) {
