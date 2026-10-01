@@ -96,7 +96,7 @@ export const B1_UNIT_1_PRODUCT: ProductUnitDefinition = {
 export const B1_UNIT_1_LESSON_SLOTS: readonly PlannedLessonSlot[] = [
   { sourceLessonId: 'U1-L01', order: 1, title: 'Reconnect without a script', arabicTitle: 'ادخل الحوار من غير سكريبت', connectedLessonId: B1_SCENE_LESSON_PILOTS[0]?.id },
   { sourceLessonId: 'U1-L02', order: 2, title: 'Keep a familiar conversation going', arabicTitle: 'خلّي المحادثة تكمل', connectedLessonId: B1_SCENE_LESSON_PILOTS[1]?.id },
-  { sourceLessonId: 'U1-L03', order: 3, title: 'Share personal updates, feelings and reactions', arabicTitle: 'شارك تحديثات ومشاعر وردود فعل' },
+  { sourceLessonId: 'U1-L03', order: 3, title: 'Share personal updates, feelings and reactions', arabicTitle: 'شارك تحديثات ومشاعر وردود فعل', connectedLessonId: B1_SCENE_LESSON_PILOTS[2]?.id },
   { sourceLessonId: 'U1-L04', order: 4, title: 'Paraphrase, clarify and work around a missing word', arabicTitle: 'وضّح ولف حوالين الكلمة الناقصة' },
   { sourceLessonId: 'U1-L05', order: 5, title: 'Understand and respond in an informal interview', arabicTitle: 'افهم ورد في مقابلة غير رسمية' },
   { sourceLessonId: 'U1-L06', order: 6, title: 'Ask follow-up questions and check information', arabicTitle: 'اسأل متابعة وتأكد من المعلومات' },
@@ -175,6 +175,11 @@ export function lessonCompletionWins(lesson: SceneLessonDefinition): readonly st
       'الحفاظ على الحوار لعدة أدوار بالاستماع والمتابعة بدل انتظار سؤال جديد',
       'استخدام get to know / in touch / you see ومفردات القرار والخطة داخل سياق حقيقي',
       'استخدام grammar support بسيط عند الحاجة وعمل دعوة مهذبة ثم متابعة الحوار',
+    ],
+    'b1:U1-L03': [
+      'مشاركة خبر شخصي أو إحساس بشكل طبيعي وإضافة تفاصيل قصيرة تخلي الكلام مفهوم',
+      'الرد على أخبار كويسة أو وحشة برد مناسب ثم عمل follow-up يحافظ على المحادثة',
+      'استخدام تعبيرات ومفردات L03 عن العلاقات والمشاعر والصفات، وعمل excuse مهذبة لما الموقف يحتاج',
     ],
   };
   return wins[`${lesson.levelId}:${lesson.source.sourceLessonId}`] ?? [lesson.performance];
