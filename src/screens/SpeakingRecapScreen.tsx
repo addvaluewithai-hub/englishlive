@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useLocation, useParams } from 'react-router-dom';
+import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import { OttiMark } from '../character/otti/OttiMark';
 import { ProductIcon } from '../components/ProductIcon';
 import { a1SpeakingPilotLessonById, nextA1SpeakingPilotLesson } from '../speaking/a1Pilot';
@@ -36,7 +36,10 @@ function durationLabel(seconds: number) {
 export function SpeakingRecapScreen() {
   const { sessionId = '' } = useParams();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const state = location.state as RecapLocationState | null;
+  const requestedReturnTo = searchParams.get('returnTo');
+  const returnTo = requestedReturnTo?.startsWith('/learn/') ? requestedReturnTo : null;
   const [session, setSession] = useState<SpeakingCloudSession | null>(state?.session ?? null);
   const [loading, setLoading] = useState(!state?.session);
   const [retrying, setRetrying] = useState(false);
@@ -103,7 +106,7 @@ export function SpeakingRecapScreen() {
       <section className="v2-empty-screen" dir="rtl">
         <h1>مش قادرين نفتح الملخص</h1>
         <p>{error || 'ارجع للمحادثة وجرّب تفتح الموقف تاني.'}</p>
-        <Link className="v2-primary-button" to="/speak">الرجوع للمحادثة</Link>
+        <Link className="v2-primary-button" to={returnTo || '/speak'}>{returnTo ? 'الرجوع للدرس' : 'الرجوع للمحادثة'}</Link>
       </section>
     );
   }
@@ -112,14 +115,15 @@ export function SpeakingRecapScreen() {
   const usefulEvidence = recap?.evidence.filter((item) => item.outcome !== 'not_observed') ?? [];
   const curriculumLesson = a1SpeakingPilotLessonById(session.scenarioId);
   const nextLesson = nextA1SpeakingPilotLesson(session.scenarioId);
+  const isGuidedLesson = Boolean(curriculumLesson || session.scenarioSnapshot.lessonCode);
 
   return (
     <section className="fs-recap sp-scenario-recap" dir="rtl">
       <header className="fs-recap-hero">
         <div className="fs-recap-art"><img src={speakingAssets.ottiProgress} alt="Otti" /></div>
         <div className="fs-recap-copy">
-          <span className="sp-eyebrow">{curriculumLesson?.curriculum?.lessonCode ? `${curriculumLesson.curriculum.lessonCode} • ` : ''}{session.scenarioSnapshot.titleAr}</span>
-          <h1>{recap?.headlineAr || (curriculumLesson ? 'الدرس اتحفظ!' : 'الموقف اتحفظ!')}</h1>
+          <span className="sp-eyebrow">{session.scenarioSnapshot.lessonCode ? `${session.scenarioSnapshot.lessonCode} • ` : curriculumLesson?.curriculum?.lessonCode ? `${curriculumLesson.curriculum.lessonCode} • ` : ''}{session.scenarioSnapshot.titleAr}</span>
+          <h1>{recap?.headlineAr || (isGuidedLesson ? 'الدرس اتحفظ!' : 'الموقف اتحفظ!')}</h1>
           <strong>اتكلمت <em>{durationLabel(session.durationSeconds)}</em></strong>
           <p>{recap?.summaryAr || 'المحادثة اتحفظت كاملة. جهّز التحليل عشان نطلع أهم حاجة اتدربت عليها.'}</p>
         </div>
@@ -201,7 +205,12 @@ export function SpeakingRecapScreen() {
       )}
 
       <div className="fs-recap-actions">
-        {curriculumLesson ? (
+        {returnTo ? (
+          <>
+            <Link className="fs-recap-primary" to={returnTo}><span>ارجع للدرس</span><ProductIcon name="chevron" size={24} /></Link>
+            <Link className="fs-recap-secondary" to={`/speak/live/${session.scenarioId}`}><ProductIcon name="speak" size={24} /><span>جرّب المحادثة تاني</span></Link>
+          </>
+        ) : curriculumLesson ? (
           <>
             <Link className="fs-recap-primary" to={nextLesson ? `/speak/scenario/${nextLesson.id}` : '/speak'}>
               <span>{nextLesson ? `الدرس التالي: ${nextLesson.titleAr}` : 'رجوع لمسار Speaking A1'}</span><ProductIcon name="chevron" size={24} />
