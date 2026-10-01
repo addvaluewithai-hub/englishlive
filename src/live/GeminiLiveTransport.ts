@@ -211,8 +211,9 @@ export class GeminiLiveTransport implements LiveTransport {
               startOfSpeechSensitivity: 'START_SENSITIVITY_HIGH',
               endOfSpeechSensitivity: 'END_SENSITIVITY_LOW',
               prefixPaddingMs: 120,
-              // Learners need room for natural hesitation and word-search pauses.
-              silenceDurationMs: 1300,
+              // Language learners often need a couple of seconds to search for a word
+              // or finish building a sentence. Keep short thinking pauses inside the turn.
+              silenceDurationMs: 2600,
             },
             turnCoverage: 'TURN_INCLUDES_ONLY_ACTIVITY',
           },
