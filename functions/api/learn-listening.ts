@@ -25,6 +25,30 @@ interface InteractionResponse {
   error?: { message?: string };
 }
 
+const nativeOrigins = new Set([
+  'capacitor://localhost',
+  'ionic://localhost',
+  'http://localhost',
+  'https://localhost',
+]);
+
+function allowedOrigin(request: Request) {
+  const origin = request.headers.get('origin');
+  if (!origin) return null;
+  if (nativeOrigins.has(origin)) return origin;
+  try {
+    if (new URL(origin).host === new URL(request.url).host) return origin;
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+function corsHeaders(request: Request) {
+  const origin = allowedOrigin(request);
+  return origin ? { 'access-control-allow-origin': origin, vary: 'origin' } : {};
+}
+
 function base64Bytes(value: string) {
   const binary = atob(value);
   const bytes = new Uint8Array(binary.length);
@@ -32,13 +56,28 @@ function base64Bytes(value: string) {
   return bytes;
 }
 
-function jsonError(message: string, status: number) {
+function jsonError(request: Request, message: string, status: number) {
   return new Response(JSON.stringify({ error: message }), {
     status,
     headers: {
       'content-type': 'application/json; charset=utf-8',
       'cache-control': 'no-store',
       'x-content-type-options': 'nosniff',
+      ...corsHeaders(request),
+    },
+  });
+}
+
+export async function onRequestOptions(context: PagesContext) {
+  const origin = allowedOrigin(context.request);
+  if (!origin) return new Response(null, { status: 403 });
+  return new Response(null, {
+    status: 204,
+    headers: {
+      'access-control-allow-origin': origin,
+      'access-control-allow-methods': 'GET, OPTIONS',
+      'access-control-allow-headers': 'accept, content-type',
+      vary: 'origin',
     },
   });
 }
@@ -47,10 +86,10 @@ export async function onRequestGet(context: PagesContext) {
   const requestUrl = new URL(context.request.url);
   const clipId = requestUrl.searchParams.get('clip')?.trim();
   const clip = learnV2ListeningClipById(clipId);
-  if (!clip) return jsonError('Unknown listening clip.', 404);
+  if (!clip) return jsonError(context.request, 'Unknown listening clip.', 404);
 
   const apiKey = context.env.GEMINI_API_KEY?.trim();
-  if (!apiKey) return jsonError('GEMINI_API_KEY is not configured.', 503);
+  if (!apiKey) return jsonError(context.request, 'GEMINI_API_KEY is not configured.', 503);
 
   try {
     const upstream = await fetch('https://generativelanguage.googleapis.com/v1beta/interactions', {
@@ -92,14 +131,14 @@ export async function onRequestGet(context: PagesContext) {
     if (!upstream.ok || !payload) {
       const message = payload?.error?.message || `Gemini TTS failed (${upstream.status}).`;
       console.warn('Learn V2 listening generation failed', { clipId, upstreamStatus: upstream.status });
-      return jsonError(message, 502);
+      return jsonError(context.request, message, 502);
     }
 
     const audioPart = payload.steps
       ?.flatMap((step) => step.content ?? [])
       .filter((part) => part.type === 'audio' && part.data)
       .at(-1);
-    if (!audioPart?.data) return jsonError('Gemini TTS returned no audio.', 502);
+    if (!audioPart?.data) return jsonError(context.request, 'Gemini TTS returned no audio.', 502);
 
     const audio = base64Bytes(audioPart.data);
     return new Response(audio, {
@@ -110,10 +149,11 @@ export async function onRequestGet(context: PagesContext) {
         'cache-control': 'public, max-age=86400, s-maxage=604800, immutable',
         'x-content-type-options': 'nosniff',
         'content-disposition': `inline; filename="${clip.id}.wav"`,
+        ...corsHeaders(context.request),
       },
     });
   } catch (reason) {
     console.warn('Learn V2 listening generation did not respond', { clipId, reason: reason instanceof Error ? reason.message : String(reason) });
-    return jsonError('Listening audio is temporarily unavailable.', 502);
+    return jsonError(context.request, 'Listening audio is temporarily unavailable.', 502);
   }
 }
