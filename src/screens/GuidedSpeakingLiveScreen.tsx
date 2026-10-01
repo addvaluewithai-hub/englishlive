@@ -11,6 +11,7 @@ import { loadPublishedCharacter } from '../content/client';
 import { GeminiLiveTransport } from '../live/GeminiLiveTransport';
 import type { LiveStatus } from '../live/types';
 import { speakingScenarioById } from '../speaking/catalog';
+import { buildSpeakingDebugLog, copyTextWithFallback } from '../speaking/debugLog';
 import { learnV2GuidedConversationByScenarioId } from '../speaking/learnV2Guided';
 import type { SpeakingTurn, SpeakingTurnSpeaker } from '../speaking/types';
 
@@ -57,7 +58,6 @@ export function GuidedSpeakingLiveScreen() {
   const turnsRef = useRef<SpeakingTurn[]>([]);
   const learnerDraftRef = useRef('');
   const teacherDraftRef = useRef('');
-  const exchangeRef = useRef<HTMLDivElement | null>(null);
   const guidedLearnerTurnsRef = useRef(0);
   const awaitingClosingRef = useRef(false);
   const finishAfterSpeechRef = useRef(false);
@@ -71,6 +71,7 @@ export function GuidedSpeakingLiveScreen() {
   const [teacherDisplayName, setTeacherDisplayName] = useState(character.name);
   const [completedLearnerTurns, setCompletedLearnerTurns] = useState(0);
   const [finished, setFinished] = useState(false);
+  const [logCopied, setLogCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   function setLearnerMicEnabled(enabled: boolean) {
@@ -133,6 +134,26 @@ export function GuidedSpeakingLiveScreen() {
   async function leaveGuided() {
     await stopTransport();
     navigate(scenario.returnPath || '/learn');
+  }
+
+  async function copyDebugLog() {
+    const text = buildSpeakingDebugLog({
+      title: scenario.titleAr,
+      lessonCode: scenario.curriculum?.lessonCode,
+      roundLabel: 'Round 1 — guided English cards',
+      teacherName: teacherDisplayName,
+      status,
+      turns: turnsRef.current,
+      learnerDraft: learnerDraftRef.current,
+      teacherDraft: teacherDraftRef.current,
+    });
+    try {
+      await copyTextWithFallback(text);
+      setLogCopied(true);
+      window.setTimeout(() => setLogCopied(false), 1400);
+    } catch {
+      setError('تعذر نسخ اللوج.');
+    }
   }
 
   async function startLive() {
@@ -272,13 +293,6 @@ export function GuidedSpeakingLiveScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    const container = exchangeRef.current;
-    if (!container) return;
-    const frame = window.requestAnimationFrame(() => container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' }));
-    return () => window.cancelAnimationFrame(frame);
-  }, [turns, learnerDraft, teacherDraft, completedLearnerTurns]);
-
   if (!guided) {
     return (
       <section className="v2-empty-screen" dir="rtl">
@@ -295,7 +309,7 @@ export function GuidedSpeakingLiveScreen() {
           <OttiMark />
           <span>Round 1 ✓</span>
           <h1>حلو. دلوقتي نخبي الكروت.</h1>
-          <p>هتدخل نفس الموقف تاني، بس المرة دي رد بطريقتك. مش لازم تفتكر نفس الجملة حرفيًا. ولو نسيت، زر المساعدة لسه موجود.</p>
+          <p>هتدخل نفس الموقف تاني، بس المرة دي المعنى هيظهر بالعربي وإنت تقول الإنجليزي بطريقتك. لو فيه غلط حقيقي Otti هيصلحه ويخليك تعيد.</p>
           <Link className="guided-finish-primary" to={`/speak/live/${scenario.id}?round=independent`}>
             <ProductIcon name="speak" size={26} />
             <span>جرّب من غير الكارت</span>
@@ -309,15 +323,13 @@ export function GuidedSpeakingLiveScreen() {
 
   const learnerTurn = status === 'listening' && micOpen;
   const currentStep = guided.steps[Math.min(completedLearnerTurns, guided.steps.length - 1)];
-  const visibleTurns: SpeakingTurn[] = [
-    ...turns,
-    ...(learnerDraft.trim() ? [{ id: 'draft-learner', speaker: 'learner' as const, text: learnerDraft, atMs: Date.now() }] : []),
-    ...(teacherDraft.trim() ? [{ id: 'draft-teacher', speaker: 'teacher' as const, text: teacherDraft, atMs: Date.now() }] : []),
-  ].slice(-6);
+  const latestTeacherText = teacherDraft.trim()
+    || [...turns].reverse().find((turn) => turn.speaker === 'teacher')?.text
+    || '';
   const statusText = statusCopy[status];
 
   return (
-    <section className="fs-live sp-scenario-live guided-live" dir="rtl">
+    <section className="fs-live sp-scenario-live sp-learn-mission-live guided-live" dir="rtl">
       <header className="fs-live-header sp-scenario-live-header">
         <button type="button" className="fs-live-close" onClick={() => void leaveGuided()} aria-label="إنهاء التدريب">
           <ProductIcon name="close" size={28} />
@@ -331,6 +343,13 @@ export function GuidedSpeakingLiveScreen() {
         className="fs-live-stage sp-scenario-stage"
         style={{ backgroundImage: `linear-gradient(180deg, rgba(255,247,243,.08), rgba(255,250,247,.68) 72%, #fffdfc 100%), url(${scenario.image})` }}
       >
+        {latestTeacherText ? (
+          <article className="sp-otti-transcript" aria-live="polite">
+            <small><bdi dir="ltr">{teacherDisplayName}</bdi></small>
+            <p dir="auto">{latestTeacherText}</p>
+          </article>
+        ) : null}
+
         <div className="fs-live-character sp-scenario-character">
           <CharacterHost ref={host} character={character} className="fs-live-character-host" />
         </div>
@@ -344,25 +363,10 @@ export function GuidedSpeakingLiveScreen() {
           {guided.steps.map((_, index) => <i key={index} className={index < completedLearnerTurns ? 'is-done' : index === completedLearnerTurns ? 'is-current' : ''} />)}
         </div>
 
-        <div ref={exchangeRef} className="fs-exchange guided-exchange" aria-live="polite">
-          {visibleTurns.length ? visibleTurns.map((turn) => turn.speaker === 'teacher' ? (
-            <article key={turn.id} className={`fs-bubble fs-bubble-teacher${turn.id.startsWith('draft-') ? ' is-draft' : ''}`}>
-              <span className="fs-bubble-avatar" aria-hidden="true"><OttiMark /></span>
-              <small><bdi dir="ltr">{teacherDisplayName}</bdi></small>
-              <p dir="auto">{turn.text}</p>
-            </article>
-          ) : (
-            <article key={turn.id} className={`fs-bubble fs-bubble-learner${turn.id.startsWith('draft-') ? ' is-draft' : ''}`}>
-              <span className="fs-learner-dot" aria-hidden="true"><ProductIcon name="profile" size={20} /></span>
-              <p dir="auto">{turn.text}</p>
-            </article>
-          )) : (
-            <article className="fs-bubble fs-bubble-teacher is-placeholder">
-              <span className="fs-bubble-avatar" aria-hidden="true"><OttiMark /></span>
-              <p>{status === 'connecting' ? 'بنجهز التدريب…' : 'Otti هيبدأ بجملة قصيرة.'}</p>
-            </article>
-          )}
-        </div>
+        <button type="button" className="sp-copy-log-button" onClick={() => void copyDebugLog()} aria-label="نسخ لوج المحادثة">
+          <span aria-hidden="true">⧉</span>
+          <strong>{logCopied ? 'Copied' : 'Copy log'}</strong>
+        </button>
       </div>
 
       <div className="fs-live-controls guided-controls">
