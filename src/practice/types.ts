@@ -5,9 +5,7 @@ export type PracticeMissionBeat = {
   type: 'required' | 'ending';
   aiIntentEn: string;
   learnerIntentEn: string;
-  intentHintAr?: string;
-  usefulLanguageEn?: string[];
-  fullHelpExamplesEn?: string[];
+  overviewAr?: string;
   correctionFocusEn?: string[];
   next?: string;
 };
