@@ -128,6 +128,13 @@ export function usePracticeMissionRuntime(scenarioId?: string) {
 
   function receiveHintBundle(args: Record<string, unknown>) {
     if (!contract) return { error: 'No authored Practice mission is active.' };
+    if (!hintLoadingRef.current) {
+      return {
+        error: 'No active UI Practice hint request. Unsolicited hint bundles are rejected.',
+        instruction: 'Do not speak, do not reveal help, and continue only when the learner acts or the UI explicitly requests a hint.',
+      };
+    }
+
     const beatId = cleanText(args.beat_id, 80);
     const currentBeatId = activeBeatIdRef.current;
     if (!beatId || beatId !== currentBeatId) {
