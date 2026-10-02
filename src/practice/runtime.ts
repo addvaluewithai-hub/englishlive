@@ -44,6 +44,7 @@ export function usePracticeMissionRuntime(scenarioId?: string) {
   const activeBeatIdRef = useRef<string | null>(firstBeatId);
   const [supportLevel, setSupportLevel] = useState<PracticeSupportLevel>(0);
   const supportLevelRef = useRef<PracticeSupportLevel>(0);
+  const maxSupportRecordedRef = useRef<PracticeSupportLevel>(0);
   const supportSummaryRef = useRef<PracticeSupportSummary>(emptySupportSummary());
   const [hintBundle, setHintBundle] = useState<PracticeHintBundle | null>(null);
   const hintBundleRef = useRef<PracticeHintBundle | null>(null);
@@ -60,6 +61,7 @@ export function usePracticeMissionRuntime(scenarioId?: string) {
     setHintLoading(false);
     setHintError(null);
     supportLevelRef.current = 0;
+    maxSupportRecordedRef.current = 0;
     setSupportLevel(0);
   }
 
@@ -112,18 +114,20 @@ export function usePracticeMissionRuntime(scenarioId?: string) {
   }
 
   function revealSupport(level: Exclude<PracticeSupportLevel, 0>) {
-    const previous = supportLevelRef.current;
-    if (level > previous) {
+    const previouslyRecorded = maxSupportRecordedRef.current;
+    if (level > previouslyRecorded) {
       const summary = supportSummaryRef.current;
       supportSummaryRef.current = {
-        intentHints: summary.intentHints + (previous < 1 && level >= 1 ? 1 : 0),
-        usefulLanguageReveals: summary.usefulLanguageReveals + (previous < 2 && level >= 2 ? 1 : 0),
-        fullHelpReveals: summary.fullHelpReveals + (previous < 3 && level >= 3 ? 1 : 0),
+        intentHints: summary.intentHints + (previouslyRecorded < 1 && level >= 1 ? 1 : 0),
+        usefulLanguageReveals: summary.usefulLanguageReveals + (previouslyRecorded < 2 && level >= 2 ? 1 : 0),
+        fullHelpReveals: summary.fullHelpReveals + (previouslyRecorded < 3 && level >= 3 ? 1 : 0),
       };
+      maxSupportRecordedRef.current = level;
     }
-    const next = Math.max(previous, level) as PracticeSupportLevel;
-    supportLevelRef.current = next;
-    setSupportLevel(next);
+
+    const visibleNext = Math.max(supportLevelRef.current, level) as PracticeSupportLevel;
+    supportLevelRef.current = visibleNext;
+    setSupportLevel(visibleNext);
   }
 
   function receiveHintBundle(args: Record<string, unknown>) {
