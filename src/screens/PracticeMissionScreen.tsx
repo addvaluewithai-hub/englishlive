@@ -58,15 +58,15 @@ export function PracticeMissionScreen() {
         <section className="practice-start-flow">
           <header>
             <small>المحادثة مصممة — مش محفوظة</small>
-            <strong>إيه اللي هيحصل؟</strong>
+            <strong>إيه اللي هتتمرّن عليه؟</strong>
           </header>
           <ol>
             {responseBeats.map((beat, index) => (
               <li key={beat.id}>
                 <span>{index + 1}</span>
                 <div>
-                  <strong>{beat.intentHintAr}</strong>
-                  <small>{beat.id === 'greet_order' ? 'اطلب بطريقتك — مش لازم جملة بعينها' : beat.id === 'choose_size' ? 'اختيار قصير طبيعي كفاية' : 'كمّل التبادل واقفل الطلب'}</small>
+                  <strong>{beat.overviewAr ?? 'اتصرف في الموقف بطريقتك'}</strong>
+                  <small>{beat.id === 'greet_order' ? 'مش لازم جملة بعينها' : beat.id === 'choose_size' ? 'اختيار قصير طبيعي كفاية' : 'المهم تكمل التبادل بشكل طبيعي'}</small>
                 </div>
               </li>
             ))}
@@ -76,8 +76,8 @@ export function PracticeMissionScreen() {
         <section className="practice-start-hints">
           <div className="practice-start-hint-icon" aria-hidden="true">💡</div>
           <div>
-            <strong>الـHint بإيدك أنت</strong>
-            <p>لو وقفت: افتح المعنى بالعربي. لو لسه محتاج مساعدة، أظهر كلمات مفيدة أو مثال كامل. المثال للمساعدة مش إجابة وحيدة لازم تحفظها.</p>
+            <strong>الـHint ذكية وبتتعمل وقتها</strong>
+            <p>لو وقفت واضغطت Hint، Otti يبني المساعدة على اللي حصل فعلًا في المحادثة. بنجيب المعنى والكلمات والمثال مرة واحدة، وبعدها أنت تكشف المستوى اللي محتاجه من غير requests زيادة.</p>
           </div>
         </section>
 
