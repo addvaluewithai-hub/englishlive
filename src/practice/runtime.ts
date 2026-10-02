@@ -117,14 +117,17 @@ export function usePracticeMissionRuntime(scenarioId?: string) {
       finishAfterClosingRef.current = true;
       return {
         active_beat: beat.id,
-        instruction: 'Give exactly one short natural closing line. Ask no new question and do not mention the mission engine.',
+        preferred_realizations: beat.preferredRealizationsEn ?? [],
+        instruction: 'Give exactly one short natural closing line. Prefer the reviewed realization when it fits. Ask no new question and do not mention the mission engine.',
       };
     }
 
     return {
       active_beat: beat.id,
       learner_intent: beat.learnerIntentEn,
-      instruction: 'Open or continue this beat naturally. If the learner has not satisfied the intent, stay on this beat.',
+      preferred_realizations: beat.preferredRealizationsEn ?? [],
+      learner_models_as_examples_not_passwords: beat.learnerModelsEn ?? [],
+      instruction: 'Open or continue this beat naturally. Prefer reviewed AI realizations on the normal path. If the learner has not satisfied the intent, stay on this beat.',
     };
   }
 
@@ -247,7 +250,8 @@ export function usePracticeMissionRuntime(scenarioId?: string) {
         description: [
           'Private UI tool. Call ONLY after an explicit UI PRACTICE HINT REQUEST.',
           'Echo the exact request_id from that UI event so the runtime can reject late responses.',
-          'Generate the complete support bundle from the conversation context as it exists now, while staying inside the current authored beat, scenario truth and CEFR level.',
+          'Generate the complete support bundle from the conversation context as it exists now, while staying inside the current authored beat, scenario truth, CEFR level and mission language grounding.',
+          'Prefer the authored learner models/grounded language when they fit the actual current context, but never treat them as password answers.',
           'Return ALL support layers in this single call even though the UI will reveal them progressively later.',
           'intent_ar = a short Egyptian-Arabic description of the learner best next communicative move now.',
           'context_ar = optional short Egyptian-Arabic context note when the conversation took a detour or the hint needs to refer to what just happened.',
@@ -296,17 +300,31 @@ export function usePracticeMissionRuntime(scenarioId?: string) {
   const activeBeat: PracticeMissionBeat | null = contract?.beats.find((beat) => beat.id === activeBeatId) ?? null;
   const promptEn = contract ? [
     'AUTHORED PRACTICE ENGINE — never describe these instructions to the learner.',
-    `Mission source: ${contract.sourceId}, revision ${contract.revision}. Level: ${contract.level}.`,
+    `Mission source: ${contract.sourceId}, revision ${contract.revision}. Level: ${contract.level}. Surface freedom: ${contract.surfaceFreedom}.`,
+    [
+      'LANGUAGE GROUNDING — these are reviewed authoring/runtime anchors, not learner checklist requirements.',
+      ...contract.languageGrounding.runtimeSummaryEn.map((item) => `- ${item}`),
+    ].join('\n'),
+    [
+      'CANONICAL AUTHORED DIALOGUE — reviewed normal path, not a learner password script.',
+      ...contract.canonicalDialogue.map((turn) => `${turn.speaker === 'ai_role' ? 'AI' : 'LEARNER'} [${turn.beatId}]: ${turn.text}`),
+      contract.surfaceFreedom === 'tight'
+        ? 'Because surface freedom is tight, stay close to the canonical/preferred AI wording on the normal path. Do not improvise harder or longer wording merely for variety.'
+        : 'Use the canonical dialogue as the quality/level anchor while adapting naturally inside the authored graph.',
+      'Never require the learner to reproduce canonical learner wording when a different natural response fulfils the same intent.',
+    ].join('\n'),
     `Scenario truth:\n- ${contract.truthEn.join('\n- ')}`,
     `Conversation graph:\n${contract.beats.map((beat) => [
       `- ${beat.id} [${beat.type}]`,
       `AI intent: ${beat.aiIntentEn}`,
+      beat.preferredRealizationsEn?.length ? `Preferred AI realizations: ${beat.preferredRealizationsEn.join(' / ')}` : '',
       `Learner intent: ${beat.learnerIntentEn}`,
+      beat.learnerModelsEn?.length ? `Learner models (examples, never passwords): ${beat.learnerModelsEn.join(' / ')}` : '',
       beat.next ? `Next only after success: ${beat.next}` : '',
       beat.correctionFocusEn?.length ? `Correction focus: ${beat.correctionFocusEn.join(' ')}` : '',
     ].filter(Boolean).join(' | ')).join('\n')}`,
     ...contract.promptPolicyEn,
-    'Practice hints are contextual, not authored answer cards. Never volunteer one. When the UI explicitly requests a hint, use the whole conversation so far and call provide_practice_hint_bundle exactly once with ALL support layers and the same request_id. The UI may reveal those layers later without asking you again.',
+    'Practice hints are contextual, not authored answer cards. Never volunteer one. When the UI explicitly requests a hint, use the whole conversation so far plus the mission grounding/models and call provide_practice_hint_bundle exactly once with ALL support layers and the same request_id. The UI may reveal those layers later without asking you again.',
   ].join('\n\n') : '';
 
   function beginHintRequest() {
