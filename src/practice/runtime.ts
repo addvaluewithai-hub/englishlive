@@ -37,6 +37,11 @@ function cleanStringList(value: unknown) {
     .slice(0, 5);
 }
 
+function createHintRequestId() {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
 export function usePracticeMissionRuntime(scenarioId?: string) {
   const contract = practiceMissionContractBySlug(scenarioId);
   const firstBeatId = contract?.beats[0]?.id ?? null;
@@ -50,6 +55,7 @@ export function usePracticeMissionRuntime(scenarioId?: string) {
   const hintBundleRef = useRef<PracticeHintBundle | null>(null);
   const [hintLoading, setHintLoading] = useState(false);
   const hintLoadingRef = useRef(false);
+  const activeHintRequestIdRef = useRef<string | null>(null);
   const [hintError, setHintError] = useState<string | null>(null);
   const finishAfterClosingRef = useRef(false);
   const finalClosingOutputRef = useRef(false);
@@ -58,6 +64,7 @@ export function usePracticeMissionRuntime(scenarioId?: string) {
     hintBundleRef.current = null;
     setHintBundle(null);
     hintLoadingRef.current = false;
+    activeHintRequestIdRef.current = null;
     setHintLoading(false);
     setHintError(null);
     supportLevelRef.current = 0;
@@ -140,10 +147,18 @@ export function usePracticeMissionRuntime(scenarioId?: string) {
 
   function receiveHintBundle(args: Record<string, unknown>) {
     if (!contract) return { error: 'No authored Practice mission is active.' };
-    if (!hintLoadingRef.current) {
+    if (!hintLoadingRef.current || !activeHintRequestIdRef.current) {
       return {
         error: 'No active UI Practice hint request. Unsolicited hint bundles are rejected.',
         instruction: 'Do not speak, do not reveal help, and continue only when the learner acts or the UI explicitly requests a hint.',
+      };
+    }
+
+    const requestId = cleanText(args.request_id, 100);
+    if (!requestId || requestId !== activeHintRequestIdRef.current) {
+      return {
+        error: `Stale or mismatched Practice hint request_id: ${requestId || 'missing'}.`,
+        instruction: 'Do not speak and do not retry this old request. Wait for the active UI request.',
       };
     }
 
@@ -151,6 +166,7 @@ export function usePracticeMissionRuntime(scenarioId?: string) {
     const currentBeatId = activeBeatIdRef.current;
     if (!beatId || beatId !== currentBeatId) {
       hintLoadingRef.current = false;
+      activeHintRequestIdRef.current = null;
       setHintLoading(false);
       setHintError('الـHint وصلت لسياق قديم. جرّب تفتحها تاني.');
       return {
@@ -165,6 +181,7 @@ export function usePracticeMissionRuntime(scenarioId?: string) {
     const fullResponseEn = cleanText(args.full_response_en, 260);
     if (!intentAr || !usefulLanguageEn.length || !fullResponseEn) {
       hintLoadingRef.current = false;
+      activeHintRequestIdRef.current = null;
       setHintLoading(false);
       setHintError('الـHint ما اكتملتش. جرّب تاني.');
       return {
@@ -183,6 +200,7 @@ export function usePracticeMissionRuntime(scenarioId?: string) {
     hintBundleRef.current = bundle;
     setHintBundle(bundle);
     hintLoadingRef.current = false;
+    activeHintRequestIdRef.current = null;
     setHintLoading(false);
     setHintError(null);
     revealSupport(1);
@@ -228,6 +246,7 @@ export function usePracticeMissionRuntime(scenarioId?: string) {
         name: 'provide_practice_hint_bundle',
         description: [
           'Private UI tool. Call ONLY after an explicit UI PRACTICE HINT REQUEST.',
+          'Echo the exact request_id from that UI event so the runtime can reject late responses.',
           'Generate the complete support bundle from the conversation context as it exists now, while staying inside the current authored beat, scenario truth and CEFR level.',
           'Return ALL support layers in this single call even though the UI will reveal them progressively later.',
           'intent_ar = a short Egyptian-Arabic description of the learner best next communicative move now.',
@@ -240,6 +259,10 @@ export function usePracticeMissionRuntime(scenarioId?: string) {
         parameters: {
           type: 'OBJECT',
           properties: {
+            request_id: {
+              type: 'STRING',
+              description: 'Exact request_id from the active UI PRACTICE HINT REQUEST.',
+            },
             beat_id: {
               type: 'STRING',
               enum: contract.beats.filter((beat) => beat.type !== 'ending').map((beat) => beat.id),
@@ -263,7 +286,7 @@ export function usePracticeMissionRuntime(scenarioId?: string) {
               description: 'One natural complete learner response that fits the current conversation state and current beat.',
             },
           },
-          required: ['beat_id', 'intent_ar', 'useful_language_en', 'full_response_en'],
+          required: ['request_id', 'beat_id', 'intent_ar', 'useful_language_en', 'full_response_en'],
         },
       },
       handle: receiveHintBundle,
@@ -283,26 +306,29 @@ export function usePracticeMissionRuntime(scenarioId?: string) {
       beat.correctionFocusEn?.length ? `Correction focus: ${beat.correctionFocusEn.join(' ')}` : '',
     ].filter(Boolean).join(' | ')).join('\n')}`,
     ...contract.promptPolicyEn,
-    'Practice hints are contextual, not authored answer cards. Never volunteer one. When the UI explicitly requests a hint, use the whole conversation so far and call provide_practice_hint_bundle exactly once with ALL support layers. The UI may reveal those layers later without asking you again.',
+    'Practice hints are contextual, not authored answer cards. Never volunteer one. When the UI explicitly requests a hint, use the whole conversation so far and call provide_practice_hint_bundle exactly once with ALL support layers and the same request_id. The UI may reveal those layers later without asking you again.',
   ].join('\n\n') : '';
 
   function beginHintRequest() {
     const beat = contract?.beats.find((candidate) => candidate.id === activeBeatIdRef.current) ?? null;
-    if (!beat || beat.type === 'ending') return false;
+    if (!beat || beat.type === 'ending') return null;
     if (hintBundleRef.current?.beatId === beat.id) {
       revealSupport(1);
-      return false;
+      return null;
     }
-    if (hintLoadingRef.current) return false;
+    if (hintLoadingRef.current) return null;
+    const requestId = createHintRequestId();
+    activeHintRequestIdRef.current = requestId;
     hintLoadingRef.current = true;
     setHintLoading(true);
     setHintError(null);
-    return true;
+    return requestId;
   }
 
   function failHintRequest(message = 'تعذر تجهيز الـHint. جرّب تاني.') {
     if (!hintLoadingRef.current) return;
     hintLoadingRef.current = false;
+    activeHintRequestIdRef.current = null;
     setHintLoading(false);
     setHintError(message);
   }
