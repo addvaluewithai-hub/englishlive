@@ -62,6 +62,7 @@ export function PracticeLiveScreen() {
   const manualInterrupt = useRef(false);
   const teacherDraftRef = useRef('');
   const learnerDraftRef = useRef('');
+  const hintTimeoutRef = useRef<number | null>(null);
 
   const [status, setStatus] = useState<LiveStatus>('idle');
   const [micOpen, setMicOpen] = useState(false);
@@ -84,7 +85,14 @@ export function PracticeLiveScreen() {
     if (!enabled) setMicLevel(0);
   }
 
+  function clearHintTimeout() {
+    if (hintTimeoutRef.current === null) return;
+    window.clearTimeout(hintTimeoutRef.current);
+    hintTimeoutRef.current = null;
+  }
+
   async function stopTransport() {
+    clearHintTimeout();
     transport.current?.endAudioStream();
     transport.current?.close();
     transport.current = null;
@@ -199,7 +207,9 @@ export function PracticeLiveScreen() {
         runtime.promptEn,
         'This is A1. Use short, clear English and one idea at a time. Give the learner enough silence to think.',
         'Conversation comes first. Stay in role. Do not narrate the lesson, mention beats, hints, tools, scoring or progress.',
-        'The UI hint is private learner support. Never treat a different correct sentence as wrong because it differs from an example.',
+        'A UI PRACTICE HINT REQUEST is a private control event, never learner speech and never evidence that the learner attempted an answer.',
+        'When that event arrives, do not talk. Call provide_practice_hint_bundle exactly once and put the Arabic intent, contextual note if useful, useful English chunks and a complete example response in that one tool call. Then end silently.',
+        'The generated full response is only help for that exact conversational moment. Never treat a different correct sentence as wrong because it differs from the example.',
         'When there is a genuine current-target error, correct it briefly, give the natural form, and let the learner try again before moving on.',
         'Do not overpraise. React like a normal friendly cashier and keep turns brief.',
       ].join('\n\n');
@@ -234,6 +244,7 @@ export function PracticeLiveScreen() {
     return () => {
       window.clearTimeout(startTimer);
       window.clearInterval(clock);
+      clearHintTimeout();
       transport.current?.close();
       void microphone.current?.stop();
       void playback.current?.close();
@@ -248,6 +259,10 @@ export function PracticeLiveScreen() {
     else if (status === 'listening') performer.current?.listening();
     else if (status === 'idle' || status === 'error') host.current?.setMode('idle');
   }, [status]);
+
+  useEffect(() => {
+    if (!runtime.hintLoading) clearHintTimeout();
+  }, [runtime.hintLoading]);
 
   function interruptTeacher() {
     const live = transport.current;
@@ -266,6 +281,29 @@ export function PracticeLiveScreen() {
       return;
     }
     if (status === 'idle' || status === 'error') void startLive();
+  }
+
+  function requestContextualHint() {
+    if (visualQa) return;
+    const live = transport.current;
+    const beat = runtime.activeBeat;
+    if (!live?.connected || status !== 'listening' || !micOpen || !beat || beat.type === 'ending') return;
+    if (!runtime.beginHintRequest()) return;
+
+    clearHintTimeout();
+    live.sendText([
+      'UI PRACTICE HINT REQUEST — private control event, NOT learner speech, NOT an answer attempt.',
+      `Current authored beat: ${beat.id}.`,
+      `Current learner intent: ${beat.learnerIntentEn}`,
+      'Use the ENTIRE conversation context up to this moment, including any detour, clarification, unavailable option or correction that just happened.',
+      'Call provide_practice_hint_bundle exactly once. Fill ALL layers in that single tool call: contextual Egyptian-Arabic intent, optional context/recovery note, useful English chunks, and one complete natural learner response that works right now.',
+      'Keep the support appropriate to this mission level and scenario truth. The full response is an example, not a required sentence.',
+      'Do not speak, do not advance the beat, do not answer on the learner behalf outside the tool call, and after the tool result end the turn silently.',
+    ].join('\n'));
+    hintTimeoutRef.current = window.setTimeout(() => {
+      runtime.failHintRequest('Otti اتأخر في تجهيز الـHint. جرّب تاني.');
+      hintTimeoutRef.current = null;
+    }, 8_000);
   }
 
   function submitText(event: FormEvent) {
@@ -336,7 +374,7 @@ export function PracticeLiveScreen() {
       </div>
 
       <div className="fs-live-controls practice-live-controls">
-        <PracticeHintCard runtime={runtime} learnerTurn={learnerTurn} />
+        <PracticeHintCard runtime={runtime} learnerTurn={learnerTurn} onRequestHint={requestContextualHint} />
 
         {keyboardOpen ? (
           <form className="fs-type-row" onSubmit={submitText}>
@@ -352,7 +390,7 @@ export function PracticeLiveScreen() {
         ) : null}
 
         <div className="fs-control-row practice-live-control-row">
-          <span className="practice-live-side-label">Hint اختياري</span>
+          <span className="practice-live-side-label">Hint ذكية</span>
 
           <button
             type="button"
