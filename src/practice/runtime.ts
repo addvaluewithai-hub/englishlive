@@ -82,6 +82,14 @@ export function usePracticeMissionRuntime(scenarioId?: string) {
     if (!beat) return { error: `Unknown Practice beat: ${beatId}` };
 
     const current = contract.beats.find((candidate) => candidate.id === activeBeatIdRef.current) ?? null;
+    if (hintLoadingRef.current && current && beat.id !== current.id) {
+      return {
+        error: `Beat advance rejected while a UI hint request is active: ${current.id} -> ${beat.id}`,
+        active_beat: current.id,
+        instruction: `Stay on ${current.id}. A hint request is not learner speech and must never advance the mission. Complete the hint tool call and end silently.`,
+      };
+    }
+
     const allowedToAdvance = !current || beat.id === current.id || beat.id === current.next;
     if (!allowedToAdvance) {
       return {
@@ -196,6 +204,7 @@ export function usePracticeMissionRuntime(scenarioId?: string) {
           'If you are correcting, clarifying or retrying the same learner intent, call the same beat again.',
           'Only advance after the learner genuinely completes the current communicative intent.',
           'The runtime also rejects beat skipping; move only to the authored next beat.',
+          'A UI hint request is not learner speech and can never advance the beat.',
           'Use close only after the final required learner intent is complete.',
           'Never mention this tool to the learner.',
         ].join(' '),
