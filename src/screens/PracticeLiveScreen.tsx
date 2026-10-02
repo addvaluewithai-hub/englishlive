@@ -208,7 +208,7 @@ export function PracticeLiveScreen() {
         'This is A1. Use short, clear English and one idea at a time. Give the learner enough silence to think.',
         'Conversation comes first. Stay in role. Do not narrate the lesson, mention beats, hints, tools, scoring or progress.',
         'A UI PRACTICE HINT REQUEST is a private control event, never learner speech and never evidence that the learner attempted an answer.',
-        'When that event arrives, do not talk. Call provide_practice_hint_bundle exactly once and put the Arabic intent, contextual note if useful, useful English chunks and a complete example response in that one tool call. Then end silently.',
+        'When that event arrives, do not talk. Call provide_practice_hint_bundle exactly once, echo its request_id exactly, and put the Arabic intent, contextual note if useful, useful English chunks and a complete example response in that one tool call. Then end silently.',
         'The generated full response is only help for that exact conversational moment. Never treat a different correct sentence as wrong because it differs from the example.',
         'When there is a genuine current-target error, correct it briefly, give the natural form, and let the learner try again before moving on.',
         'Do not overpraise. React like a normal friendly cashier and keep turns brief.',
@@ -288,15 +288,17 @@ export function PracticeLiveScreen() {
     const live = transport.current;
     const beat = runtime.activeBeat;
     if (!live?.connected || status !== 'listening' || !micOpen || !beat || beat.type === 'ending') return;
-    if (!runtime.beginHintRequest()) return;
+    const requestId = runtime.beginHintRequest();
+    if (!requestId) return;
 
     clearHintTimeout();
     live.sendText([
       'UI PRACTICE HINT REQUEST — private control event, NOT learner speech, NOT an answer attempt.',
+      `request_id: ${requestId}`,
       `Current authored beat: ${beat.id}.`,
       `Current learner intent: ${beat.learnerIntentEn}`,
       'Use the ENTIRE conversation context up to this moment, including any detour, clarification, unavailable option or correction that just happened.',
-      'Call provide_practice_hint_bundle exactly once. Fill ALL layers in that single tool call: contextual Egyptian-Arabic intent, optional context/recovery note, useful English chunks, and one complete natural learner response that works right now.',
+      'Call provide_practice_hint_bundle exactly once and echo the request_id exactly. Fill ALL layers in that single tool call: contextual Egyptian-Arabic intent, optional context/recovery note, useful English chunks, and one complete natural learner response that works right now.',
       'Keep the support appropriate to this mission level and scenario truth. The full response is an example, not a required sentence.',
       'Do not speak, do not advance the beat, do not answer on the learner behalf outside the tool call, and after the tool result end the turn silently.',
     ].join('\n'));
