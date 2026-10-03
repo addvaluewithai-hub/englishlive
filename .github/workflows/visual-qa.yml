@@ -9,6 +9,7 @@ on:
       - 'scripts/visual-qa-speaking.mjs'
       - 'scripts/visual-qa-home.mjs'
       - 'scripts/visual-qa-lesson.mjs'
+      - 'scripts/visual-qa-live-layout.mjs'
       - 'public/speaking-assets/**'
       - 'package.json'
       - 'package-lock.json'
@@ -54,6 +55,8 @@ jobs:
         run: node --import tsx scripts/visual-qa-home.mjs
       - name: Verify migrated Learn lesson
         run: node --import tsx scripts/visual-qa-lesson.mjs
+      - name: Verify shared live conversation layout
+        run: node --import tsx scripts/visual-qa-live-layout.mjs
       - name: Capture product screens
         run: |
           node scripts/visual-qa.mjs
