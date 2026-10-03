@@ -121,13 +121,15 @@ export const PRACTICE_MISSIONS: PracticeMission[] = [
   },
   {
     id: 'a1-make-a-simple-plan',
+    sourceId: 'practice.a1.plans.make-simple-plan.v1',
     level: 'A1',
     worldId: 'plans-leisure',
     titleAr: 'اعمل خطة بسيطة',
     titleEn: 'Make a simple plan',
-    descriptionAr: 'اقترح نشاط واتفقوا على وقت ومكان.',
-    durationMinutes: 5,
-    status: 'planned',
+    descriptionAr: 'وافق على خروجة فيلم بسيطة، اختار الساعة، واتفقوا على مكان المقابلة.',
+    durationMinutes: 4,
+    status: 'live',
+    livePath: '/practice/mission/a1-make-a-simple-plan',
   },
   {
     id: 'b1-change-hotel-booking',
