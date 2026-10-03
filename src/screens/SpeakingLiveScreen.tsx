@@ -9,6 +9,7 @@ import { OttiMark } from '../character/otti/OttiMark';
 import { getCharacterDefinition } from '../character/registry';
 import { ProductIcon } from '../components/ProductIcon';
 import { loadPublishedCharacter } from '../content/client';
+import { useI18n } from '../i18n/LocaleProvider';
 import { GeminiLiveTransport } from '../live/GeminiLiveTransport';
 import type { LiveStatus } from '../live/types';
 import { comfortLabel, goalPrompt, readLearnerProfile } from '../product/profile';
@@ -23,6 +24,7 @@ import { buildSpeakingDebugLog, copyTextWithFallback } from '../speaking/debugLo
 import { LessonEvidenceProgress, useLessonEvidenceRuntime } from '../speaking/lessonEvidenceRuntime';
 import { Round2IntentHint } from '../speaking/Round2IntentHint';
 import type { SpeakingTurn, SpeakingTurnSpeaker } from '../speaking/types';
+import { LiveConversationHeader, LiveConversationStatus } from '../ui/product/LiveConversationChrome';
 
 function pcmSampleRate(mimeType: string) {
   const match = mimeType.match(/rate=(\d+)/i);
@@ -55,19 +57,11 @@ const difficultyPrompt: Record<SpeakingDifficulty, string> = {
   challenge: 'Use natural pace and less scaffolding. Add at most one plausible complication or constraint that requires clarification or negotiation. Keep the language itself accessible and do not demand untaught specialist vocabulary.',
 };
 
-const statusCopy: Record<LiveStatus, { title: string; body: string }> = {
-  idle: { title: 'جاهز؟', body: 'المحادثة هتبدأ حالاً' },
-  connecting: { title: 'بنجهز الموقف', body: 'ثواني وهنبدأ' },
-  listening: { title: 'دورك الآن', body: 'المايك مفتوح — رد بصوتك' },
-  speaking: { title: 'Otti بيتكلم', body: 'اسمع أو قاطعه من زر المايك' },
-  reconnecting: { title: 'بنرجّع الاتصال', body: 'المحادثة محفوظة' },
-  error: { title: 'حصلت مشكلة بسيطة', body: 'جرّب تبدأ تاني' },
-};
-
 export function SpeakingLiveScreen() {
   const { scenarioId } = useParams();
   const [params] = useSearchParams();
   const navigate = useNavigate();
+  const { t } = useI18n();
   const scenario = speakingScenarioById(scenarioId);
   const isCurriculumLesson = Boolean(scenario.curriculum);
   const lessonEvidence = useLessonEvidenceRuntime(scenario.id);
@@ -338,7 +332,7 @@ export function SpeakingLiveScreen() {
       await mic.start((chunk) => live.sendAudio(chunk), setMicLevel);
       live.sendText(scenario.openingMoveEn ?? 'Begin the roleplay now with one short, natural opening move that fits your role. Do not explain the scenario.');
     } catch (reason) {
-      const message = reason instanceof Error ? reason.message : 'تعذر بدء المحادثة.';
+      const message = reason instanceof Error ? reason.message : t('live.startError');
       setError(message);
       setStatus('error');
       await stopTransport();
@@ -347,10 +341,12 @@ export function SpeakingLiveScreen() {
 
   useEffect(() => {
     if (visualQa) {
-      const fixtureTurns: SpeakingTurn[] = [
-        { id: 'qa-teacher', speaker: 'teacher', text: 'I’m sorry, but your room isn’t ready yet. How can I help?', atMs: 8_000 },
-        { id: 'qa-learner', speaker: 'learner', text: 'Can I leave my luggage here?', atMs: 24_000 },
-      ];
+      const fixtureTurns: SpeakingTurn[] = round === 'independent'
+        ? [{ id: 'qa-teacher-round2', speaker: 'teacher', text: 'Hi! Good morning.', atMs: 8_000 }]
+        : [
+            { id: 'qa-teacher', speaker: 'teacher', text: 'I’m sorry, but your room isn’t ready yet. How can I help?', atMs: 8_000 },
+            { id: 'qa-learner', speaker: 'learner', text: 'Can I leave my luggage here?', atMs: 24_000 },
+          ];
       turnsRef.current = fixtureTurns;
       setTurns(fixtureTurns);
       setElapsedSeconds(28);
@@ -443,7 +439,7 @@ export function SpeakingLiveScreen() {
       setLogCopied(true);
       window.setTimeout(() => setLogCopied(false), 1400);
     } catch {
-      setError('تعذر نسخ اللوج.');
+      setError(t('live.copyError'));
     }
   }
 
@@ -494,24 +490,41 @@ export function SpeakingLiveScreen() {
   const connecting = status === 'connecting' || status === 'reconnecting';
   const teacherSpeaking = status === 'speaking';
   const learnerTurn = status === 'listening' && micOpen;
-  const statusText = statusCopy[status];
+  const statusText = {
+    idle: { title: t('live.status.idle.title'), body: t('live.status.idle.body') },
+    connecting: { title: t('live.status.connecting.title'), body: t('live.status.connecting.body') },
+    listening: { title: t('live.status.listening.title'), body: t('live.status.listening.body') },
+    speaking: { title: t('live.status.speaking.title'), body: t('live.status.speaking.body') },
+    reconnecting: { title: t('live.status.reconnecting.title'), body: t('live.status.reconnecting.body') },
+    error: { title: t('live.status.error.title'), body: t('live.status.error.body') },
+  }[status];
   const latestTeacherText = teacherDraft.trim()
     || [...turns].reverse().find((turn) => turn.speaker === 'teacher')?.text
     || '';
+  const headerTitle = round === 'independent'
+    ? (
+        <>
+          {t('independent.headerTitle')}
+          {scenario.curriculum?.lessonCode ? <> • <bdi dir="ltr">{scenario.curriculum.lessonCode}</bdi></> : null}
+        </>
+      )
+    : (
+        <span lang="ar" dir="rtl">
+          {scenario.curriculum ? `${scenario.curriculum.lessonCode} • ${scenario.titleAr}` : scenario.titleAr}
+        </span>
+      );
 
   return (
-    <section className={`fs-live sp-scenario-live${scenario.learnMission ? ' sp-learn-mission-live' : ''}`} dir="rtl">
-      <header className="fs-live-header sp-scenario-live-header">
-        <button type="button" className="fs-live-close" onClick={() => void finishConversation()} aria-label="إنهاء المحادثة" disabled={ending}>
-          <ProductIcon name="close" size={28} />
-        </button>
-        <div className="fs-live-brand" aria-label="Englotti">
-          <OttiMark />
-          <strong>Englotti</strong>
-        </div>
-        <strong className="fs-live-title">{scenario.curriculum ? `${scenario.curriculum.lessonCode} • ${scenario.titleAr}` : scenario.titleAr}</strong>
-        <span className="fs-live-mode sp-scenario-timer">◷ {timeLabel(elapsedSeconds)}</span>
-      </header>
+    <section className={`fs-live sp-scenario-live${scenario.learnMission ? ' sp-learn-mission-live' : ''}`}>
+      <LiveConversationHeader
+        title={headerTitle}
+        meta={<>◷ <bdi dir="ltr">{timeLabel(elapsedSeconds)}</bdi></>}
+        onClose={() => void finishConversation()}
+        closeLabel={t('live.endConversation')}
+        disabled={ending}
+        className="sp-scenario-live-header"
+        metaClassName="fs-live-mode sp-scenario-timer"
+      />
 
       <div
         className="fs-live-stage sp-scenario-stage"
@@ -528,16 +541,18 @@ export function SpeakingLiveScreen() {
           <CharacterHost ref={host} character={character} className="fs-live-character-host" />
         </div>
 
-        <div className={`fs-live-status status-${status}${learnerTurn ? ' is-open' : ''}`} aria-live="polite">
-          <span className="fs-live-wave" aria-hidden="true"><i /><i /><i /></span>
-          <span><strong>{statusText.title}</strong><small>{statusText.body}</small></span>
-        </div>
+        <LiveConversationStatus
+          status={status}
+          title={statusText.title}
+          body={statusText.body}
+          learnerTurn={learnerTurn}
+        />
 
         {scenario.hideEvidenceProgress ? null : <LessonEvidenceProgress runtime={lessonEvidence} />}
 
-        <button type="button" className="sp-copy-log-button" onClick={() => void copyDebugLog()} aria-label="نسخ لوج المحادثة">
+        <button type="button" className="sp-copy-log-button" onClick={() => void copyDebugLog()} aria-label={t('live.copyLogLabel')}>
           <span aria-hidden="true">⧉</span>
-          <strong>{logCopied ? 'Copied' : 'Copy log'}</strong>
+          <strong>{logCopied ? t('live.copied') : t('live.copyLog')}</strong>
         </button>
       </div>
 
@@ -550,10 +565,10 @@ export function SpeakingLiveScreen() {
               dir="ltr"
               value={typedText}
               onChange={(event) => setTypedText(event.target.value)}
-              placeholder="Type what you want to say…"
+              placeholder={t('live.typePlaceholder')}
               autoFocus
             />
-            <button type="submit" disabled={!typedText.trim() || !learnerTurn}>إرسال</button>
+            <button type="submit" disabled={!typedText.trim() || !learnerTurn}>{t('live.send')}</button>
           </form>
         ) : null}
 
@@ -565,7 +580,7 @@ export function SpeakingLiveScreen() {
             disabled={!learnerTurn}
           >
             <span>ع</span>
-            <strong>اشرح بالعربي</strong>
+            <strong>{t('live.explainArabic')}</strong>
           </button>
 
           <button
@@ -573,12 +588,12 @@ export function SpeakingLiveScreen() {
             className={`fs-mic-control${learnerTurn ? ' is-live' : ''}${teacherSpeaking ? ' is-interrupt' : ''}`}
             onClick={handleMicAction}
             disabled={connecting || ending || (status === 'listening' && !teacherSpeaking)}
-            aria-label={teacherSpeaking ? 'قاطع Otti واتكلم' : learnerTurn ? 'دورك تتكلم' : 'ابدأ المحادثة'}
+            aria-label={teacherSpeaking ? t('live.interruptLabel') : learnerTurn ? t('live.yourTurnLabel') : t('live.startLabel')}
           >
             {teacherSpeaking ? (
-              <><span className="fs-interrupt-bars" aria-hidden="true"><i /><i /></span><small>مقاطعة</small></>
+              <><span className="fs-interrupt-bars" aria-hidden="true"><i /><i /></span><small>{t('live.interrupt')}</small></>
             ) : (
-              <><ProductIcon name="speak" size={54} /><small>{learnerTurn ? 'دورك' : status === 'error' ? 'جرّب تاني' : 'استنى'}</small></>
+              <><ProductIcon name="speak" size={54} /><small>{learnerTurn ? t('live.yourTurn') : status === 'error' ? t('live.tryAgain') : t('live.wait')}</small></>
             )}
           </button>
 
@@ -587,7 +602,7 @@ export function SpeakingLiveScreen() {
             className="fs-keyboard-control"
             onClick={() => setKeyboardOpen((value) => !value)}
             disabled={!learnerTurn}
-            aria-label="اكتب بدل الكلام"
+            aria-label={t('live.typeInstead')}
           >
             <ProductIcon name="keyboard" size={31} />
           </button>
@@ -600,7 +615,7 @@ export function SpeakingLiveScreen() {
         <div className="fs-ending-overlay" aria-live="polite">
           <div>
             <OttiMark />
-            <strong>{scenario.learnMission ? 'تمام — بنرجع للدرس…' : 'بنجهّز ملخص المحادثة…'}</strong>
+            <strong>{scenario.learnMission ? t('live.returningLesson') : t('live.preparingSummary')}</strong>
             <span><i /><i /><i /></span>
           </div>
         </div>
