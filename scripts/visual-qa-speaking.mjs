@@ -33,7 +33,30 @@ const progress = {
 };
 
 const scenarios = [
-  { name: 'speaking-home', path: '/speak', full: true },
+  { name: 'practice-home', path: '/practice', full: true },
+  { name: 'practice-a1-everyday-world', path: '/practice/A1/world/everyday', full: true },
+  { name: 'practice-repeat-start', path: '/practice/mission/a1-ask-someone-to-repeat', full: true },
+  { name: 'practice-repeat-live', path: '/practice/live/a1-ask-someone-to-repeat', full: true },
+  { name: 'practice-repeat-live-hint', path: '/practice/live/a1-ask-someone-to-repeat', click: '.practice-hint-toggle', full: true },
+  { name: 'practice-a1-people-world', path: '/practice/A1/world/people-social', full: true },
+  { name: 'practice-meet-start', path: '/practice/mission/a1-meet-someone-new', full: true },
+  { name: 'practice-meet-live', path: '/practice/live/a1-meet-someone-new', full: true },
+  { name: 'practice-meet-live-hint', path: '/practice/live/a1-meet-someone-new', click: '.practice-hint-toggle', full: true },
+  { name: 'practice-a1-food-world', path: '/practice/A1/world/food-shopping', full: true },
+  { name: 'practice-order-start', path: '/practice/mission/a1-order-a-drink', full: true },
+  { name: 'practice-order-live', path: '/practice/live/a1-order-a-drink', full: true },
+  { name: 'practice-order-live-hint', path: '/practice/live/a1-order-a-drink', click: '.practice-hint-toggle', full: true },
+  { name: 'practice-order-complete', path: '/practice/complete/a1-order-a-drink', full: true },
+  { name: 'practice-a1-travel-world', path: '/practice/A1/world/travel-transport', full: true },
+  { name: 'practice-directions-start', path: '/practice/mission/a1-ask-where-a-place-is', full: true },
+  { name: 'practice-directions-live', path: '/practice/live/a1-ask-where-a-place-is', full: true },
+  { name: 'practice-directions-live-hint', path: '/practice/live/a1-ask-where-a-place-is', click: '.practice-hint-toggle', full: true },
+  { name: 'practice-a1-plans-world', path: '/practice/A1/world/plans-leisure', full: true },
+  { name: 'practice-plan-start', path: '/practice/mission/a1-make-a-simple-plan', full: true },
+  { name: 'practice-plan-live', path: '/practice/live/a1-make-a-simple-plan', full: true },
+  { name: 'practice-plan-live-hint', path: '/practice/live/a1-make-a-simple-plan', click: '.practice-hint-toggle', full: true },
+  { name: 'practice-b1-travel-world', path: '/practice/B1/world/travel-transport', full: true },
+  { name: 'legacy-speak-alias', path: '/speak', full: true },
   { name: 'speaking-lesson-start', path: '/speak/scenario/a1-s1-l01', full: true },
   { name: 'speaking-lesson-live', path: '/speak/live/a1-s1-l01', full: true },
   { name: 'speaking-b1-start', path: '/speak/scenario/b1-s1-l01', full: true },
@@ -78,6 +101,10 @@ try {
       await page.goto(`${baseUrl}${scenario.path}`, { waitUntil: 'networkidle' });
       await page.locator('body').waitFor({ state: 'visible' });
       await page.waitForTimeout(150);
+      if (scenario.click) {
+        await page.locator(scenario.click).click();
+        await page.waitForTimeout(80);
+      }
 
       await page.screenshot({
         path: path.join(outputDir, `${viewport.name}--${scenario.name}.png`),

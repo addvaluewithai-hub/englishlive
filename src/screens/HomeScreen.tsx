@@ -1,17 +1,13 @@
 import { Link } from 'react-router-dom';
-import { useProductCatalog } from '../catalog/client';
-import { publishedCharacterById, usePublishedCharacters } from '../character/catalog';
 import { OttiMark } from '../character/otti/OttiMark';
 import { ProductIcon } from '../components/ProductIcon';
 import { learnArt } from '../learn/assets';
-import { lessonArabicTitle, lessonProductTitle } from '../productV2/course';
-import { productUnitProgress, readProductCourseProgress } from '../productV2/progress';
+import { availableLearnLessons, learnRoadmapLevelById } from '../learnV2/roadmap';
 import { readLearnerProfile } from '../product/profile';
+import { readLearnLessonProgress } from '../speaking/roadmapProgress';
 
 export function HomeScreen() {
   const profile = readLearnerProfile();
-  const catalog = useProductCatalog();
-  const characterCatalog = usePublishedCharacters();
 
   if (!profile) {
     return (
@@ -24,18 +20,18 @@ export function HomeScreen() {
     );
   }
 
-  const level = catalog.levels[0];
-  const unit = level?.connectedUnits[0];
-  if (!level || !unit || unit.lessons.length === 0) {
-    return <section className="v2-empty-screen" dir="rtl"><h1>المسار بيتجهز</h1><p>مفيش دروس منشورة في المسار دلوقتي.</p></section>;
+  const level = learnRoadmapLevelById('a1');
+  const lessons = level ? availableLearnLessons(level) : [];
+  if (!level || !lessons.length) {
+    return <section className="v2-empty-screen" dir="rtl"><h1>المسار بيتجهز</h1><p>مفيش دروس جاهزة في المسار دلوقتي.</p></section>;
   }
 
-  const character = publishedCharacterById(characterCatalog.characters, profile.characterId);
-  const progress = readProductCourseProgress();
-  const summary = productUnitProgress(unit, progress);
-  const lessonSaved = progress.lessons[summary.nextLesson.id];
+  const completed = new Set(readLearnLessonProgress());
+  const nextLesson = lessons.find((lesson) => !completed.has(lesson.id)) ?? lessons.at(-1)!;
+  const unit = level.units.find((candidate) => candidate.order === nextLesson.unit) ?? level.units[0];
+  const unitCompleted = unit.lessons.filter((lesson) => completed.has(lesson.id)).length;
   const greeting = profile.firstName ? `أهلًا يا ${profile.firstName}!` : 'أهلًا بيك!';
-  const lessonHref = `/scene-lesson/${summary.nextLesson.id}?character=${character.id}`;
+  const lessonHref = `/learn/lesson/${nextLesson.id}`;
 
   return (
     <section className="v2-home-screen home-ref-screen" dir="rtl">
@@ -54,12 +50,12 @@ export function HomeScreen() {
       <Link className="home-ref-course-card" to={lessonHref}>
         <div className="home-ref-course-copy">
           <div className="home-ref-course-index" dir="ltr">
-            <span>{level.title}</span>
-            <strong>Unit {unit.order}</strong>
-            <strong>Lesson {summary.nextLesson.order}</strong>
+            <span>{level.code}</span>
+            <strong>Unit {nextLesson.unit}</strong>
+            <strong>Lesson {nextLesson.lesson}</strong>
           </div>
-          <p className="home-ref-arabic-title">{lessonArabicTitle(summary.nextLesson)}</p>
-          <p className="home-ref-english-title" dir="ltr">{lessonProductTitle(summary.nextLesson)}</p>
+          <p className="home-ref-arabic-title">{nextLesson.titleAr}</p>
+          <p className="home-ref-english-title" dir="ltr">{nextLesson.titleEn}</p>
         </div>
 
         <div className="home-ref-course-art" aria-hidden="true">
@@ -69,7 +65,7 @@ export function HomeScreen() {
 
         <div className="home-ref-continue" dir="rtl">
           <ProductIcon name="play" size={25} />
-          <span>{lessonSaved?.startedAt ? 'متابعة الدرس' : 'ابدأ الدرس'}</span>
+          <span>{completed.has(nextLesson.id) ? 'راجع الدرس' : 'كمّل المسار'}</span>
         </div>
       </Link>
 
@@ -77,28 +73,28 @@ export function HomeScreen() {
         <div className="home-ref-progress-copy">
           <span className="home-ref-flame" aria-hidden="true">🔥</span>
           <div>
-            <strong>{summary.completedCount}</strong>
+            <strong>{unitCompleted}</strong>
             <span>دروس مكتملة</span>
           </div>
         </div>
 
         <div className="home-ref-progress-divider" aria-hidden="true" />
 
-        <div className="home-ref-lesson-dots" aria-label={`${summary.completedCount} of ${summary.totalCount} published lessons complete`}>
+        <div className="home-ref-lesson-dots" aria-label={`${unitCompleted} من ${unit.lessons.length} دروس جاهزة مكتملة`}>
           {unit.lessons.map((lesson) => {
-            const completed = Boolean(progress.lessons[lesson.id]?.completedAt);
-            const current = lesson.id === summary.nextLesson.id && !completed;
+            const done = completed.has(lesson.id);
+            const current = lesson.id === nextLesson.id && !done;
             return (
-              <span key={lesson.id} className={`${completed ? 'is-done' : ''}${current ? ' is-current' : ''}`}>
-                {completed ? <ProductIcon name="check" size={17} /> : null}
+              <span key={lesson.id} className={`${done ? 'is-done' : ''}${current ? ' is-current' : ''}`}>
+                {done ? <ProductIcon name="check" size={17} /> : null}
               </span>
             );
           })}
         </div>
 
         <div className="home-ref-progress-label">
-          <strong>{summary.completedCount} من {summary.totalCount}</strong>
-          <span>تقدم الوحدة</span>
+          <strong>{unitCompleted} من {unit.lessons.length}</strong>
+          <span>تقدم الوحدة {unit.order}</span>
         </div>
       </section>
     </section>

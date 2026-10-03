@@ -209,9 +209,11 @@ export class GeminiLiveTransport implements LiveTransport {
             automaticActivityDetection: {
               disabled: false,
               startOfSpeechSensitivity: 'START_SENSITIVITY_HIGH',
-              endOfSpeechSensitivity: 'END_SENSITIVITY_HIGH',
+              endOfSpeechSensitivity: 'END_SENSITIVITY_LOW',
               prefixPaddingMs: 120,
-              silenceDurationMs: 760,
+              // A language learner may pause mid-sentence while searching for words.
+              // Keep those pauses inside the same turn rather than rushing to answer.
+              silenceDurationMs: 3600,
             },
             turnCoverage: 'TURN_INCLUDES_ONLY_ACTIVITY',
           },
@@ -238,42 +240,38 @@ export class GeminiLiveTransport implements LiveTransport {
               this.setupComplete = true;
               this.callbacks.onStatus('listening');
               resolveSetup();
+              return;
             }
 
-            const content = message.serverContent;
-            if (content?.interrupted) {
-              this.callbacks.onInterrupted();
-              this.callbacks.onStatus('listening');
-            }
-
-            if (message.toolCall?.functionCalls?.length) {
-              await this.handleToolCalls(message.toolCall.functionCalls, Boolean(content?.interrupted));
-            }
-
-            const input = content?.inputTranscription?.text?.trim();
-            if (input) this.callbacks.onInputTranscript(input);
-            const output = content?.outputTranscription?.text?.trim();
-            if (output && !content?.interrupted) this.callbacks.onOutputTranscript(output);
-
-            if (!content?.interrupted) {
-              for (const part of content?.modelTurn?.parts ?? []) {
-                if (part.inlineData?.data && part.inlineData.mimeType?.startsWith('audio/pcm')) {
-                  this.callbacks.onAudio(part.inlineData.data, part.inlineData.mimeType);
-                }
-              }
-            }
-
-            if (content?.turnComplete) {
-              this.callbacks.onTurnComplete();
-            }
-
-            if (message.sessionResumptionUpdate?.resumable && message.sessionResumptionUpdate.newHandle) {
+            if (message.sessionResumptionUpdate?.newHandle && message.sessionResumptionUpdate.resumable !== false) {
               this.resumptionHandle = message.sessionResumptionUpdate.newHandle;
             }
-            if (message.goAway && !this.reconnecting) void this.resumeSession();
+
+            if (message.goAway) {
+              this.resumeSession();
+              return;
+            }
+
+            const serverContent = message.serverContent;
+            if (serverContent?.interrupted) this.callbacks.onInterrupted?.();
+            const inputText = serverContent?.inputTranscription?.text?.trim();
+            if (inputText) this.callbacks.onInputTranscript?.(inputText);
+            const outputText = serverContent?.outputTranscription?.text?.trim();
+            if (outputText) this.callbacks.onOutputTranscript?.(outputText);
+            for (const part of serverContent?.modelTurn?.parts ?? []) {
+              if (part.inlineData?.data) {
+                this.callbacks.onAudio?.(part.inlineData.data, part.inlineData.mimeType ?? 'audio/pcm;rate=24000');
+              }
+              if (part.text?.trim() && !outputText) this.callbacks.onOutputTranscript?.(part.text.trim());
+            }
+            if (serverContent?.turnComplete) this.callbacks.onTurnComplete?.();
+
+            for (const call of message.toolCall?.functionCalls ?? []) {
+              await this.handleFunctionCall(call);
+            }
           })
           .catch((reason) => {
-            const message = reason instanceof Error ? reason.message : 'Gemini Live message handling failed.';
+            const message = reason instanceof Error ? reason.message : 'Gemini Live connection error.';
             this.callbacks.onError(message);
             this.callbacks.onStatus('error');
           });
@@ -282,96 +280,71 @@ export class GeminiLiveTransport implements LiveTransport {
       socket.addEventListener('error', () => {
         const error = new Error('Gemini Live WebSocket error.');
         this.callbacks.onError(error.message);
-        if (!this.setupComplete) {
-          this.callbacks.onStatus('error');
-          rejectSetup(error);
-        }
+        this.callbacks.onStatus('error');
+        rejectSetup(error);
       });
 
       socket.addEventListener('close', (event) => {
-        if (this.socket !== socket) {
-          clearSetupTimer();
-          return;
+        if (this.socket === socket) {
+          this.socket = null;
+          this.setupComplete = false;
         }
-        const wasReady = this.setupComplete;
-        this.setupComplete = false;
         clearSetupTimer();
-        if (!wasReady) rejectSetup(new Error(`Gemini Live closed during setup (${event.code}).`));
-        if (!event.wasClean && wasReady && this.resumptionHandle && !this.reconnecting) {
-          void this.resumeSession();
-        } else if (!this.reconnecting && wasReady) {
-          this.callbacks.onStatus('idle');
-        }
+        if (!settled && !this.reconnecting) rejectSetup(new Error(event.reason || 'Gemini Live connection closed.'));
       });
     });
   }
 
-  private async handleToolCalls(functionCalls: FunctionCall[], interrupted: boolean) {
-    const responses: FunctionResponse[] = [];
-
-    for (const call of functionCalls) {
-      if (call.id && this.acknowledgedCallIds.has(call.id)) continue;
-      if (call.id) this.acknowledgedCallIds.add(call.id);
-
-      if (interrupted) {
-        responses.push({
-          id: call.id,
-          name: call.name,
-          response: { result: 'cancelled' },
-        });
-        continue;
-      }
-
-      const tool = this.customTools.find((candidate) => candidate.declaration.name === call.name);
-      if (!tool) {
-        responses.push({
-          id: call.id,
-          name: call.name,
-          response: { error: `Unsupported client tool: ${call.name}` },
-        });
-        continue;
-      }
-
-      try {
-        const result = await tool.handle(call.args ?? {});
-        responses.push({
-          id: call.id,
-          name: call.name,
-          response: scheduledResponse(responseObject(result), tool.declaration.behavior),
-        });
-      } catch (reason) {
-        responses.push({
-          id: call.id,
-          name: call.name,
-          response: scheduledResponse({
-            error: reason instanceof Error ? reason.message : `Client tool ${call.name} failed.`,
-          }, tool.declaration.behavior),
-        });
-      }
+  private async handleFunctionCall(call: FunctionCall) {
+    if (!call.name) return;
+    if (call.id && this.acknowledgedCallIds.has(call.id)) return;
+    if (call.id) this.acknowledgedCallIds.add(call.id);
+    const tool = this.customTools.find((candidate) => candidate.declaration.name === call.name);
+    if (!tool) {
+      this.sendFunctionResponses([{ id: call.id, name: call.name, response: { error: `Unknown tool: ${call.name}` } }]);
+      return;
     }
-
-    if (responses.length && this.connected) this.send({ toolResponse: { functionResponses: responses } });
+    try {
+      const value = responseObject(await tool.handle(call.args ?? {}));
+      this.sendFunctionResponses([{
+        id: call.id,
+        name: call.name,
+        response: scheduledResponse(value, tool.declaration.behavior),
+      }]);
+    } catch (reason) {
+      const message = reason instanceof Error ? reason.message : 'Tool failed.';
+      this.sendFunctionResponses([{ id: call.id, name: call.name, response: { error: message } }]);
+    }
   }
 
-  private async resumeSession() {
-    if (this.reconnecting || !this.resumptionHandle) return;
+  private sendFunctionResponses(functionResponses: FunctionResponse[]) {
+    this.send({ toolResponse: { functionResponses } });
+  }
+
+  private resumeSession() {
+    if (this.reconnecting || !this.resumptionHandle || !this.socket) return;
     this.reconnecting = true;
     this.callbacks.onStatus('reconnecting');
-    try {
-      this.socket?.close(1000, 'session resume');
-      const issued = await this.tokenProvider();
-      if (issued.model !== this.model) throw new Error('Live model changed during session resumption.');
-      await this.openSocket(issued.token);
-    } catch (reason) {
-      const message = reason instanceof Error ? reason.message : 'Could not resume Live session.';
-      this.callbacks.onError(message);
-      this.callbacks.onStatus('error');
-    } finally {
-      this.reconnecting = false;
-    }
+    const oldSocket = this.socket;
+    oldSocket.close(1000, 'session resume');
+    window.setTimeout(async () => {
+      try {
+        const issued = await this.tokenProvider();
+        if (!isLiveModel(issued.model)) throw new Error(`Unexpected Live model: ${issued.model}`);
+        this.model = issued.model;
+        await this.openSocket(issued.token);
+        this.reconnecting = false;
+      } catch (reason) {
+        this.reconnecting = false;
+        const message = reason instanceof Error ? reason.message : 'Could not resume Live session.';
+        this.callbacks.onError(message);
+        this.callbacks.onStatus('error');
+      }
+    }, 250);
   }
 
-  private send(payload: unknown) {
-    if (this.socket?.readyState === WebSocket.OPEN) this.socket.send(JSON.stringify(payload));
+  private send(payload: Record<string, unknown>) {
+    if (this.socket?.readyState !== WebSocket.OPEN) return;
+    this.socket.send(JSON.stringify(payload));
   }
 }

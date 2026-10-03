@@ -1,0 +1,197 @@
+export const PRACTICE_LEVELS = [
+  { id: 'A1', titleAr: 'مبتدئ', promiseAr: 'مواقف قصيرة وواضحة، شريك متعاون، ومساعدة جاهزة وقت ما تحتاجها.' },
+  { id: 'A2', titleAr: 'أساسي', promiseAr: 'مواقف يومية أطول شوية، تفاصيل أكتر، واختيارات بسيطة.' },
+  { id: 'B1', titleAr: 'متوسط', promiseAr: 'تتصرف باستقلال أكبر، تشرح، تتابع، وتحل مفاجآت طبيعية.' },
+  { id: 'B2', titleAr: 'فوق المتوسط', promiseAr: 'بدائل وتفاوض ومواقف أقل توقعًا مع مساحة أكبر لطريقتك.' },
+  { id: 'C1', titleAr: 'متقدم', promiseAr: 'مواقف اجتماعية ومهنية دقيقة، نبرة مناسبة، وشرح أعمق.' },
+  { id: 'C2', titleAr: 'إتقان', promiseAr: 'مرونة عالية، معاني ضمنية، تفاوض معقد، وصياغة دقيقة.' },
+] as const;
+
+export type PracticeLevelId = (typeof PRACTICE_LEVELS)[number]['id'];
+
+export type PracticeWorldId =
+  | 'everyday'
+  | 'people-social'
+  | 'food-shopping'
+  | 'travel-transport'
+  | 'work-study'
+  | 'home-services'
+  | 'plans-leisure';
+
+export type PracticeWorld = {
+  id: PracticeWorldId;
+  titleAr: string;
+  subtitleAr: string;
+  emoji: string;
+};
+
+export const PRACTICE_WORLDS: PracticeWorld[] = [
+  { id: 'everyday', titleAr: 'الحياة اليومية', subtitleAr: 'مواقف صغيرة بتحصل كل يوم.', emoji: '☀️' },
+  { id: 'people-social', titleAr: 'الناس والمواقف الاجتماعية', subtitleAr: 'تعارف، دردشة، دعوات وتواصل طبيعي.', emoji: '👋' },
+  { id: 'food-shopping', titleAr: 'الأكل والتسوق', subtitleAr: 'اطلب، اختار، اسأل، واتعامل مع مشكلة.', emoji: '☕' },
+  { id: 'travel-transport', titleAr: 'السفر والمواصلات', subtitleAr: 'فندق، طريق، تذاكر وتغييرات مفاجئة.', emoji: '✈️' },
+  { id: 'work-study', titleAr: 'العمل والدراسة', subtitleAr: 'زملاء، اجتماعات، مقابلات وشرح أفكار.', emoji: '💼' },
+  { id: 'home-services', titleAr: 'البيت والخدمات', subtitleAr: 'طلبات، مواعيد، إصلاحات وخدمات يومية.', emoji: '🏠' },
+  { id: 'plans-leisure', titleAr: 'الخطط ووقت الفراغ', subtitleAr: 'رتّب خروجة، اقترح، اختار واتفق.', emoji: '🎟️' },
+];
+
+export type PracticeMission = {
+  id: string;
+  sourceId?: string;
+  level: PracticeLevelId;
+  worldId: PracticeWorldId;
+  titleAr: string;
+  titleEn: string;
+  descriptionAr: string;
+  durationMinutes: number;
+  status: 'planned' | 'live';
+  livePath?: string;
+};
+
+// Product-structure seeds only. Authored live missions are runtime mirrors of
+// reviewed contracts in the dedicated speaking-practice source-of-truth repo.
+export const PRACTICE_MISSIONS: PracticeMission[] = [
+  {
+    id: 'a1-meet-someone-new',
+    sourceId: 'practice.a1.people.meet-someone.v1',
+    level: 'A1',
+    worldId: 'people-social',
+    titleAr: 'اتعرف على شخص جديد',
+    titleEn: 'Meet someone new',
+    descriptionAr: 'سلّم، قول اسم تختاره، رد على سؤال بسيط، واسأل الشخص اللي قدامك هو كمان.',
+    durationMinutes: 4,
+    status: 'live',
+    livePath: '/practice/mission/a1-meet-someone-new',
+  },
+  {
+    id: 'a1-ask-someone-to-repeat',
+    sourceId: 'practice.a1.everyday.ask-repeat.v1',
+    level: 'A1',
+    worldId: 'everyday',
+    titleAr: 'اطلب من الشخص يعيد الكلام',
+    titleEn: 'Ask someone to repeat',
+    descriptionAr: 'لو تفصيلة فاتتك، اطلب إعادتها، اتأكد إنك سمعتها صح، واقفل الكلام طبيعي.',
+    durationMinutes: 3,
+    status: 'live',
+    livePath: '/practice/mission/a1-ask-someone-to-repeat',
+  },
+  {
+    id: 'a1-order-a-drink',
+    sourceId: 'practice.a1.food.order-drink.v1',
+    level: 'A1',
+    worldId: 'food-shopping',
+    titleAr: 'اطلب مشروب',
+    titleEn: 'Order a drink',
+    descriptionAr: 'اطلب اللي عايزه، اختار الحجم، كمّل الدفع، واقفل الطلب طبيعي.',
+    durationMinutes: 4,
+    status: 'live',
+    livePath: '/practice/mission/a1-order-a-drink',
+  },
+  {
+    id: 'a1-ask-where-a-place-is',
+    sourceId: 'practice.a1.travel.ask-place-location.v1',
+    level: 'A1',
+    worldId: 'travel-transport',
+    titleAr: 'اسأل مكان فين',
+    titleEn: 'Ask where a place is',
+    descriptionAr: 'اسأل البنك فين، افهم اتجاه قصير، واتأكد إنك فهمت الاتجاه صح.',
+    durationMinutes: 4,
+    status: 'live',
+    livePath: '/practice/mission/a1-ask-where-a-place-is',
+  },
+  {
+    id: 'a1-buy-something',
+    level: 'A1',
+    worldId: 'food-shopping',
+    titleAr: 'اشتري حاجة بسيطة',
+    titleEn: 'Buy something simple',
+    descriptionAr: 'اسأل عن المنتج والسعر وكمّل عملية شراء قصيرة.',
+    durationMinutes: 5,
+    status: 'planned',
+  },
+  {
+    id: 'a1-ask-for-help',
+    level: 'A1',
+    worldId: 'home-services',
+    titleAr: 'اطلب مساعدة',
+    titleEn: 'Ask for help',
+    descriptionAr: 'اشرح احتياج بسيط واطلب مساعدة مباشرة.',
+    durationMinutes: 4,
+    status: 'planned',
+  },
+  {
+    id: 'a1-make-a-simple-plan',
+    sourceId: 'practice.a1.plans.make-simple-plan.v1',
+    level: 'A1',
+    worldId: 'plans-leisure',
+    titleAr: 'اعمل خطة بسيطة',
+    titleEn: 'Make a simple plan',
+    descriptionAr: 'وافق على خروجة فيلم بسيطة، اختار الساعة، واتفقوا على مكان المقابلة.',
+    durationMinutes: 4,
+    status: 'live',
+    livePath: '/practice/mission/a1-make-a-simple-plan',
+  },
+  {
+    id: 'b1-change-hotel-booking',
+    level: 'B1',
+    worldId: 'travel-transport',
+    titleAr: 'غيّر حجز فندق',
+    titleEn: 'Change a hotel booking',
+    descriptionAr: 'اطلب تغيير، افهم قيد أو بديل، ووصل لاتفاق.',
+    durationMinutes: 7,
+    status: 'planned',
+  },
+  {
+    id: 'b1-fix-wrong-order',
+    level: 'B1',
+    worldId: 'food-shopping',
+    titleAr: 'حل مشكلة في الطلب',
+    titleEn: 'Fix a wrong order',
+    descriptionAr: 'اشرح المشكلة واتعامل مع أسئلة الموظف لحد ما توصلوا لحل.',
+    durationMinutes: 7,
+    status: 'planned',
+  },
+  {
+    id: 'b1-give-work-update',
+    level: 'B1',
+    worldId: 'work-study',
+    titleAr: 'ادّي تحديث في الشغل',
+    titleEn: 'Give a work update',
+    descriptionAr: 'اشرح إيه اللي حصل وإيه الخطوة الجاية ورد على متابعة.',
+    durationMinutes: 7,
+    status: 'planned',
+  },
+];
+
+const LEVEL_STORAGE_KEY = 'englotti.practice.level.v1';
+
+export function isPracticeLevelId(value: string | undefined): value is PracticeLevelId {
+  return PRACTICE_LEVELS.some((level) => level.id === value);
+}
+
+export function readPracticeLevel(): PracticeLevelId {
+  if (typeof window === 'undefined') return 'A1';
+  const value = window.localStorage.getItem(LEVEL_STORAGE_KEY) ?? undefined;
+  return isPracticeLevelId(value) ? value : 'A1';
+}
+
+export function savePracticeLevel(level: PracticeLevelId) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(LEVEL_STORAGE_KEY, level);
+}
+
+export function practiceLevelById(levelId?: string) {
+  return PRACTICE_LEVELS.find((level) => level.id === levelId) ?? PRACTICE_LEVELS[0];
+}
+
+export function practiceWorldById(worldId?: string) {
+  return PRACTICE_WORLDS.find((world) => world.id === worldId) ?? PRACTICE_WORLDS[0];
+}
+
+export function practiceMissionsForLevel(level: PracticeLevelId) {
+  return PRACTICE_MISSIONS.filter((mission) => mission.level === level);
+}
+
+export function practiceMissionsForWorld(level: PracticeLevelId, worldId: PracticeWorldId) {
+  return PRACTICE_MISSIONS.filter((mission) => mission.level === level && mission.worldId === worldId);
+}

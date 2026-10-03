@@ -1,0 +1,258 @@
+/* The adaptive checkpoint row is an extra direct child of the lesson shell.
+ * The original lesson layout has four rows (header, progress, stage, footer).
+ * Keep the stage as the only flexible row after inserting checkpoints. */
+.premium-scene-lesson {
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto !important;
+}
+
+.adaptive-checkpoint-bar {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  padding: 8px 18px 2px;
+  direction: rtl;
+}
+
+.adaptive-checkpoint-bar > span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 11px;
+  opacity: 0.48;
+  white-space: nowrap;
+}
+
+.adaptive-checkpoint-bar > span i {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: currentColor;
+  flex: 0 0 auto;
+}
+
+.adaptive-checkpoint-bar > span.is-complete {
+  opacity: 0.78;
+}
+
+.adaptive-checkpoint-bar > span.is-current {
+  opacity: 1;
+  font-weight: 800;
+}
+
+/* Preflight is a modal phase. Hide the live stage chrome completely so legacy
+ * absolute-positioned status/footer layers cannot appear through the picker. */
+.premium-scene-lesson:has(.adaptive-preflight-card) .premium-lesson-footer,
+.premium-scene-lesson:has(.adaptive-preflight-card) .premium-lesson-progress,
+.premium-scene-lesson:has(.adaptive-preflight-card) .adaptive-checkpoint-bar,
+.premium-scene-lesson:has(.adaptive-preflight-card) .premium-scene-caption,
+.premium-scene-lesson:has(.adaptive-preflight-card) .premium-lesson-character,
+.premium-scene-lesson:has(.adaptive-preflight-card) .premium-board-layer {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+.premium-scene-lesson:has(.adaptive-preflight-card) .premium-lesson-stage::before,
+.premium-scene-lesson:has(.adaptive-preflight-card) .premium-lesson-stage::after {
+  display: none !important;
+  content: none !important;
+}
+
+.premium-lesson-stage.has-preflight {
+  overflow: visible !important;
+  background: #fffaf7 !important;
+}
+
+.adaptive-preflight-card {
+  position: fixed !important;
+  z-index: 2147483000 !important;
+  top: max(76px, calc(env(safe-area-inset-top) + 68px)) !important;
+  right: 8px !important;
+  bottom: max(8px, env(safe-area-inset-bottom)) !important;
+  left: 8px !important;
+  width: auto !important;
+  max-width: 720px;
+  margin: 0 auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  padding: 18px 16px 24px;
+  border: 0;
+  border-radius: 22px;
+  background: #fffaf7 !important;
+  box-shadow: 0 18px 60px rgb(20 32 58 / 18%);
+  color: #10203a;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  transform: none !important;
+}
+
+.adaptive-preflight-card,
+.adaptive-preflight-card * {
+  pointer-events: auto !important;
+}
+
+.adaptive-preflight-card button {
+  position: relative;
+  z-index: 1;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.adaptive-preflight-card > small {
+  display: block;
+  margin-bottom: 4px;
+  opacity: 0.62;
+  font-weight: 700;
+}
+
+.adaptive-preflight-card h2 {
+  margin: 0 0 8px;
+  font-size: clamp(22px, 5.5vw, 32px);
+}
+
+.adaptive-preflight-card > p {
+  margin: 0 0 18px;
+  line-height: 1.55;
+  opacity: 0.72;
+}
+
+.adaptive-known-group {
+  margin-top: 17px;
+}
+
+.adaptive-known-group > strong,
+.adaptive-pace-picker > strong {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.adaptive-known-group > div,
+.adaptive-pace-picker > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.adaptive-known-group button,
+.adaptive-pace-picker button,
+.adaptive-preflight-actions button,
+.adaptive-preflight-confirm {
+  border: 1px solid rgb(0 0 0 / 10%);
+  border-radius: 999px;
+  padding: 9px 13px;
+  background: rgb(255 255 255 / 92%);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.adaptive-known-group button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.adaptive-known-group button small {
+  opacity: 0.58;
+}
+
+.adaptive-known-group button.is-selected,
+.adaptive-pace-picker button.is-selected {
+  border-color: var(--character-accent, #ff3f68);
+  box-shadow: inset 0 0 0 1px var(--character-accent, #ff3f68);
+  font-weight: 800;
+}
+
+.adaptive-pace-picker {
+  margin-top: 22px;
+  padding-top: 16px;
+  border-top: 1px solid rgb(0 0 0 / 8%);
+}
+
+.adaptive-preflight-confirm {
+  width: 100%;
+  margin-top: 22px;
+  border: 0;
+  border-radius: 16px;
+  padding: 13px 16px;
+  background: var(--character-accent, #ff3f68);
+  color: white;
+  font-weight: 800;
+}
+
+.adaptive-preflight-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.adaptive-preflight-actions button {
+  border-radius: 16px;
+  padding: 12px 14px;
+  font-weight: 800;
+}
+
+.adaptive-preflight-actions button.is-primary {
+  border-color: transparent;
+  background: var(--character-accent, #ff3f68);
+  color: white;
+}
+
+/* Once preflight is closed, make the mascot/board explicit again. Several old
+ * screenshot-polish sheets target the same lesson selectors. */
+.premium-scene-lesson:not(:has(.adaptive-preflight-card)) .premium-lesson-character {
+  display: grid !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  z-index: 12 !important;
+  pointer-events: none !important;
+}
+
+.premium-scene-lesson:not(:has(.adaptive-preflight-card)) .premium-lesson-character[data-renderer='otti-svg'],
+.premium-scene-lesson:not(:has(.adaptive-preflight-card)) .premium-lesson-character[data-renderer='otti-svg'] > svg,
+.premium-scene-lesson:not(:has(.adaptive-preflight-card)) .premium-lesson-character .otti-svg {
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+.premium-scene-lesson:not(:has(.adaptive-preflight-card)) .premium-lesson-stage {
+  background-color: #f9e1d2 !important;
+}
+
+.premium-scene-lesson:not(:has(.adaptive-preflight-card)) .premium-board-layer {
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+@media (max-width: 560px) {
+  .adaptive-checkpoint-bar {
+    gap: 3px;
+    padding-inline: 10px;
+  }
+
+  .adaptive-checkpoint-bar > span {
+    gap: 3px;
+    font-size: 9px;
+  }
+
+  .adaptive-checkpoint-bar > span i {
+    width: 5px;
+    height: 5px;
+  }
+
+  .adaptive-preflight-card {
+    top: max(70px, calc(env(safe-area-inset-top) + 62px)) !important;
+    right: 5px !important;
+    bottom: max(5px, env(safe-area-inset-bottom)) !important;
+    left: 5px !important;
+    padding: 15px 13px 22px;
+    border-radius: 18px;
+  }
+}

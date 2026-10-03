@@ -9,6 +9,15 @@ export type SceneInteractionKind =
   | 'roleplay'
   | 'fresh_transfer';
 
+export type SceneEvidenceType =
+  | 'independent_production'
+  | 'receptive_comprehension'
+  | 'multi_turn_interaction'
+  | 'delayed_retrieval'
+  | 'integrated_support';
+
+export type SceneSupportUsed = 'none' | 'light' | 'strong' | 'full_model';
+
 export interface SceneTeachingPlan {
   /** Internal authoring guidance. The teacher explains these points mostly in Egyptian Arabic. */
   explainInArabic: readonly string[];
@@ -66,6 +75,11 @@ export interface SceneLessonEvidence {
   sceneId: string;
   /** Teacher-authored, content-minimized summary of what the learner could use successfully. */
   summary: string;
+  /** Teacher self-audit metadata. The application stores this; it does not semantically grade it. */
+  evidenceType?: SceneEvidenceType;
+  supportUsed?: SceneSupportUsed;
+  freshIndependentRetry?: boolean;
+  learnerTurnsObserved?: number;
   recordedAt: string;
 }
 

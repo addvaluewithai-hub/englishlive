@@ -7,7 +7,8 @@ import {
   type LessonEvidenceLevel,
   type LessonEvidenceState,
 } from './lessonContracts';
-import { markA1SpeakingPilotLessonComplete } from './roadmapProgress';
+import { markLearnLessonComplete } from './roadmapProgress';
+import { useRound2PracticeRuntime } from './round2PracticeRuntime';
 
 function normalizedEvidence(value: string) {
   return value.trim().toLocaleLowerCase().replace(/\s+/g, ' ');
@@ -15,6 +16,9 @@ function normalizedEvidence(value: string) {
 
 export function useLessonEvidenceRuntime(scenarioId: string) {
   const contract = speakingLessonContractByScenarioId(scenarioId);
+  // Learn V2 A1 guided conversations only reach this runtime in Round 2;
+  // Round 1 uses GuidedSpeakingLiveScreen and has no lesson evidence runtime.
+  const round2 = useRound2PracticeRuntime(scenarioId, true);
   const evidenceRef = useRef<LessonEvidenceState>(createLessonEvidenceState(contract));
   const [evidence, setEvidence] = useState<LessonEvidenceState>(() => createLessonEvidenceState(contract));
   const lessonCompleteRef = useRef(false);
@@ -28,6 +32,7 @@ export function useLessonEvidenceRuntime(scenarioId: string) {
     lessonCompleteRef.current = false;
     finishAfterClosingRef.current = false;
     finalClosingOutputRef.current = false;
+    round2.reset();
   }
 
   function recordEvidence(args: Record<string, unknown>) {
@@ -57,8 +62,12 @@ export function useLessonEvidenceRuntime(scenarioId: string) {
     if (summary.lessonComplete && !lessonCompleteRef.current) {
       lessonCompleteRef.current = true;
       finishAfterClosingRef.current = true;
-      markA1SpeakingPilotLessonComplete(scenarioId, true);
+      if (!round2.active) markLearnLessonComplete(scenarioId, true);
     }
+
+    const normalInstruction = summary.lessonComplete
+      ? 'All required lesson evidence is complete. Ask no new question. Give one short natural closing line for the conversation without mentioning checks, progress, scores or the tool, then end your turn.'
+      : 'Continue the conversation naturally. Do not mention this check.';
 
     return {
       recorded: true,
@@ -68,13 +77,13 @@ export function useLessonEvidenceRuntime(scenarioId: string) {
       completed_units: summary.completedUnits,
       total_units: summary.totalUnits,
       remaining_check_ids: summary.remainingCheckIds,
-      instruction: summary.lessonComplete
-        ? 'All required lesson evidence is complete. Ask no new question. Give one short natural closing line for the conversation without mentioning checks, progress, scores or the tool, then end your turn.'
-        : 'Continue the conversation naturally. Do not mention this check. Create a natural opportunity for a remaining check within the next one or two exchanges rather than wandering into unrelated topics.',
+      instruction: round2.active
+        ? 'STOP before speaking. This evidence result does NOT authorize any partner response or step advance. You MUST now call judge_round2_attempt on this same learner attempt. Follow only that gate tool response for correction/retry or progression.'
+        : normalInstruction,
     };
   }
 
-  const tools: LiveClientTool[] = contract ? [{
+  const evidenceTools: LiveClientTool[] = contract ? [{
     declaration: {
       name: 'record_lesson_evidence',
       description: [
@@ -84,6 +93,7 @@ export function useLessonEvidenceRuntime(scenarioId: string) {
         'independent = learner produced the required behaviour/form without being given the exact answer immediately beforehand.',
         'supported = meaning/attempt appeared but the learner copied supplied wording, needed the exact model, or did not yet produce the required form independently.',
         'Never call from partner/Otti speech and never invent evidence.',
+        'This tool NEVER advances a gated Round 2 step. Only judge_round2_attempt may do that.',
       ].join(' '),
       behavior: 'BLOCKING',
       parameters: {
@@ -112,8 +122,10 @@ export function useLessonEvidenceRuntime(scenarioId: string) {
     handle: recordEvidence,
   }] : [];
 
+  const tools: LiveClientTool[] = [...round2.tools, ...evidenceTools];
+
   const progress = contract ? summarizeLessonEvidence(contract, evidence) : null;
-  const promptEn = contract ? [
+  const evidencePromptEn = contract ? [
     'PRIVATE LESSON ENGINE — never read or describe this bookkeeping to the learner.',
     `This Speaking lesson is built from reviewed Learn lessons ${contract.sourceLessonIds.join(', ')}. Their source-introduction load is ${contract.sourceLoad.abilities} abilities, ${contract.sourceLoad.phrases} phrases, ${contract.sourceLoad.grammar} grammar records, ${contract.sourceLoad.words} word records and ${contract.sourceLoad.pronunciation} pronunciation records. This source load defines the available ground; it does NOT mean every record is a separate spoken requirement.`,
     `Available language ground:\n- ${contract.languageGroundEn.join('\n- ')}`,
@@ -121,11 +133,16 @@ export function useLessonEvidenceRuntime(scenarioId: string) {
     contract.coachPromptEn,
   ].join('\n\n') : '';
 
+  const promptEn = [round2.promptEn, evidencePromptEn].filter(Boolean).join('\n\n');
+
   function noteTeacherOutput() {
+    round2.noteTeacherOutput();
     if (finishAfterClosingRef.current) finalClosingOutputRef.current = true;
   }
 
   function consumeAutoFinishAfterTurn() {
+    if (round2.consumeAutoFinishAfterTurn()) return true;
+    if (round2.active) return false;
     if (!finishAfterClosingRef.current || !finalClosingOutputRef.current) return false;
     finishAfterClosingRef.current = false;
     finalClosingOutputRef.current = false;
