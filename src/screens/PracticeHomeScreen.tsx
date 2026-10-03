@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ProductIcon } from '../components/ProductIcon';
+import { useI18n } from '../i18n/LocaleProvider';
 import {
   PRACTICE_LEVELS,
   PRACTICE_WORLDS,
@@ -9,9 +10,13 @@ import {
   savePracticeLevel,
   type PracticeLevelId,
 } from '../practice/catalog';
+import { practiceJourneyCopy } from '../practice/journeyCopy';
 import { speakingAssets } from '../speaking/assets';
+import styles from './PracticeJourney.module.css';
 
 export function PracticeHomeScreen() {
+  const { locale, number } = useI18n();
+  const copy = practiceJourneyCopy[locale].home;
   const [level, setLevel] = useState<PracticeLevelId>(() => readPracticeLevel());
   const levelMeta = PRACTICE_LEVELS.find((item) => item.id === level) ?? PRACTICE_LEVELS[0];
   const missions = useMemo(() => practiceMissionsForLevel(level), [level]);
@@ -22,16 +27,14 @@ export function PracticeHomeScreen() {
   }
 
   return (
-    <section className="practice-home" dir="rtl">
+    <section className={`${styles.root} practice-home`}>
       <header className="practice-hero">
         <div className="practice-hero-copy">
-          <span className="practice-eyebrow">Practice</span>
-          <h1>اتدرّب في موقف حقيقي</h1>
-          <p>اختار مستواك والموقف. إحنا بنصمم المحادثة، وGemini Live بيخليها تتحرك طبيعي معاك.</p>
-          <div className="practice-hero-pills" aria-label="مميزات التدريب">
-            <span>مواقف حسب المستوى</span>
-            <span>Hints وقت ما تحتاج</span>
-            <span>مفيش إجابة واحدة محفوظة</span>
+          <span className="practice-eyebrow">{copy.eyebrow}</span>
+          <h1>{copy.title}</h1>
+          <p>{copy.body}</p>
+          <div className="practice-hero-pills" aria-label={copy.featuresLabel}>
+            {copy.features.map((feature) => <span key={feature}>{feature}</span>)}
           </div>
         </div>
         <img className="practice-hero-art" src={speakingAssets.ottiHero} alt="" />
@@ -40,13 +43,17 @@ export function PracticeHomeScreen() {
       <section className="practice-level-section" aria-labelledby="practice-level-heading">
         <div className="practice-section-heading">
           <div>
-            <span className="practice-section-kicker">مستوى التدريب</span>
-            <h2 id="practice-level-heading">إيه المناسب ليك دلوقتي؟</h2>
+            <span className="practice-section-kicker">{copy.levelKicker}</span>
+            <h2 id="practice-level-heading">{copy.levelTitle}</h2>
           </div>
-          <span className="practice-current-level">{level} • {levelMeta.titleAr}</span>
+          <span className="practice-current-level">
+            <bdi dir="ltr">{level}</bdi>
+            {' • '}
+            <span lang="ar" dir="rtl">{levelMeta.titleAr}</span>
+          </span>
         </div>
 
-        <div className="practice-level-rail" role="list" aria-label="مستويات CEFR">
+        <div className="practice-level-rail" role="list" aria-label="CEFR">
           {PRACTICE_LEVELS.map((item) => {
             const selected = item.id === level;
             return (
@@ -58,22 +65,22 @@ export function PracticeHomeScreen() {
                 aria-pressed={selected}
               >
                 <strong dir="ltr">{item.id}</strong>
-                <span>{item.titleAr}</span>
+                <span lang="ar" dir="rtl">{item.titleAr}</span>
               </button>
             );
           })}
         </div>
-        <p className="practice-level-promise">{levelMeta.promiseAr}</p>
-        <p className="practice-level-note">المستوى فلتر يساعدك تلاقي المناسب بسرعة، مش قفل. تقدر تستكشف أي مستوى وقت ما تحب.</p>
+        <p className="practice-level-promise" lang="ar" dir="rtl">{levelMeta.promiseAr}</p>
+        <p className="practice-level-note">{copy.levelNote}</p>
       </section>
 
       <section className="practice-worlds-section" aria-labelledby="practice-worlds-heading">
         <div className="practice-section-heading">
           <div>
-            <span className="practice-section-kicker">العوالم</span>
-            <h2 id="practice-worlds-heading">عايز تتدرّب على إيه؟</h2>
+            <span className="practice-section-kicker">{copy.worldsKicker}</span>
+            <h2 id="practice-worlds-heading">{copy.worldsTitle}</h2>
           </div>
-          <span className="practice-library-count">{missions.length} مواقف مخطط لها في {level}</span>
+          <span className="practice-library-count">{copy.plannedForLevel(number(missions.length), level)}</span>
         </div>
 
         <div className="practice-world-grid">
@@ -82,10 +89,10 @@ export function PracticeHomeScreen() {
             return (
               <Link key={world.id} className="practice-world-card" to={`/practice/${level}/world/${world.id}`}>
                 <span className="practice-world-emoji" aria-hidden="true">{world.emoji}</span>
-                <div>
+                <div lang="ar" dir="rtl">
                   <strong>{world.titleAr}</strong>
                   <p>{world.subtitleAr}</p>
-                  <small>{count ? `${count} ${count === 1 ? 'موقف' : 'مواقف'} في ${level}` : `هنضيف مواقف ${level} هنا`}</small>
+                  <small>{count ? copy.worldCount(number(count), level) : copy.worldEmpty(level)}</small>
                 </div>
                 <ProductIcon name="chevron" size={21} />
               </Link>
@@ -97,8 +104,8 @@ export function PracticeHomeScreen() {
       <section className="practice-open-section" aria-labelledby="practice-open-heading">
         <div className="practice-section-heading">
           <div>
-            <span className="practice-section-kicker">من غير Mission جاهزة</span>
-            <h2 id="practice-open-heading">اتكلم بطريقتك</h2>
+            <span className="practice-section-kicker">{copy.openKicker}</span>
+            <h2 id="practice-open-heading">{copy.openTitle}</h2>
           </div>
         </div>
 
@@ -107,17 +114,17 @@ export function PracticeHomeScreen() {
             <span className="practice-open-icon"><ProductIcon name="chat" size={28} /></span>
             <div>
               <strong>Free Speak</strong>
-              <p>محادثة مفتوحة من غير blueprint أو hints جاهزة.</p>
-              <small>متاح دلوقتي</small>
+              <p>{copy.freeSpeakBody}</p>
+              <small>{copy.availableNow}</small>
             </div>
           </Link>
 
-          <article className="practice-open-card is-coming" aria-label="Custom scenario قريبًا">
+          <article className="practice-open-card is-coming" aria-label={`${copy.customScenario} — ${copy.comingSoon}`}>
             <span className="practice-open-icon">✨</span>
             <div>
-              <strong>Custom scenario</strong>
-              <p>اكتب الموقف اللي عايز تتدرب عليه وخليه يتولد ليك.</p>
-              <small>قريبًا</small>
+              <strong>{copy.customScenario}</strong>
+              <p>{copy.customBody}</p>
+              <small>{copy.comingSoon}</small>
             </div>
           </article>
         </div>
