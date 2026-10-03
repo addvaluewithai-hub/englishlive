@@ -8,12 +8,14 @@ import { OttiMark } from '../character/otti/OttiMark';
 import { getCharacterDefinition } from '../character/registry';
 import { ProductIcon } from '../components/ProductIcon';
 import { loadPublishedCharacter } from '../content/client';
+import { useI18n } from '../i18n/LocaleProvider';
 import { GeminiLiveTransport } from '../live/GeminiLiveTransport';
 import type { LiveStatus } from '../live/types';
 import { speakingScenarioById } from '../speaking/catalog';
 import { buildSpeakingDebugLog, copyTextWithFallback } from '../speaking/debugLog';
 import { learnV2GuidedConversationByScenarioId } from '../speaking/learnV2Guided';
 import type { SpeakingTurn, SpeakingTurnSpeaker } from '../speaking/types';
+import { LiveConversationHeader, LiveConversationStatus } from '../ui/product/LiveConversationChrome';
 
 function pcmSampleRate(mimeType: string) {
   const match = mimeType.match(/rate=(\d+)/i);
@@ -34,18 +36,10 @@ function turnId(speaker: SpeakingTurnSpeaker) {
   return `${speaker}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-const statusCopy: Record<LiveStatus, { title: string; body: string }> = {
-  idle: { title: 'جاهز؟', body: 'هنتمرّن سوا خطوة بخطوة' },
-  connecting: { title: 'بنجهز التدريب', body: 'ثواني وOtti هيبدأ' },
-  listening: { title: 'دورك الآن', body: 'اقرأ الكارت بصوتك وغيّر اللي بين [ ]' },
-  speaking: { title: 'Otti بيتكلم', body: 'اسمع الأول — الكارت هيظهر بعد ما يخلص' },
-  reconnecting: { title: 'بنرجّع الاتصال', body: 'ثواني ونكمل' },
-  error: { title: 'حصلت مشكلة بسيطة', body: 'جرّب تبدأ التدريب تاني' },
-};
-
 export function GuidedSpeakingLiveScreen() {
   const { scenarioId } = useParams();
   const navigate = useNavigate();
+  const { t } = useI18n();
   const scenario = speakingScenarioById(scenarioId);
   const guided = learnV2GuidedConversationByScenarioId(scenarioId);
   const character = getCharacterDefinition('otti');
@@ -152,7 +146,7 @@ export function GuidedSpeakingLiveScreen() {
       setLogCopied(true);
       window.setTimeout(() => setLogCopied(false), 1400);
     } catch {
-      setError('تعذر نسخ اللوج.');
+      setError(t('guided.copyError'));
     }
   }
 
@@ -272,7 +266,7 @@ export function GuidedSpeakingLiveScreen() {
       await mic.start((chunk) => live.sendAudio(chunk), setMicLevel);
       live.sendText(`Start STEP 1 now. Stay very close to this line: “${guided.steps[0].partnerExampleEn}” Then stop and give the learner the turn.`);
     } catch (reason) {
-      const message = reason instanceof Error ? reason.message : 'تعذر بدء التدريب.';
+      const message = reason instanceof Error ? reason.message : t('guided.startError');
       setError(message);
       setStatus('error');
       await stopTransport();
@@ -295,27 +289,27 @@ export function GuidedSpeakingLiveScreen() {
 
   if (!guided) {
     return (
-      <section className="v2-empty-screen" dir="rtl">
-        <h1>التدريب الموجّه مش متاح للموقف ده</h1>
-        <Link className="v2-primary-button" to={`/speak/live/${scenario.id}?round=independent`}>ابدأ المحادثة</Link>
+      <section className="v2-empty-screen">
+        <h1>{t('guided.notAvailableTitle')}</h1>
+        <Link className="v2-primary-button" to={`/speak/live/${scenario.id}?round=independent`}>{t('guided.startConversation')}</Link>
       </section>
     );
   }
 
   if (finished) {
     return (
-      <section className="guided-finish" dir="rtl">
+      <section className="guided-finish">
         <div className="guided-finish-card">
           <OttiMark />
-          <span>Round 1 ✓</span>
-          <h1>حلو. دلوقتي نخبي الكروت.</h1>
-          <p>هتدخل نفس الموقف تاني، بس المرة دي المعنى هيظهر بالعربي وإنت تقول الإنجليزي بطريقتك. لو فيه غلط حقيقي Otti هيصلحه ويخليك تعيد.</p>
+          <span>{t('guided.round')} ✓</span>
+          <h1>{t('guided.finishTitle')}</h1>
+          <p>{t('guided.finishBody')}</p>
           <Link className="guided-finish-primary" to={`/speak/live/${scenario.id}?round=independent`}>
             <ProductIcon name="speak" size={26} />
-            <span>جرّب من غير الكارت</span>
+            <span>{t('guided.tryIndependent')}</span>
             <ProductIcon name="chevron" size={22} />
           </Link>
-          <Link className="guided-finish-secondary" to={scenario.returnPath || '/learn'}>ارجع للدرس</Link>
+          <Link className="guided-finish-secondary" to={scenario.returnPath || '/learn'}>{t('guided.backLesson')}</Link>
         </div>
       </section>
     );
@@ -326,18 +320,30 @@ export function GuidedSpeakingLiveScreen() {
   const latestTeacherText = teacherDraft.trim()
     || [...turns].reverse().find((turn) => turn.speaker === 'teacher')?.text
     || '';
-  const statusText = statusCopy[status];
+  const statusText: Record<LiveStatus, { title: string; body: string }> = {
+    idle: { title: t('guided.status.idle.title'), body: t('guided.status.idle.body') },
+    connecting: { title: t('guided.status.connecting.title'), body: t('guided.status.connecting.body') },
+    listening: { title: t('guided.status.listening.title'), body: t('guided.status.listening.body') },
+    speaking: { title: t('guided.status.speaking.title'), body: t('guided.status.speaking.body') },
+    reconnecting: { title: t('guided.status.reconnecting.title'), body: t('guided.status.reconnecting.body') },
+    error: { title: t('guided.status.error.title'), body: t('guided.status.error.body') },
+  };
+  const currentStatus = statusText[status];
+  const currentProgress = Math.min(completedLearnerTurns + 1, guided.steps.length);
+  const headerTitle = scenario.curriculum?.lessonCode ? (
+    <>{t('guided.headerTitle')} • <bdi dir="ltr">{scenario.curriculum.lessonCode}</bdi></>
+  ) : t('guided.headerTitle');
 
   return (
-    <section className="fs-live sp-scenario-live sp-learn-mission-live guided-live" dir="rtl">
-      <header className="fs-live-header sp-scenario-live-header">
-        <button type="button" className="fs-live-close" onClick={() => void leaveGuided()} aria-label="إنهاء التدريب">
-          <ProductIcon name="close" size={28} />
-        </button>
-        <div className="fs-live-brand" aria-label="Englotti"><OttiMark /><strong>Englotti</strong></div>
-        <strong className="fs-live-title">تدريب موجه • {scenario.curriculum?.lessonCode}</strong>
-        <span className="guided-round-pill">Round 1</span>
-      </header>
+    <section className="fs-live sp-scenario-live sp-learn-mission-live guided-live">
+      <LiveConversationHeader
+        className="sp-scenario-live-header"
+        onClose={() => void leaveGuided()}
+        closeLabel={t('guided.leave')}
+        title={headerTitle}
+        meta={t('guided.round')}
+        metaClassName="guided-round-pill"
+      />
 
       <div
         className="fs-live-stage sp-scenario-stage"
@@ -354,18 +360,20 @@ export function GuidedSpeakingLiveScreen() {
           <CharacterHost ref={host} character={character} className="fs-live-character-host" />
         </div>
 
-        <div className={`fs-live-status status-${status}${learnerTurn ? ' is-open' : ''}`} aria-live="polite">
-          <span className="fs-live-wave" aria-hidden="true"><i /><i /><i /></span>
-          <span><strong>{statusText.title}</strong><small>{statusText.body}</small></span>
-        </div>
+        <LiveConversationStatus
+          status={status}
+          learnerTurn={learnerTurn}
+          title={currentStatus.title}
+          body={currentStatus.body}
+        />
 
-        <div className="guided-progress" aria-label={`خطوة ${Math.min(completedLearnerTurns + 1, guided.steps.length)} من ${guided.steps.length}`}>
+        <div className="guided-progress" aria-label={t('guided.progress', { current: currentProgress, total: guided.steps.length })}>
           {guided.steps.map((_, index) => <i key={index} className={index < completedLearnerTurns ? 'is-done' : index === completedLearnerTurns ? 'is-current' : ''} />)}
         </div>
 
-        <button type="button" className="sp-copy-log-button" onClick={() => void copyDebugLog()} aria-label="نسخ لوج المحادثة">
+        <button type="button" className="sp-copy-log-button" onClick={() => void copyDebugLog()} aria-label={t('guided.copyLogLabel')}>
           <span aria-hidden="true">⧉</span>
-          <strong>{logCopied ? 'Copied' : 'Copy log'}</strong>
+          <strong>{logCopied ? t('guided.copied') : t('guided.copyLog')}</strong>
         </button>
       </div>
 
@@ -373,11 +381,11 @@ export function GuidedSpeakingLiveScreen() {
         {learnerTurn && currentStep ? (
           <section className="guided-response-card" aria-live="polite">
             <div>
-              <span>YOUR TURN</span>
-              <small>اقرأها بصوتك — وغيّر اللي بين [ ]</small>
+              <span>{t('guided.yourTurn')}</span>
+              <small>{t('guided.yourTurnHelp')}</small>
             </div>
-            <strong dir="ltr">{currentStep.learnerCardEn}</strong>
-            {currentStep.noteAr ? <p>{currentStep.noteAr}</p> : null}
+            <strong dir="ltr" lang="en">{currentStep.learnerCardEn}</strong>
+            {currentStep.noteAr ? <p lang="ar" dir="rtl">{currentStep.noteAr}</p> : null}
           </section>
         ) : null}
 
@@ -386,17 +394,17 @@ export function GuidedSpeakingLiveScreen() {
             type="button"
             className={`fs-mic-control${learnerTurn ? ' is-live' : ''}`}
             disabled
-            aria-label={learnerTurn ? 'المايك مفتوح ودورك تتكلم' : 'استنى دورك'}
+            aria-label={learnerTurn ? t('guided.micOpen') : t('guided.waitTurn')}
           >
             <ProductIcon name="speak" size={48} />
-            <small>{learnerTurn ? 'اتكلم' : 'استنى'}</small>
+            <small>{learnerTurn ? t('guided.speak') : t('guided.wait')}</small>
           </button>
         </div>
         <div className="fs-mic-meter" aria-hidden="true"><span style={{ width: `${Math.max(learnerTurn ? 3 : 0, micLevel * 100)}%` }} /></div>
         {error ? (
           <div className="guided-error" role="alert">
             <p>{error}</p>
-            <button type="button" onClick={() => void startLive()}>جرّب تاني</button>
+            <button type="button" onClick={() => void startLive()}>{t('guided.tryAgain')}</button>
           </div>
         ) : null}
       </div>
