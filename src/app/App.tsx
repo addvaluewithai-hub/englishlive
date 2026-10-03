@@ -35,12 +35,14 @@ import { StudioCurriculumScreen } from '../screens/StudioCurriculumScreen';
 import { StudioScreen } from '../screens/StudioScreen';
 import { UnitScreen } from '../screens/UnitScreen';
 import { AppLayout } from '../ui/layouts/AppLayout';
+import { LiveConversationLayout } from '../ui/layouts/LiveConversationLayout';
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
   isActive ? 'v2-nav-link is-active' : 'v2-nav-link';
 
 export function App() {
   const location = useLocation();
+  const isFreeSpeakSessionPath = /^\/speak\/(?!recap(?:\/|$)|scenario-recap(?:\/|$)|world(?:\/|$)|scenario(?:\/|$)|progress(?:\/|$)|live(?:\/|$))[^/]+/.test(location.pathname);
 
   // Opt in per migrated route. Keep parameterized screens inside Routes so hooks retain route params.
   const usesMigratedLayout = Boolean(
@@ -65,6 +67,24 @@ export function App() {
     );
   }
 
+  const usesLiveConversationLayout = Boolean(
+    matchPath('/practice/live/:missionId', location.pathname)
+    || matchPath('/speak/live/:scenarioId', location.pathname)
+    || isFreeSpeakSessionPath,
+  );
+
+  if (usesLiveConversationLayout) {
+    return (
+      <LiveConversationLayout>
+        <Routes>
+          <Route path="/practice/live/:missionId" element={<RequireAuth><PracticeLiveScreen /></RequireAuth>} />
+          <Route path="/speak/live/:scenarioId" element={<RequireAuth><SpeakingLiveEntryScreen /></RequireAuth>} />
+          <Route path="/speak/:modeId" element={<RequireAuth><FreeSpeakSessionScreen /></RequireAuth>} />
+        </Routes>
+      </LiveConversationLayout>
+    );
+  }
+
   const isLanding = location.pathname === '/';
   const isAuth = location.pathname.startsWith('/auth/');
   const isOnboarding = location.pathname.startsWith('/onboarding');
@@ -78,7 +98,7 @@ export function App() {
   const isSpeakingRecap = location.pathname.startsWith('/speak/scenario-recap/');
   const isSpeakingScenario = location.pathname.startsWith('/speak/scenario/');
   const isSpeakingLive = location.pathname.startsWith('/speak/live/');
-  const isFreeSpeakSession = /^\/speak\/(?!recap(?:\/|$)|scenario-recap(?:\/|$)|world(?:\/|$)|scenario(?:\/|$)|progress(?:\/|$)|live(?:\/|$))[^/]+/.test(location.pathname);
+  const isFreeSpeakSession = isFreeSpeakSessionPath;
   const isSession = isLegacySession || isLesson || isSceneLesson || isFreeSpeakSession || isSpeakingLive || isPracticeLive;
   const isReview = location.pathname.startsWith('/review/') || location.pathname.startsWith('/lesson-review/');
   const isApp = !isLanding && !isAuth && !isOnboarding && !isStudio && !isSession && !isReview && !isSpeakingScenario;
