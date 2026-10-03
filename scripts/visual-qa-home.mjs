@@ -65,7 +65,8 @@ try {
           for (const target of ['/learn', '/practice', '/account', '/progress']) {
             await page.locator(`a[href="${target}"]`).first().click();
             assert.equal(new URL(page.url()).pathname, target);
-            assert.equal(await page.locator('[data-englotti-ui]').count(), 0, 'Legacy pages must not inherit the new theme boundary');
+            await page.locator('[data-englotti-ui]').waitFor({ state: 'detached' });
+            assert.equal(await page.locator('[data-englotti-ui]').count(), 0, `${target}: legacy pages must not inherit the new theme boundary`);
             await page.goto(`${baseUrl}/home`);
             await boundary.waitFor();
           }
@@ -93,11 +94,14 @@ try {
     }
   }
   console.log(`Home UI passed ${scenarios} viewport/locale/theme scenarios, plus navigation, persistence, progress, keyboard, and text resizing checks.`);
+} finally {
   // Optional inspection fallback when Actions artifact storage is unavailable.
   // These screenshots contain only the synthetic QA learner above.
   if (process.env.VISUAL_QA_INLINE_SCREENSHOTS === '1') {
     for (const name of ['home-ar-adult-390.png', 'home-en-adult-1440.png']) {
-      console.log(`HOME_SCREENSHOT ${name} ${(await readFile(path.join(outputDir, name))).toString('base64')}`);
+      const screenshot = await readFile(path.join(outputDir, name)).catch(() => null);
+      if (screenshot) console.log(`HOME_SCREENSHOT ${name} ${screenshot.toString('base64')}`);
     }
   }
-} finally { await browser.close(); }
+  await browser.close();
+}
