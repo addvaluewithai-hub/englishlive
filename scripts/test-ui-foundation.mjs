@@ -18,6 +18,7 @@ test('every published catalog is complete and every message formats without unre
           count,
           total: 7,
           completed: 3,
+          current: 2,
           level: 'A1',
         });
         assert.ok(text.length > 0);
