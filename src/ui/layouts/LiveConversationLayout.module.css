@@ -92,7 +92,7 @@
   border-color: color-mix(in srgb, var(--color-primary) 20%, var(--color-border));
   background: color-mix(in srgb, var(--color-primary) 7%, var(--color-surface));
 }
-.root :global(.fs-bubble-teacher::after) {
+.root :global(.fs-bubble-teacher)::after {
   border-color: transparent color-mix(in srgb, var(--color-primary) 7%, var(--color-surface)) transparent transparent;
 }
 .root :global(.fs-bubble-avatar),
