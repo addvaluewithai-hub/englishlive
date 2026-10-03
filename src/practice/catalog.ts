@@ -94,7 +94,7 @@ export const PRACTICE_MISSIONS: PracticeMission[] = [
     worldId: 'travel-transport',
     titleAr: 'اسأل مكان فين',
     titleEn: 'Ask where a place is',
-    descriptionAr: 'اسأل البنك فين، افهم اتجاه قصير، واتأكد إنك سمعت اليمين والشمال صح.',
+    descriptionAr: 'اسأل البنك فين، افهم اتجاه قصير، واتأكد إنك فهمت الاتجاه صح.',
     durationMinutes: 4,
     status: 'live',
     livePath: '/practice/mission/a1-ask-where-a-place-is',
