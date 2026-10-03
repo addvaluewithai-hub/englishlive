@@ -26,6 +26,14 @@ async function assertMigratedBoundary(page, locale, experience) {
   return boundary;
 }
 
+async function assertPracticeRoot(page, selector, locale) {
+  const root = page.locator(selector);
+  await root.waitFor();
+  assert.equal(await root.getAttribute('dir'), null, `${selector}: must inherit AppLayout direction`);
+  assert.equal(await root.evaluate((node) => getComputedStyle(node).direction), locale === 'ar' ? 'rtl' : 'ltr');
+  return root;
+}
+
 try {
   for (const locale of ['ar', 'en']) {
     for (const experience of ['adult', 'teen']) {
@@ -92,6 +100,49 @@ try {
         assert.equal(await boundary.evaluate((node) => Number.parseFloat(getComputedStyle(node).getPropertyValue('--motion-normal'))), 0);
         assert.deepEqual(errors, []);
 
+        await page.goto(`${baseUrl}/practice`);
+        boundary = await assertMigratedBoundary(page, locale, experience);
+        await assertPracticeRoot(page, '.practice-home', locale);
+        assert.equal(await page.locator('.practice-hero h1').textContent(), locale === 'ar' ? 'اتدرّب في موقف حقيقي' : 'Practice in a real situation');
+        assert.equal(await page.locator('.practice-current-level [lang="ar"][dir="rtl"]').count(), 1);
+        assert.equal(await page.locator('.practice-world-card [lang="ar"][dir="rtl"]').count() > 0, true);
+        assert.equal(await page.locator('nav a[aria-current="page"]').getAttribute('href'), '/practice');
+        if ((width === 390 && locale === 'ar' && experience === 'adult') || (width === 1440 && locale === 'en' && experience === 'teen')) {
+          await page.screenshot({ path: path.join(outputDir, `practice-home-${locale}-${experience}-${width}.png`), fullPage: true });
+        }
+
+        await page.goto(`${baseUrl}/practice/A1/world/everyday`);
+        boundary = await assertMigratedBoundary(page, locale, experience);
+        await assertPracticeRoot(page, '.practice-world-screen', locale);
+        assert.equal(await page.locator('.practice-world-header h1').getAttribute('lang'), 'ar');
+        assert.equal(await page.locator('.practice-world-header h1').getAttribute('dir'), 'rtl');
+        assert.equal(await page.locator('.practice-world-levels > span').textContent(), locale === 'ar' ? 'المستوى' : 'Level');
+        assert.equal(await page.locator('a[href="/practice/mission/a1-ask-someone-to-repeat"]').count(), 1);
+
+        await page.goto(`${baseUrl}/practice/mission/a1-ask-someone-to-repeat`);
+        boundary = await assertMigratedBoundary(page, locale, experience);
+        await assertPracticeRoot(page, '.practice-start-page', locale);
+        assert.equal(await page.locator('.practice-start-heading h1').getAttribute('lang'), 'ar');
+        assert.equal(await page.locator('.practice-start-heading h1').getAttribute('dir'), 'rtl');
+        assert.equal(await page.locator('.practice-start-heading > div > strong').getAttribute('lang'), 'en');
+        assert.equal(await page.locator('.practice-start-button').textContent().then((value) => value?.includes(locale === 'ar' ? 'ابدأ الـMission' : 'Start mission')), true);
+        if ((width === 390 && locale === 'ar' && experience === 'adult') || (width === 1440 && locale === 'en' && experience === 'teen')) {
+          await page.screenshot({ path: path.join(outputDir, `practice-mission-${locale}-${experience}-${width}.png`), fullPage: true });
+        }
+
+        await page.goto(`${baseUrl}/practice/complete/a1-ask-someone-to-repeat`);
+        boundary = await assertMigratedBoundary(page, locale, experience);
+        await assertPracticeRoot(page, '.practice-complete', locale);
+        assert.equal(await page.locator('.practice-complete h1 [lang="ar"][dir="rtl"]').count(), 1);
+        assert.equal(await page.locator('.practice-complete-primary').textContent(), locale === 'ar' ? 'أعيد الـMission' : 'Repeat mission');
+        assert.equal(await page.locator('.practice-complete-secondary').textContent(), locale === 'ar' ? 'موقف تاني' : 'Another situation');
+
+        await page.goto(`${baseUrl}/speak`);
+        boundary = await assertMigratedBoundary(page, locale, experience);
+        await assertPracticeRoot(page, '.practice-home', locale);
+        assert.equal(await page.locator('.practice-hero h1').textContent(), locale === 'ar' ? 'اتدرّب في موقف حقيقي' : 'Practice in a real situation');
+        assert.deepEqual(errors, []);
+
         await page.goto(`${baseUrl}/home`);
         boundary = await assertMigratedBoundary(page, locale, experience);
 
@@ -111,7 +162,7 @@ try {
           assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true, '200% text overflow');
           await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
 
-          for (const target of ['/learn', '/progress']) {
+          for (const target of ['/learn', '/progress', '/practice']) {
             await page.locator(`a[href="${target}"]`).first().click();
             assert.equal(new URL(page.url()).pathname, target);
             const migrated = await assertMigratedBoundary(page, nextLocale, experience);
@@ -129,14 +180,12 @@ try {
           boundary = await assertMigratedBoundary(page, nextLocale, experience);
           assert.equal(await page.locator('#unit-a1-u2-people-around-me').count(), 1);
 
-          for (const target of ['/practice', '/account']) {
-            await page.goto(`${baseUrl}/home`);
-            boundary = await assertMigratedBoundary(page, nextLocale, experience);
-            await page.locator(`a[href="${target}"]`).first().click();
-            assert.equal(new URL(page.url()).pathname, target);
-            await page.locator('[data-englotti-ui]').waitFor({ state: 'detached' });
-            assert.equal(await page.locator('[data-englotti-ui]').count(), 0, `${target}: legacy pages must not inherit the new theme boundary`);
-          }
+          await page.goto(`${baseUrl}/home`);
+          boundary = await assertMigratedBoundary(page, nextLocale, experience);
+          await page.locator('a[href="/account"]').first().click();
+          assert.equal(new URL(page.url()).pathname, '/account');
+          await page.locator('[data-englotti-ui]').waitFor({ state: 'detached' });
+          assert.equal(await page.locator('[data-englotti-ui]').count(), 0, '/account: legacy page must not inherit the new theme boundary');
 
           // First lesson, complete roadmap, and missing profile.
           await page.goto(`${baseUrl}/home`);
@@ -170,12 +219,12 @@ try {
       }
     }
   }
-  console.log(`Core UI passed ${scenarios} viewport/locale/theme scenarios across Home, Learn, Level Roadmap, and Progress, plus navigation, persistence, progress, keyboard, hash routing, and text resizing checks.`);
+  console.log(`Core UI passed ${scenarios} viewport/locale/theme scenarios across Home, Learn, Level Roadmap, Progress, and the Practice journey, plus navigation, persistence, progress, keyboard, hash routing, and text resizing checks.`);
 } finally {
   // Optional inspection fallback when Actions artifact storage is unavailable.
   // These screenshots contain only the synthetic QA learner above.
   if (process.env.VISUAL_QA_INLINE_SCREENSHOTS === '1') {
-    for (const name of ['home-ar-adult-390.png', 'home-en-adult-1440.png', 'level-ar-adult-390.png', 'level-en-adult-1440.png']) {
+    for (const name of ['home-ar-adult-390.png', 'home-en-adult-1440.png', 'level-ar-adult-390.png', 'level-en-adult-1440.png', 'practice-home-ar-adult-390.png', 'practice-home-en-teen-1440.png', 'practice-mission-ar-adult-390.png', 'practice-mission-en-teen-1440.png']) {
       const screenshot = await readFile(path.join(outputDir, name)).catch(() => null);
       if (screenshot) console.log(`HOME_SCREENSHOT ${name} ${screenshot.toString('base64')}`);
     }
