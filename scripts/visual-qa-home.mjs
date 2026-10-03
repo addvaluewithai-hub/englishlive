@@ -70,6 +70,19 @@ try {
         assert.equal(await page.locator('nav a[aria-current="page"]').getAttribute('href'), '/learn');
         assert.equal(await boundary.evaluate((node) => Number.parseFloat(getComputedStyle(node).getPropertyValue('--motion-normal'))), 0);
 
+        await page.goto(`${baseUrl}/learn/level/a1`);
+        boundary = await assertMigratedBoundary(page, locale, experience);
+        assert.equal(await page.locator('h1').count(), 1);
+        assert.equal(await page.locator('#unit-a1-u1-first-contact').count(), 1);
+        assert.equal(await page.locator('a[href="/learn/lesson/a1-u1-l02"]').count(), 2);
+        assert.equal(await page.locator('progress').first().getAttribute('value'), '1');
+        assert.equal(await page.locator('progress').first().getAttribute('max'), String(lessons.length));
+        assert.equal(await page.locator('nav a[aria-current="page"]').getAttribute('href'), '/learn');
+        assert.equal(await boundary.evaluate((node) => Number.parseFloat(getComputedStyle(node).getPropertyValue('--motion-normal'))), 0);
+        if ((width === 390 && locale === 'ar' && experience === 'adult') || (width === 1440 && locale === 'en' && experience === 'adult')) {
+          await page.screenshot({ path: path.join(outputDir, `level-${locale}-${experience}-${width}.png`), fullPage: true });
+        }
+
         await page.goto(`${baseUrl}/progress`);
         boundary = await assertMigratedBoundary(page, locale, experience);
         assert.equal(await page.locator('h1').count(), 1);
@@ -107,16 +120,26 @@ try {
             boundary = await assertMigratedBoundary(page, nextLocale, experience);
           }
 
+          await page.goto(`${baseUrl}/learn`);
+          await page.locator('a[href="/learn/level/a1"]').click();
+          assert.equal(new URL(page.url()).pathname, '/learn/level/a1');
+          boundary = await assertMigratedBoundary(page, nextLocale, experience);
+          assert.equal(await page.locator('nav a[aria-current="page"]').getAttribute('href'), '/learn');
+          await page.goto(`${baseUrl}/learn/level/a1#unit-a1-u2-people-around-me`);
+          boundary = await assertMigratedBoundary(page, nextLocale, experience);
+          assert.equal(await page.locator('#unit-a1-u2-people-around-me').count(), 1);
+
           for (const target of ['/practice', '/account']) {
+            await page.goto(`${baseUrl}/home`);
+            boundary = await assertMigratedBoundary(page, nextLocale, experience);
             await page.locator(`a[href="${target}"]`).first().click();
             assert.equal(new URL(page.url()).pathname, target);
             await page.locator('[data-englotti-ui]').waitFor({ state: 'detached' });
             assert.equal(await page.locator('[data-englotti-ui]').count(), 0, `${target}: legacy pages must not inherit the new theme boundary`);
-            await page.goto(`${baseUrl}/home`);
-            boundary = await assertMigratedBoundary(page, nextLocale, experience);
           }
 
           // First lesson, complete roadmap, and missing profile.
+          await page.goto(`${baseUrl}/home`);
           await page.evaluate(() => { localStorage.removeItem('englotti:learn-completed-v1'); });
           await page.reload();
           assert.equal(await page.locator('a[href="/learn/lesson/a1-u1-l01"]').count(), 1);
@@ -147,12 +170,12 @@ try {
       }
     }
   }
-  console.log(`Core UI passed ${scenarios} viewport/locale/theme scenarios across Home, Learn, and Progress, plus navigation, persistence, progress, keyboard, and text resizing checks.`);
+  console.log(`Core UI passed ${scenarios} viewport/locale/theme scenarios across Home, Learn, Level Roadmap, and Progress, plus navigation, persistence, progress, keyboard, hash routing, and text resizing checks.`);
 } finally {
   // Optional inspection fallback when Actions artifact storage is unavailable.
   // These screenshots contain only the synthetic QA learner above.
   if (process.env.VISUAL_QA_INLINE_SCREENSHOTS === '1') {
-    for (const name of ['home-ar-adult-390.png', 'home-en-adult-1440.png']) {
+    for (const name of ['home-ar-adult-390.png', 'home-en-adult-1440.png', 'level-ar-adult-390.png', 'level-en-adult-1440.png']) {
       const screenshot = await readFile(path.join(outputDir, name)).catch(() => null);
       if (screenshot) console.log(`HOME_SCREENSHOT ${name} ${screenshot.toString('base64')}`);
     }

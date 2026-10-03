@@ -42,17 +42,25 @@ const navClass = ({ isActive }: { isActive: boolean }) =>
 export function App() {
   const location = useLocation();
 
-  // Opt in per migrated route. Legacy selectors never wrap the new UI.
-  const migratedScreen = matchPath('/home', location.pathname)
-    ? <HomeScreen />
-    : matchPath('/learn', location.pathname)
-      ? <LearnScreen />
-      : matchPath('/progress', location.pathname)
-        ? <ProgressScreen />
-        : null;
+  // Opt in per migrated route. Keep parameterized screens inside Routes so hooks retain route params.
+  const usesMigratedLayout = Boolean(
+    matchPath('/home', location.pathname)
+    || matchPath('/learn', location.pathname)
+    || matchPath('/learn/level/:levelId', location.pathname)
+    || matchPath('/progress', location.pathname),
+  );
 
-  if (migratedScreen) {
-    return <AppLayout><RequireAuth>{migratedScreen}</RequireAuth></AppLayout>;
+  if (usesMigratedLayout) {
+    return (
+      <AppLayout>
+        <Routes>
+          <Route path="/home" element={<RequireAuth><HomeScreen /></RequireAuth>} />
+          <Route path="/learn" element={<RequireAuth><LearnScreen /></RequireAuth>} />
+          <Route path="/learn/level/:levelId" element={<RequireAuth><LevelScreen /></RequireAuth>} />
+          <Route path="/progress" element={<RequireAuth><ProgressScreen /></RequireAuth>} />
+        </Routes>
+      </AppLayout>
+    );
   }
 
   const isLanding = location.pathname === '/';

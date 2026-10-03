@@ -10,6 +10,8 @@ export interface MessageParams {
   'home.progressCount': { count: number; total: number };
   'home.completed': { count: number };
   'learn.progressCount': { completed: number; total: number };
+  'level.title': { level: string };
+  'level.minutes': { number: number };
   'progress.title': { level: string };
   'progress.completedCount': { count: number; total: number };
   'progress.unitTitle': { number: number };
