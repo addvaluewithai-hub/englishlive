@@ -47,6 +47,7 @@ export function App() {
     matchPath('/home', location.pathname)
     || matchPath('/learn', location.pathname)
     || matchPath('/learn/level/:levelId', location.pathname)
+    || matchPath('/learn/lesson/:lessonId', location.pathname)
     || matchPath('/progress', location.pathname),
   );
 
@@ -57,6 +58,7 @@ export function App() {
           <Route path="/home" element={<RequireAuth><HomeScreen /></RequireAuth>} />
           <Route path="/learn" element={<RequireAuth><LearnScreen /></RequireAuth>} />
           <Route path="/learn/level/:levelId" element={<RequireAuth><LevelScreen /></RequireAuth>} />
+          <Route path="/learn/lesson/:lessonId" element={<RequireAuth><LearnV2LessonScreen /></RequireAuth>} />
           <Route path="/progress" element={<RequireAuth><ProgressScreen /></RequireAuth>} />
         </Routes>
       </AppLayout>

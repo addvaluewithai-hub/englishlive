@@ -12,6 +12,7 @@ export interface MessageParams {
   'learn.progressCount': { completed: number; total: number };
   'level.title': { level: string };
   'level.minutes': { number: number };
+  'lesson.minutes': { number: number };
   'progress.title': { level: string };
   'progress.completedCount': { count: number; total: number };
   'progress.unitTitle': { number: number };

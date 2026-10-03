@@ -2,32 +2,39 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ProductIcon } from '../components/ProductIcon';
 import { apiUrl } from '../config/api';
+import { lessonDisplayTitle } from '../i18n/format';
+import { useI18n } from '../i18n/LocaleProvider';
 import { learnV2LessonById, type LearnV2ListeningClip } from '../learnV2/catalog';
 import { learnUnitForLesson } from '../learnV2/roadmap';
+import { Button, ButtonLink } from '../ui/primitives/Button';
+import { Card } from '../ui/primitives/Card';
+import { EmptyState } from '../ui/product/EmptyState';
+import styles from '../ui/product/LearnLesson.module.css';
 
-const STEP_LABELS = [
-  { key: 'goal', title: 'الهدف', icon: '◎' },
-  { key: 'prepare', title: 'جهّز اللغة', icon: '▤' },
-  { key: 'move', title: 'افهم الفكرة', icon: '✦' },
-  { key: 'listen', title: 'اسمع', icon: '◉' },
-  { key: 'mission', title: 'اتكلم', icon: '●' },
+const STEP_DEFINITIONS = [
+  { key: 'goal', labelKey: 'lesson.step.goal' },
+  { key: 'prepare', labelKey: 'lesson.step.prepare' },
+  { key: 'move', labelKey: 'lesson.step.move' },
+  { key: 'listen', labelKey: 'lesson.step.listen' },
+  { key: 'mission', labelKey: 'lesson.step.mission' },
 ] as const;
 
-type StepKey = (typeof STEP_LABELS)[number]['key'];
+type StepKey = (typeof STEP_DEFINITIONS)[number]['key'];
 
 function nextStep(step: StepKey): StepKey | null {
-  const index = STEP_LABELS.findIndex((item) => item.key === step);
-  return STEP_LABELS[index + 1]?.key ?? null;
+  const index = STEP_DEFINITIONS.findIndex((item) => item.key === step);
+  return STEP_DEFINITIONS[index + 1]?.key ?? null;
 }
 
 function previousStep(step: StepKey): StepKey | null {
-  const index = STEP_LABELS.findIndex((item) => item.key === step);
-  return STEP_LABELS[index - 1]?.key ?? null;
+  const index = STEP_DEFINITIONS.findIndex((item) => item.key === step);
+  return STEP_DEFINITIONS[index - 1]?.key ?? null;
 }
 
 export function LearnV2LessonScreen() {
   const { lessonId } = useParams();
   const lesson = learnV2LessonById(lessonId);
+  const { locale, number, t } = useI18n();
   const [step, setStep] = useState<StepKey>('goal');
   const [known, setKnown] = useState<Set<string>>(() => new Set());
   const [audioUrls, setAudioUrls] = useState<Record<string, string>>({});
@@ -43,11 +50,11 @@ export function LearnV2LessonScreen() {
 
   if (!lesson) {
     return (
-      <section className="v2-empty-screen" dir="rtl">
-        <h1>الدرس مش موجود</h1>
-        <p>ارجع لخريطة Learn واختار درس متاح من المستوى.</p>
-        <Link className="v2-primary-button" to="/learn">الرجوع لـ Learn</Link>
-      </section>
+      <EmptyState
+        title={t('lesson.notFoundTitle')}
+        description={t('lesson.notFoundDescription')}
+        action={<ButtonLink to="/learn">{t('lesson.backLearn')}</ButtonLink>}
+      />
     );
   }
 
@@ -79,7 +86,7 @@ export function LearnV2LessonScreen() {
     } catch (reason) {
       setAudioErrors((current) => ({
         ...current,
-        [clip.id]: reason instanceof Error ? reason.message : 'الصوت مش متاح دلوقتي.',
+        [clip.id]: reason instanceof Error ? reason.message : t('lesson.audioUnavailable'),
       }));
     } finally {
       setAudioLoading((current) => ({ ...current, [clip.id]: false }));
@@ -102,68 +109,106 @@ export function LearnV2LessonScreen() {
   const hearItems = lesson.prepItems.filter((item) => item.role === 'hear');
   const next = nextStep(step);
   const previous = previousStep(step);
+  const activeIndex = STEP_DEFINITIONS.findIndex((item) => item.key === step);
+  const primaryTitle = lessonDisplayTitle(locale, lesson);
+  const secondaryTitle = locale === 'ar'
+    ? { text: lesson.titleEn, lang: 'en', direction: 'ltr' as const }
+    : { text: lesson.titleAr, lang: 'ar', direction: 'rtl' as const };
 
   return (
-    <section className="lv2-lesson" dir="rtl">
-      <header className="lv2-hero">
-        <Link className="lv2-back" to={backPath} aria-label="الرجوع لخريطة المستوى"><ProductIcon name="chevron" size={22} /></Link>
-        <div className="lv2-hero-copy">
-          <span className="lv2-code">{lesson.code}</span>
-          <h1><bdi dir="ltr">{lesson.titleEn}</bdi></h1>
-          <p>{lesson.titleAr} • حوالي {lesson.estimatedMinutes} دقيقة</p>
+    <section className={styles.lesson} data-lesson-step={step}>
+      <Card tone="raised" className={styles.hero}>
+        <Link className={styles.back} to={backPath} aria-label={t('lesson.back')}>
+          <ProductIcon name="chevron" size={22} />
+        </Link>
+        <div className={styles.heroCopy}>
+          <div className={styles.heroMeta}>
+            <span className={styles.code}>{lesson.code}</span>
+            <span className={styles.levelBadge}>{lesson.level}</span>
+          </div>
+          <h1 className={styles.title} lang={primaryTitle.lang} dir={primaryTitle.direction}>{primaryTitle.text}</h1>
+          <p className={styles.subtitle}>
+            <span lang={secondaryTitle.lang} dir={secondaryTitle.direction}>{secondaryTitle.text}</span>
+            <span aria-hidden="true">•</span>
+            <span>{t('lesson.minutes', { number: lesson.estimatedMinutes })}</span>
+          </p>
         </div>
-        <span className={`lv2-level is-${lesson.level.toLowerCase()}`}>{lesson.level}</span>
-      </header>
+      </Card>
 
-      <nav className="lv2-steps" aria-label="مراحل الدرس">
-        {STEP_LABELS.map((item, index) => {
-          const activeIndex = STEP_LABELS.findIndex((candidate) => candidate.key === step);
+      <nav className={styles.steps} aria-label={t('lesson.stepsLabel')}>
+        {STEP_DEFINITIONS.map((item, index) => {
           const isActive = item.key === step;
           const isPast = index < activeIndex;
           return (
-            <button key={item.key} type="button" className={`${isActive ? 'is-active' : ''}${isPast ? ' is-past' : ''}`} onClick={() => setStep(item.key)}>
-              <i aria-hidden="true">{isPast ? '✓' : item.icon}</i>
-              <span>{item.title}</span>
+            <button
+              key={item.key}
+              type="button"
+              className={[styles.stepButton, isActive ? styles.stepActive : '', isPast ? styles.stepPast : ''].filter(Boolean).join(' ')}
+              onClick={() => setStep(item.key)}
+              aria-current={isActive ? 'step' : undefined}
+              data-lesson-step-target={item.key}
+            >
+              <span className={styles.stepMarker} aria-hidden="true">
+                {isPast ? <ProductIcon name="check" size={15} /> : number(index + 1)}
+              </span>
+              <span>{t(item.labelKey)}</span>
             </button>
           );
         })}
       </nav>
 
-      <main className="lv2-stage">
+      <main className={styles.stage}>
         {step === 'goal' ? (
-          <article className="lv2-panel lv2-goal-panel">
-            <span className="lv2-eyebrow">هتطلع بإيه؟</span>
-            <h2>{lesson.goalAr}</h2>
-            <div className="lv2-goal-example" dir="ltr">
+          <Card className={styles.panel}>
+            <span className={styles.eyebrow}>{t('lesson.goalEyebrow')}</span>
+            <h2 className={styles.panelTitle} lang="ar" dir="rtl">{lesson.goalAr}</h2>
+            <div className={styles.goalExample} lang="en" dir="ltr">
               {lesson.goalExample.map((line) => <p key={line}>{line}</p>)}
             </div>
-            <div className="lv2-principle">
-              <strong>طريقة الدرس</strong>
-              <p>هنجهّز اللغة الأول، نفهم الفكرة المهمة، نسمعها في موقف طبيعي، وبعدها تستخدمها بنفسك في محادثة حقيقية.</p>
+            <div className={styles.callout}>
+              <span className={styles.calloutIcon} aria-hidden="true"><ProductIcon name="learn" size={22} /></span>
+              <div>
+                <strong>{t('lesson.methodTitle')}</strong>
+                <p>{t('lesson.methodBody')}</p>
+              </div>
             </div>
-          </article>
+          </Card>
         ) : null}
 
         {step === 'prepare' ? (
-          <article className="lv2-panel">
-            <span className="lv2-eyebrow">Prepare</span>
-            <h2>جهّز اللغة قبل ما تتكلم</h2>
-            <p className="lv2-lead">{lesson.prepIntroAr}</p>
+          <Card className={styles.panel}>
+            <span className={styles.eyebrow}>{t('lesson.prepareEyebrow')}</span>
+            <h2 className={styles.panelTitle}>{t('lesson.prepareTitle')}</h2>
+            <p className={styles.lead} lang="ar" dir="rtl">{lesson.prepIntroAr}</p>
 
-            <section className="lv2-language-section">
-              <header><div><strong>Language you'll USE</strong><span>دي اللغة اللي مفيد تطلع منك في الكلام.</span></div><em>{useItems.length}</em></header>
-              <div className="lv2-language-grid">
+            <section className={styles.languageSection}>
+              <header className={styles.sectionHeader}>
+                <div className={styles.sectionHeaderCopy}>
+                  <strong>{t('lesson.useLanguageTitle')}</strong>
+                  <span>{t('lesson.useLanguageBody')}</span>
+                </div>
+                <em className={styles.countBadge}>{number(useItems.length)}</em>
+              </header>
+              <div className={styles.languageGrid}>
                 {useItems.map((item) => {
                   const isKnown = known.has(item.id);
                   return (
-                    <article key={item.id} className={`lv2-language-card${isKnown ? ' is-known' : ''}`}>
-                      <div className="lv2-language-top">
-                        <strong dir="ltr">{item.english}</strong>
-                        <button type="button" onClick={() => toggleKnown(item.id)}>{isKnown ? '✓ عارفها' : 'عارفها؟'}</button>
+                    <article key={item.id} className={[styles.languageCard, isKnown ? styles.languageKnown : ''].filter(Boolean).join(' ')}>
+                      <div className={styles.languageTop}>
+                        <strong lang="en" dir="ltr">{item.english}</strong>
+                        <button
+                          className={styles.knownToggle}
+                          type="button"
+                          onClick={() => toggleKnown(item.id)}
+                          aria-pressed={isKnown}
+                          data-known-toggle={item.id}
+                        >
+                          {isKnown ? t('lesson.known') : t('lesson.markKnown')}
+                        </button>
                       </div>
-                      <span>{item.meaningAr}</span>
-                      <p dir="ltr">{item.exampleEn}</p>
-                      {item.noteAr ? <small>{item.noteAr}</small> : null}
+                      <span className={styles.meaning} lang="ar" dir="rtl">{item.meaningAr}</span>
+                      <p className={styles.example} lang="en" dir="ltr">{item.exampleEn}</p>
+                      {item.noteAr ? <small className={styles.note} lang="ar" dir="rtl">{item.noteAr}</small> : null}
                     </article>
                   );
                 })}
@@ -171,146 +216,209 @@ export function LearnV2LessonScreen() {
             </section>
 
             {hearItems.length ? (
-              <section className="lv2-language-section is-receptive">
-                <header><div><strong>Language you'll HEAR</strong><span>المطلوب هنا إنك تفهمها لما تظهر؛ مش لازم تحشرها في كلامك.</span></div><em>{hearItems.length}</em></header>
-                <div className="lv2-language-grid compact">
+              <section className={styles.languageSection}>
+                <header className={styles.sectionHeader}>
+                  <div className={styles.sectionHeaderCopy}>
+                    <strong>{t('lesson.hearLanguageTitle')}</strong>
+                    <span>{t('lesson.hearLanguageBody')}</span>
+                  </div>
+                  <em className={styles.countBadge}>{number(hearItems.length)}</em>
+                </header>
+                <div className={[styles.languageGrid, styles.languageGridCompact].join(' ')}>
                   {hearItems.map((item) => {
                     const isKnown = known.has(item.id);
                     return (
-                      <article key={item.id} className={`lv2-language-card${isKnown ? ' is-known' : ''}`}>
-                        <div className="lv2-language-top"><strong dir="ltr">{item.english}</strong><button type="button" onClick={() => toggleKnown(item.id)}>{isKnown ? '✓ عارفها' : 'عارفها؟'}</button></div>
-                        <span>{item.meaningAr}</span>
-                        <p dir="ltr">{item.exampleEn}</p>
+                      <article key={item.id} className={[styles.languageCard, isKnown ? styles.languageKnown : ''].filter(Boolean).join(' ')}>
+                        <div className={styles.languageTop}>
+                          <strong lang="en" dir="ltr">{item.english}</strong>
+                          <button
+                            className={styles.knownToggle}
+                            type="button"
+                            onClick={() => toggleKnown(item.id)}
+                            aria-pressed={isKnown}
+                            data-known-toggle={item.id}
+                          >
+                            {isKnown ? t('lesson.known') : t('lesson.markKnown')}
+                          </button>
+                        </div>
+                        <span className={styles.meaning} lang="ar" dir="rtl">{item.meaningAr}</span>
+                        <p className={styles.example} lang="en" dir="ltr">{item.exampleEn}</p>
                       </article>
                     );
                   })}
                 </div>
               </section>
             ) : null}
-          </article>
+          </Card>
         ) : null}
 
         {step === 'move' ? (
-          <article className="lv2-panel">
-            <span className="lv2-eyebrow">{lesson.move.eyebrowAr}</span>
-            <h2>{lesson.move.titleAr}</h2>
-            <p className="lv2-lead">{lesson.move.introAr}</p>
-            <div className="lv2-move-steps">
+          <Card className={styles.panel}>
+            <span className={styles.eyebrow} lang="ar" dir="rtl">{lesson.move.eyebrowAr}</span>
+            <h2 className={styles.panelTitle} lang="ar" dir="rtl">{lesson.move.titleAr}</h2>
+            <p className={styles.lead} lang="ar" dir="rtl">{lesson.move.introAr}</p>
+            <div className={styles.moveSteps}>
               {lesson.move.steps.map((moveStep, index) => (
-                <div key={moveStep.labelEn}>
-                  <span>{index + 1}</span>
-                  <strong dir="ltr">{moveStep.labelEn}</strong>
-                  <p>{moveStep.explanationAr}</p>
+                <div className={styles.moveStep} key={moveStep.labelEn}>
+                  <span className={styles.moveStepNumber}>{number(index + 1)}</span>
+                  <strong lang="en" dir="ltr">{moveStep.labelEn}</strong>
+                  <p lang="ar" dir="rtl">{moveStep.explanationAr}</p>
                 </div>
               ))}
             </div>
-            <section className="lv2-dialogue-demo">
-              <strong>شوفها في مثال</strong>
+            <section className={styles.dialogue}>
+              <strong>{t('lesson.moveExample')}</strong>
               {lesson.move.example.map((turn, index) => (
-                <p key={`${turn.speaker}-${index}`} dir="ltr"><b>{turn.speaker}:</b> {turn.text}</p>
+                <p key={`${turn.speaker}-${index}`} lang="en" dir="ltr"><b>{turn.speaker}:</b> {turn.text}</p>
               ))}
             </section>
-            <p className="lv2-note">{lesson.move.noteAr}</p>
+            <p className={styles.authoredNote} lang="ar" dir="rtl">{lesson.move.noteAr}</p>
             {lesson.move.languageNote?.length ? (
-              <section className="lv2-language-note">
-                <strong>Language note</strong>
-                {lesson.move.languageNote.map((note) => <div key={note.form}><b dir="ltr">{note.form}</b><span>{note.explanationAr}</span></div>)}
+              <section className={styles.languageNote}>
+                <strong>{t('lesson.languageNote')}</strong>
+                {lesson.move.languageNote.map((note) => (
+                  <div key={note.form}>
+                    <b lang="en" dir="ltr">{note.form}</b>
+                    <span lang="ar" dir="rtl">{note.explanationAr}</span>
+                  </div>
+                ))}
               </section>
             ) : null}
-          </article>
+          </Card>
         ) : null}
 
         {step === 'listen' ? (
-          <article className="lv2-panel">
-            <span className="lv2-eyebrow">Listening</span>
-            <h2>اسمع اللغة وهي عايشة</h2>
-            <p className="lv2-lead">{lesson.listeningIntroAr}</p>
-            <div className="lv2-listening-stack">
+          <Card className={styles.panel}>
+            <span className={styles.eyebrow}>{t('lesson.listeningEyebrow')}</span>
+            <h2 className={styles.panelTitle}>{t('lesson.listeningTitle')}</h2>
+            <p className={styles.lead} lang="ar" dir="rtl">{lesson.listeningIntroAr}</p>
+            <div className={styles.listeningStack}>
               {lesson.listeningClips.map((clip, clipIndex) => (
-                <section className="lv2-listening-card" key={clip.id}>
-                  <header>
-                    <span>{clipIndex + 1}</span>
-                    <div><strong>{clip.titleAr}</strong><p>{clip.subtitleAr}</p></div>
+                <section className={styles.listeningCard} key={clip.id}>
+                  <header className={styles.listeningHeader}>
+                    <span className={styles.listeningIndex}>{number(clipIndex + 1)}</span>
+                    <div>
+                      <strong lang="ar" dir="rtl">{clip.titleAr}</strong>
+                      <p lang="ar" dir="rtl">{clip.subtitleAr}</p>
+                    </div>
                   </header>
                   {!audioUrls[clip.id] ? (
-                    <button className="lv2-listen-button" type="button" onClick={() => void loadAudio(clip)} disabled={audioLoading[clip.id]}>
-                      <span aria-hidden="true">▶</span>
-                      {audioLoading[clip.id] ? 'بنحضّر الصوت…' : 'اسمع المحادثة'}
-                    </button>
+                    <Button
+                      className={styles.audioButton}
+                      type="button"
+                      onClick={() => void loadAudio(clip)}
+                      loading={audioLoading[clip.id]}
+                      data-audio-load={clip.id}
+                    >
+                      <ProductIcon name="play" size={18} />
+                      {audioLoading[clip.id] ? t('lesson.audioPreparing') : t('lesson.audioPlay')}
+                    </Button>
                   ) : (
-                    <audio className="lv2-audio" controls preload="metadata" src={audioUrls[clip.id]} />
+                    <audio className={styles.audio} controls preload="metadata" src={audioUrls[clip.id]} />
                   )}
-                  {audioErrors[clip.id] ? <p className="lv2-audio-error">{audioErrors[clip.id]} — تقدر تكمل بالنص لو حبيت.</p> : null}
+                  {audioErrors[clip.id] ? (
+                    <p className={styles.audioError}>{audioErrors[clip.id]} — {t('lesson.audioFallback')}</p>
+                  ) : null}
 
-                  <div className="lv2-questions">
+                  <div className={styles.questions}>
                     {clip.questions.map((question) => {
                       const selected = answers[question.id];
                       const hasAnswer = selected !== undefined;
                       const correct = selected === question.answerIndex;
                       return (
-                        <div className="lv2-question" key={question.id}>
-                          <strong>{question.promptAr}</strong>
-                          <div>
-                            {question.options.map((option, optionIndex) => (
-                              <button
-                                key={option}
-                                type="button"
-                                className={hasAnswer && optionIndex === selected ? (correct ? 'is-correct' : 'is-wrong') : ''}
-                                onClick={() => answerQuestion(question.id, optionIndex)}
-                              >
-                                {option}
-                              </button>
-                            ))}
+                        <div className={styles.question} key={question.id}>
+                          <strong lang="ar" dir="rtl">{question.promptAr}</strong>
+                          <div className={styles.options}>
+                            {question.options.map((option, optionIndex) => {
+                              const isSelected = hasAnswer && optionIndex === selected;
+                              return (
+                                <button
+                                  key={option}
+                                  type="button"
+                                  dir="auto"
+                                  className={[
+                                    styles.option,
+                                    isSelected && correct ? styles.optionCorrect : '',
+                                    isSelected && !correct ? styles.optionWrong : '',
+                                  ].filter(Boolean).join(' ')}
+                                  onClick={() => answerQuestion(question.id, optionIndex)}
+                                  data-question-option={`${question.id}-${optionIndex}`}
+                                >
+                                  {option}
+                                </button>
+                              );
+                            })}
                           </div>
-                          {hasAnswer ? <small className={correct ? 'is-correct' : 'is-wrong'}>{correct ? question.feedbackAr : 'جرّب تسمع الجزء ده تاني وبص على المعنى العام.'}</small> : null}
+                          {hasAnswer ? (
+                            <small
+                              className={[styles.feedback, correct ? styles.feedbackCorrect : styles.feedbackWrong].join(' ')}
+                              lang={correct ? 'ar' : undefined}
+                              dir={correct ? 'rtl' : undefined}
+                            >
+                              {correct ? question.feedbackAr : t('lesson.tryAgain')}
+                            </small>
+                          ) : null}
                         </div>
                       );
                     })}
                   </div>
 
-                  <button className="lv2-transcript-toggle" type="button" onClick={() => toggleTranscript(clip.id)}>
-                    {transcriptsOpen[clip.id] ? 'اخفي النص' : 'اعرض النص بعد ما تسمع'}
+                  <button
+                    className={styles.transcriptToggle}
+                    type="button"
+                    onClick={() => toggleTranscript(clip.id)}
+                    aria-expanded={Boolean(transcriptsOpen[clip.id])}
+                    data-transcript-toggle={clip.id}
+                  >
+                    {transcriptsOpen[clip.id] ? t('lesson.hideTranscript') : t('lesson.showTranscript')}
                   </button>
                   {transcriptsOpen[clip.id] ? (
-                    <div className="lv2-transcript" dir="ltr">
-                      {clip.turns.map((turn, index) => <p key={`${turn.speaker}-${index}`}><strong>{turn.speaker}:</strong> {turn.text}</p>)}
+                    <div className={styles.transcript} lang="en" dir="ltr" data-transcript={clip.id}>
+                      {clip.turns.map((turn, index) => (
+                        <p key={`${turn.speaker}-${index}`}><strong>{turn.speaker}:</strong> {turn.text}</p>
+                      ))}
                     </div>
                   ) : null}
                 </section>
               ))}
             </div>
-          </article>
+          </Card>
         ) : null}
 
         {step === 'mission' ? (
-          <article className="lv2-panel lv2-mission-panel">
-            <span className="lv2-eyebrow">Speaking Mission</span>
-            <h2>{lesson.missionTitleAr}</h2>
-            <p className="lv2-lead">{lesson.missionSetupAr}</p>
-            <section className="lv2-mission-language">
-              <strong>Useful language — مرجع سريع، مش checklist</strong>
-              <div>{lesson.missionUsefulLanguage.map((item) => <span key={item} dir="ltr">{item}</span>)}</div>
-            </section>
-            <section className="lv2-help-explainer">
-              <span>2×</span>
-              <div>
-                <strong>هتعمل المحادثة مرتين</strong>
-                <p>أول مرة الردود الإنجليزية هتظهر لك ككروت صغيرة. بعدها تعيد نفس الموقف والمعنى يظهر بالعربي وإنت تنتج الإنجليزي بنفسك. ولو احتجت تفهم كلام Otti، زر «اشرح بالعربي» موجود جوه المحادثة.</p>
+          <Card className={styles.panel}>
+            <span className={styles.eyebrow}>{t('lesson.missionEyebrow')}</span>
+            <h2 className={styles.panelTitle} lang="ar" dir="rtl">{lesson.missionTitleAr}</h2>
+            <p className={styles.lead} lang="ar" dir="rtl">{lesson.missionSetupAr}</p>
+            <section className={styles.missionLanguage}>
+              <strong>{t('lesson.usefulLanguage')}</strong>
+              <div className={styles.phraseList}>
+                {lesson.missionUsefulLanguage.map((item) => <span className={styles.phrase} key={item} lang="en" dir="ltr">{item}</span>)}
               </div>
             </section>
-            <Link className="lv2-mission-button" to={`/speak/live/${lesson.missionScenarioId}`}>
-              <ProductIcon name="speak" size={28} />
-              <span>ابدأ المحادثة</span>
-              <ProductIcon name="chevron" size={22} />
-            </Link>
-            <small className="lv2-source-note">{lesson.sourceNoteAr}</small>
-          </article>
+            <div className={styles.callout}>
+              <span className={styles.calloutIcon} aria-hidden="true">2×</span>
+              <div>
+                <strong>{t('lesson.missionTwoRoundsTitle')}</strong>
+                <p>{t('lesson.missionTwoRoundsBody')}</p>
+              </div>
+            </div>
+            <ButtonLink className={styles.missionAction} size="lg" to={`/speak/live/${lesson.missionScenarioId}`}>
+              <ProductIcon name="speak" size={24} />
+              <span>{t('lesson.startConversation')}</span>
+            </ButtonLink>
+            <small className={styles.sourceNote} lang="ar" dir="rtl">{lesson.sourceNoteAr}</small>
+          </Card>
         ) : null}
       </main>
 
-      <footer className="lv2-footer">
-        {previous ? <button type="button" className="lv2-secondary" onClick={() => setStep(previous)}>السابق</button> : <Link className="lv2-secondary" to={backPath}>المستوى</Link>}
-        {next ? <button type="button" className="lv2-primary" onClick={() => setStep(next)}>التالي <span>←</span></button> : null}
+      <footer className={styles.footer}>
+        {previous ? (
+          <Button variant="secondary" onClick={() => setStep(previous)}>{t('lesson.previous')}</Button>
+        ) : (
+          <ButtonLink variant="secondary" to={backPath}>{t('lesson.level')}</ButtonLink>
+        )}
+        {next ? <Button onClick={() => setStep(next)}>{t('lesson.next')}</Button> : <span />}
       </footer>
     </section>
   );
