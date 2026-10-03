@@ -34,6 +34,10 @@ const progress = {
 
 const scenarios = [
   { name: 'practice-home', path: '/practice', full: true },
+  { name: 'practice-a1-everyday-world', path: '/practice/A1/world/everyday', full: true },
+  { name: 'practice-repeat-start', path: '/practice/mission/a1-ask-someone-to-repeat', full: true },
+  { name: 'practice-repeat-live', path: '/practice/live/a1-ask-someone-to-repeat', full: true },
+  { name: 'practice-repeat-live-hint', path: '/practice/live/a1-ask-someone-to-repeat', click: '.practice-hint-toggle', full: true },
   { name: 'practice-a1-people-world', path: '/practice/A1/world/people-social', full: true },
   { name: 'practice-a1-food-world', path: '/practice/A1/world/food-shopping', full: true },
   { name: 'practice-order-start', path: '/practice/mission/a1-order-a-drink', full: true },
