@@ -19,13 +19,21 @@ export const locales = {
 export type SupportedLocale = keyof typeof locales;
 export const defaultLocale: SupportedLocale = 'ar';
 
-export function resolveLocale(value: unknown): SupportedLocale {
-  if (typeof value !== 'string') return defaultLocale;
+export function resolveRegisteredLocale<T extends string>(value: unknown, codes: readonly T[], fallback: T): T {
+  if (typeof value !== 'string') return fallback;
   try {
-    const canonical = Intl.getCanonicalLocales(value)[0]?.toLowerCase();
-    if (canonical && Object.hasOwn(locales, canonical)) return canonical as SupportedLocale;
-    const language = canonical?.split('-')[0];
-    if (language && Object.hasOwn(locales, language)) return language as SupportedLocale;
+    let candidate = Intl.getCanonicalLocales(value)[0]?.toLowerCase();
+    while (candidate) {
+      const registered = codes.find((code) => code.toLowerCase() === candidate);
+      if (registered) return registered;
+      // Keep a registered script/region before falling back to a base language.
+      const separator = candidate.lastIndexOf('-');
+      candidate = separator < 0 ? '' : candidate.slice(0, separator);
+    }
   } catch { /* Invalid or unsupported preferences use the product default. */ }
-  return defaultLocale;
+  return fallback;
+}
+
+export function resolveLocale(value: unknown): SupportedLocale {
+  return resolveRegisteredLocale(value, Object.keys(locales) as SupportedLocale[], defaultLocale);
 }

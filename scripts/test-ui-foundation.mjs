@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { locales, resolveLocale } from '../src/i18n/locales.ts';
+import { locales, resolveLocale, resolveRegisteredLocale } from '../src/i18n/locales.ts';
 import { formatNumber, lessonDisplayTitle, translate } from '../src/i18n/format.ts';
 import { experienceProfiles, resolveExperienceProfile } from '../src/ui/theme/profiles.ts';
 import { normalizedProgress } from '../src/ui/primitives/progress.ts';
@@ -45,6 +45,16 @@ test('interface titles use authored content and preserve the learning-language b
   assert.deepEqual(lessonDisplayTitle('ar', lesson), { text: 'التعارف', lang: 'ar', direction: 'rtl' });
   assert.deepEqual(lessonDisplayTitle('en', lesson), { text: 'Introductions', lang: 'en', direction: 'ltr' });
   assert.deepEqual(lesson, { titleAr: 'التعارف', titleEn: 'Introductions' });
+});
+
+test('a ten-language registry supports canonical region/script tags without changing screens', () => {
+  // Test metadata only. This is not the product's launch-language list.
+  const codes = ['ar', 'en', 'fr', 'es', 'pt-BR', 'zh-Hans', 'he', 'ja', 'de', 'tr'];
+  assert.equal(resolveRegisteredLocale('pt-br', codes, 'ar'), 'pt-BR');
+  assert.equal(resolveRegisteredLocale('zh-Hans-CN', codes, 'ar'), 'zh-Hans');
+  assert.equal(resolveRegisteredLocale('en-US-u-nu-latn', codes, 'ar'), 'en');
+  assert.equal(resolveRegisteredLocale('he-IL', codes, 'ar'), 'he');
+  assert.equal(resolveRegisteredLocale('unknown', codes, 'ar'), 'ar');
 });
 
 test('theme profiles share the complete token contract and never require age', () => {
