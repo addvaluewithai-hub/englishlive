@@ -43,6 +43,7 @@ export function GuidedSpeakingLiveScreen() {
   const scenario = speakingScenarioById(scenarioId);
   const guided = learnV2GuidedConversationByScenarioId(scenarioId);
   const character = getCharacterDefinition('otti');
+  const visualQa = import.meta.env.VITE_VISUAL_QA === '1';
 
   const host = useRef<CharacterHostHandle | null>(null);
   const transport = useRef<GeminiLiveTransport | null>(null);
@@ -275,6 +276,12 @@ export function GuidedSpeakingLiveScreen() {
 
   useEffect(() => {
     if (!guided) return;
+    if (visualQa) {
+      setStatus('listening');
+      setMicOpen(true);
+      setTeacherDraft(guided.steps[0]?.partnerExampleEn ?? 'Ready.');
+      return;
+    }
     const timer = window.setTimeout(() => void startLive(), 0);
     return () => {
       window.clearTimeout(timer);
