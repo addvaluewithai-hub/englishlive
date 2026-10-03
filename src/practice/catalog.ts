@@ -53,13 +53,15 @@ export type PracticeMission = {
 export const PRACTICE_MISSIONS: PracticeMission[] = [
   {
     id: 'a1-meet-someone-new',
+    sourceId: 'practice.a1.people.meet-someone.v1',
     level: 'A1',
     worldId: 'people-social',
     titleAr: 'اتعرف على شخص جديد',
     titleEn: 'Meet someone new',
-    descriptionAr: 'ابدأ تعارف بسيط وخلي الكلام يكمل كام دور.',
+    descriptionAr: 'سلّم، قول اسم تختاره، رد على سؤال بسيط، واسأل الشخص اللي قدامك هو كمان.',
     durationMinutes: 4,
-    status: 'planned',
+    status: 'live',
+    livePath: '/practice/mission/a1-meet-someone-new',
   },
   {
     id: 'a1-ask-someone-to-repeat',
