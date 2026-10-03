@@ -24,6 +24,32 @@ const expectedPrimary = {
   adult: 'rgb(23, 107, 102)',
   teen: 'rgb(89, 69, 161)',
 };
+const practiceCopy = {
+  ar: {
+    brand: 'تدريب',
+    close: 'إنهاء التدريب',
+    status: 'دورك',
+    hintTitle: 'محتاج Hint؟',
+    hintBody: 'هتتعمل على سياق المحادثة الحالية',
+    hintSide: 'Hint ذكية',
+    mic: 'دورك',
+    keyboard: 'اكتب بدل الكلام',
+    placeholder: 'اكتب اللي عايز تقوله…',
+    send: 'إرسال',
+  },
+  en: {
+    brand: 'Practice',
+    close: 'End practice',
+    status: 'Your turn',
+    hintTitle: 'Need a hint?',
+    hintBody: 'It will use the current conversation context',
+    hintSide: 'Smart hint',
+    mic: 'Your turn',
+    keyboard: 'Type instead of speaking',
+    placeholder: 'Type what you want to say…',
+    send: 'Send',
+  },
+};
 const guidedCopy = {
   ar: {
     header: 'تدريب موجّه',
@@ -110,6 +136,31 @@ try {
           const status = page.locator('.fs-live-status strong');
           if (await status.count()) {
             assert.equal(await status.first().evaluate((node) => getComputedStyle(node).color), expectedPrimary[experience]);
+          }
+
+          if (route.name === 'practice-live-foundation') {
+            const expected = practiceCopy[locale];
+            const practice = page.locator('.practice-live');
+            await practice.waitFor();
+            assert.equal(await practice.getAttribute('dir'), null, 'Practice Live must inherit the live layout direction');
+            assert.equal(await practice.evaluate((node) => getComputedStyle(node).direction), locale === 'ar' ? 'rtl' : 'ltr');
+            assert.equal(await page.locator('.fs-live-brand strong').innerText(), expected.brand);
+            assert.equal(await page.locator('.fs-live-close').getAttribute('aria-label'), expected.close);
+            assert.equal(await page.locator('.fs-live-status strong').innerText(), expected.status);
+            assert.equal(await page.locator('.fs-live-title span[lang="ar"]').getAttribute('dir'), 'rtl');
+            assert.ok((await page.locator('.fs-live-title span[lang="ar"]').innerText()).length > 0);
+            assert.equal(await page.locator('.sp-otti-transcript small span[lang="ar"]').getAttribute('dir'), 'rtl');
+            assert.equal(await page.locator('.practice-hint-toggle strong').innerText(), expected.hintTitle);
+            assert.equal(await page.locator('.practice-hint-toggle small').innerText(), expected.hintBody);
+            assert.equal(await page.locator('.practice-live-side-label').innerText(), expected.hintSide);
+            assert.equal(await page.locator('.fs-mic-control small').innerText(), expected.mic);
+            assert.equal(await page.locator('.fs-keyboard-control').getAttribute('aria-label'), expected.keyboard);
+            await page.locator('.fs-keyboard-control').click();
+            assert.equal(await page.locator('.fs-type-row input').getAttribute('lang'), 'en');
+            assert.equal(await page.locator('.fs-type-row input').getAttribute('dir'), 'ltr');
+            assert.equal(await page.locator('.fs-type-row input').getAttribute('placeholder'), expected.placeholder);
+            assert.equal(await page.locator('.fs-type-row button').innerText(), expected.send);
+            await page.locator('.fs-keyboard-control').click();
           }
 
           if (route.name === 'guided-live-foundation') {
