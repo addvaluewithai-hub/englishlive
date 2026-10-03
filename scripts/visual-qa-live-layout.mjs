@@ -15,12 +15,33 @@ const profile = {
 };
 const routes = [
   { name: 'practice-live-foundation', path: '/practice/live/a1-ask-someone-to-repeat' },
+  { name: 'guided-live-foundation', path: '/speak/live/a1-s1-l01' },
   { name: 'speaking-live-foundation', path: '/speak/live/hotel-room-problem?difficulty=recommended' },
   { name: 'free-speak-live-foundation', path: '/speak/just-chat' },
 ];
 const expectedPrimary = {
   adult: 'rgb(23, 107, 102)',
   teen: 'rgb(89, 69, 161)',
+};
+const guidedCopy = {
+  ar: {
+    header: 'تدريب موجّه',
+    round: 'الجولة 1',
+    close: 'إنهاء التدريب',
+    status: 'دورك الآن',
+    yourTurn: 'دورك',
+    help: 'اقرأها بصوتك — وغيّر اللي بين [ ]',
+    mic: 'اتكلم',
+  },
+  en: {
+    header: 'Guided practice',
+    round: 'Round 1',
+    close: 'End guided practice',
+    status: 'Your turn',
+    yourTurn: 'YOUR TURN',
+    help: 'Read it aloud — change what is inside [ ]',
+    mic: 'Speak',
+  },
 };
 
 await mkdir(outputDir, { recursive: true });
@@ -61,6 +82,29 @@ try {
           if (await status.count()) {
             assert.equal(await status.first().evaluate((node) => getComputedStyle(node).color), expectedPrimary[experience]);
           }
+
+          if (route.name === 'guided-live-foundation') {
+            const expected = guidedCopy[locale];
+            const guided = page.locator('.guided-live');
+            await guided.waitFor();
+            assert.equal(await guided.getAttribute('dir'), null, 'guided live must inherit the live layout direction');
+            assert.equal(await guided.evaluate((node) => getComputedStyle(node).direction), locale === 'ar' ? 'rtl' : 'ltr');
+            assert.equal((await page.locator('.fs-live-title').innerText()).includes(expected.header), true);
+            assert.equal(await page.locator('.guided-round-pill').innerText(), expected.round);
+            assert.equal(await page.locator('.fs-live-close').getAttribute('aria-label'), expected.close);
+            assert.equal(await page.locator('.fs-live-status strong').innerText(), expected.status);
+            assert.equal(await page.locator('.guided-response-card > div span').innerText(), expected.yourTurn);
+            assert.equal(await page.locator('.guided-response-card > div small').innerText(), expected.help);
+            assert.equal(await page.locator('.guided-response-card > strong').getAttribute('lang'), 'en');
+            assert.equal(await page.locator('.guided-response-card > strong').getAttribute('dir'), 'ltr');
+            assert.equal(await page.locator('.guided-mic-row .fs-mic-control small').innerText(), expected.mic);
+            const authoredNote = page.locator('.guided-response-card > p');
+            if (await authoredNote.count()) {
+              assert.equal(await authoredNote.getAttribute('lang'), 'ar');
+              assert.equal(await authoredNote.getAttribute('dir'), 'rtl');
+            }
+          }
+
           assert.deepEqual(errors, []);
 
           if (locale === 'ar' && experience === 'adult' && width === 390) {
