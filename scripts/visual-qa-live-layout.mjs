@@ -155,11 +155,6 @@ try {
             assert.equal(await page.locator('.practice-live-side-label').innerText(), expected.hintSide);
             assert.equal(await page.locator('.fs-mic-control small').innerText(), expected.mic);
             assert.equal(await page.locator('.fs-keyboard-control').getAttribute('aria-label'), expected.keyboard);
-            await page.locator('.fs-keyboard-control').click();
-            assert.equal(await page.locator('.fs-type-row input').getAttribute('lang'), 'en');
-            assert.equal(await page.locator('.fs-type-row input').getAttribute('dir'), 'ltr');
-            assert.equal(await page.locator('.fs-type-row input').getAttribute('placeholder'), expected.placeholder);
-            assert.equal(await page.locator('.fs-type-row button').innerText(), expected.send);
           }
 
           if (route.name === 'guided-live-foundation') {
@@ -217,18 +212,48 @@ try {
             await page.screenshot({ path: path.join(outputDir, `${route.name}-en-teen-1280.png`), fullPage: true });
           }
 
-          if (route.name === 'practice-live-foundation' && locale === 'ar' && experience === 'adult' && width === 390) {
-            await page.keyboard.press('Tab');
-            assert.equal(await page.locator(':focus').getAttribute('href'), '#englotti-live-main');
-            await page.keyboard.press('Enter');
-            assert.equal(await page.locator(':focus').getAttribute('id'), 'englotti-live-main');
-          }
-
           scenarios += 1;
           await context.close();
         }
       }
     }
+  }
+
+  for (const locale of ['ar', 'en']) {
+    const context = await browser.newContext({ viewport: { width: 390, height: 900 }, reducedMotion: 'reduce' });
+    await context.addInitScript(({ profile, locale }) => {
+      localStorage.setItem('englishlive.learner-profile.v1', JSON.stringify(profile));
+      localStorage.setItem('englotti.ui.locale.v1', JSON.stringify({ version: 1, value: locale }));
+      localStorage.setItem('englotti.ui.experience.v1', JSON.stringify({ version: 1, value: 'adult' }));
+    }, { profile, locale });
+    const page = await context.newPage();
+    await page.goto(`${baseUrl}/practice/live/a1-ask-someone-to-repeat`, { waitUntil: 'networkidle' });
+    const expected = practiceCopy[locale];
+    const keyboard = page.locator('.practice-live .fs-keyboard-control').first();
+    await keyboard.click();
+    const input = page.locator('.fs-type-row input');
+    assert.equal(await input.getAttribute('lang'), 'en');
+    assert.equal(await input.getAttribute('dir'), 'ltr');
+    assert.equal(await input.getAttribute('placeholder'), expected.placeholder);
+    assert.equal(await page.locator('.fs-type-row button').innerText(), expected.send);
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true, `Practice composer ${locale}: horizontal overflow`);
+    await context.close();
+  }
+
+  {
+    const context = await browser.newContext({ viewport: { width: 390, height: 900 }, reducedMotion: 'reduce' });
+    await context.addInitScript(({ profile }) => {
+      localStorage.setItem('englishlive.learner-profile.v1', JSON.stringify(profile));
+      localStorage.setItem('englotti.ui.locale.v1', JSON.stringify({ version: 1, value: 'ar' }));
+      localStorage.setItem('englotti.ui.experience.v1', JSON.stringify({ version: 1, value: 'adult' }));
+    }, { profile });
+    const page = await context.newPage();
+    await page.goto(`${baseUrl}/practice/live/a1-ask-someone-to-repeat`, { waitUntil: 'networkidle' });
+    await page.keyboard.press('Tab');
+    assert.equal(await page.locator(':focus').getAttribute('href'), '#englotti-live-main');
+    await page.keyboard.press('Enter');
+    assert.equal(await page.locator(':focus').getAttribute('id'), 'englotti-live-main');
+    await context.close();
   }
 
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
@@ -240,7 +265,7 @@ try {
   assert.equal(await page.locator('[data-englotti-live-ui]').count(), 0, 'non-live Practice must stay outside the live foundation boundary');
   await context.close();
 
-  console.log(`Live conversation foundation passed ${scenarios} locale/experience/viewport/route scenarios.`);
+  console.log(`Live conversation foundation passed ${scenarios} locale/experience/viewport/route scenarios plus isolated Practice interaction checks.`);
 } finally {
   await browser.close();
 }
