@@ -50,7 +50,12 @@ export function App() {
     || matchPath('/learn', location.pathname)
     || matchPath('/learn/level/:levelId', location.pathname)
     || matchPath('/learn/lesson/:lessonId', location.pathname)
-    || matchPath('/progress', location.pathname),
+    || matchPath('/progress', location.pathname)
+    || matchPath('/practice', location.pathname)
+    || matchPath('/practice/:levelId/world/:worldId', location.pathname)
+    || matchPath('/practice/mission/:missionId', location.pathname)
+    || matchPath('/practice/complete/:missionId', location.pathname)
+    || matchPath('/speak', location.pathname),
   );
 
   if (usesMigratedLayout) {
@@ -62,6 +67,11 @@ export function App() {
           <Route path="/learn/level/:levelId" element={<RequireAuth><LevelScreen /></RequireAuth>} />
           <Route path="/learn/lesson/:lessonId" element={<RequireAuth><LearnV2LessonScreen /></RequireAuth>} />
           <Route path="/progress" element={<RequireAuth><ProgressScreen /></RequireAuth>} />
+          <Route path="/practice" element={<RequireAuth><PracticeHomeScreen /></RequireAuth>} />
+          <Route path="/practice/:levelId/world/:worldId" element={<RequireAuth><PracticeWorldScreen /></RequireAuth>} />
+          <Route path="/practice/mission/:missionId" element={<RequireAuth><PracticeMissionScreen /></RequireAuth>} />
+          <Route path="/practice/complete/:missionId" element={<RequireAuth><PracticeCompleteScreen /></RequireAuth>} />
+          <Route path="/speak" element={<RequireAuth><PracticeHomeScreen /></RequireAuth>} />
         </Routes>
       </AppLayout>
     );
