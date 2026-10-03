@@ -15,7 +15,7 @@ const profile = {
 };
 const routes = [
   { name: 'practice-live-foundation', path: '/practice/live/a1-ask-someone-to-repeat' },
-  { name: 'guided-live-foundation', path: '/speak/live/a1-s1-l01' },
+  { name: 'guided-live-foundation', path: '/speak/live/learn-v2-a1-u1-l01' },
   { name: 'speaking-live-foundation', path: '/speak/live/hotel-room-problem?difficulty=recommended' },
   { name: 'free-speak-live-foundation', path: '/speak/just-chat' },
 ];
