@@ -89,9 +89,9 @@ export function PracticeHomeScreen() {
             return (
               <Link key={world.id} className="practice-world-card" to={`/practice/${level}/world/${world.id}`}>
                 <span className="practice-world-emoji" aria-hidden="true">{world.emoji}</span>
-                <div lang="ar" dir="rtl">
-                  <strong>{world.titleAr}</strong>
-                  <p>{world.subtitleAr}</p>
+                <div>
+                  <strong lang="ar" dir="rtl">{world.titleAr}</strong>
+                  <p lang="ar" dir="rtl">{world.subtitleAr}</p>
                   <small>{count ? copy.worldCount(number(count), level) : copy.worldEmpty(level)}</small>
                 </div>
                 <ProductIcon name="chevron" size={21} />
