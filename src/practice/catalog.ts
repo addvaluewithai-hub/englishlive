@@ -62,6 +62,18 @@ export const PRACTICE_MISSIONS: PracticeMission[] = [
     status: 'planned',
   },
   {
+    id: 'a1-ask-someone-to-repeat',
+    sourceId: 'practice.a1.everyday.ask-repeat.v1',
+    level: 'A1',
+    worldId: 'everyday',
+    titleAr: 'اطلب من الشخص يعيد الكلام',
+    titleEn: 'Ask someone to repeat',
+    descriptionAr: 'لو تفصيلة فاتتك، اطلب إعادتها، اتأكد إنك سمعتها صح، واقفل الكلام طبيعي.',
+    durationMinutes: 3,
+    status: 'live',
+    livePath: '/practice/mission/a1-ask-someone-to-repeat',
+  },
+  {
     id: 'a1-order-a-drink',
     sourceId: 'practice.a1.food.order-drink.v1',
     level: 'A1',
