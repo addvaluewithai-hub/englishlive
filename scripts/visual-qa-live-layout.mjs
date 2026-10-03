@@ -118,7 +118,7 @@ const freeSpeakCopy = {
     close: 'End Free Speak',
     status: 'Your turn',
     mode: 'Just chat',
-    helpArabic: 'Explain that in Arabic',
+    helpArabic: 'Explain in Arabic',
     mic: 'Your turn',
     keyboard: 'Type instead of speaking',
     history: 'Conversation history',
