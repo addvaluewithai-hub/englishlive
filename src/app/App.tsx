@@ -42,7 +42,7 @@ const navClass = ({ isActive }: { isActive: boolean }) =>
 export function App() {
   const location = useLocation();
   // Opt in per migrated route. Legacy selectors never wrap the new UI.
-  if (/^\/home\/?$/.test(location.pathname)) {
+  if (/^\/home\/?$/i.test(location.pathname)) {
     return <AppLayout><RequireAuth><HomeScreen /></RequireAuth></AppLayout>;
   }
   const isLanding = location.pathname === '/';
@@ -110,7 +110,6 @@ export function App() {
           <Route path="/onboarding" element={<RequireAuth requireProfile={false}><OnboardingScreen /></RequireAuth>} />
           <Route path="/studio" element={<RequireAuth requireProfile={false}><StudioScreen /></RequireAuth>} />
           <Route path="/studio/curriculum" element={<RequireAuth requireProfile={false}><StudioCurriculumScreen /></RequireAuth>} />
-          <Route path="/home" element={<RequireAuth><HomeScreen /></RequireAuth>} />
           <Route path="/learn" element={<RequireAuth><LearnScreen /></RequireAuth>} />
           <Route path="/learn/lesson/:lessonId" element={<RequireAuth><LearnV2LessonScreen /></RequireAuth>} />
           <Route path="/learn/pilot/:lessonId" element={<RequireAuth><LegacyLearnPilotRedirect /></RequireAuth>} />

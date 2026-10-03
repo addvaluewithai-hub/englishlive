@@ -63,8 +63,8 @@ localized copy-tone variants are future assets/content, not fabricated here.
 
 ## Migration and validation
 
-Home's dedicated `home-redesign.css` import is retired; delete the file after
-Home validation passes. Shared legacy sheets remain for unmigrated routes.
+Home's dedicated `home-redesign.css` is removed after Home browser validation.
+Shared legacy sheets remain for unmigrated routes.
 The foundation is not another global override sheet.
 
 Run `npm run check`, `npm run test:ui`, and the Home browser suite with the existing

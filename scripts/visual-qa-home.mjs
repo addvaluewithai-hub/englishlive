@@ -33,6 +33,11 @@ try {
         page.on('pageerror', (error) => errors.push(error.message));
         await page.goto(`${baseUrl}/home`);
         await page.locator('[data-englotti-ui]').waitFor();
+        if (width === 320 && locale === 'ar' && experience === 'adult') {
+          // Preserve React Router's case-insensitive, trailing-slash matching.
+          await page.goto(`${baseUrl}/HOME/?from=qa`);
+          await page.locator('[data-englotti-ui]').waitFor();
+        }
         const boundary = page.locator('[data-englotti-ui]');
         assert.equal(await boundary.getAttribute('dir'), locale === 'ar' ? 'rtl' : 'ltr');
         assert.equal(await boundary.getAttribute('lang'), locale);
