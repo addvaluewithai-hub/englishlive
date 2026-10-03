@@ -206,7 +206,7 @@ export const en = {
   'freeSpeak.you': 'You',
   'freeSpeak.conversationAppears': 'Your conversation will appear here one message at a time.',
   'freeSpeak.typePlaceholder': 'Type what you want to say in English…',
-  'freeSpeak.clarifyArabic': 'Explain that in Arabic',
+  'freeSpeak.clarifyArabic': 'Explain in Arabic',
   'freeSpeak.interruptLabel': 'Interrupt your teacher and speak',
   'freeSpeak.startLabel': 'Start Free Speak',
   'freeSpeak.start': 'Start',
