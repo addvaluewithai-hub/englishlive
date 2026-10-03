@@ -1,7 +1,27 @@
 import { Link, useParams } from 'react-router-dom';
 import { ProductIcon } from '../components/ProductIcon';
+import type { PracticeWorldId } from '../practice/catalog';
 import { practiceMissionContractBySlug } from '../practice/missions/catalog';
 import { speakingAssets } from '../speaking/assets';
+
+function missionVisualForWorld(worldId: PracticeWorldId) {
+  switch (worldId) {
+    case 'people-social':
+      return speakingAssets.meetingPeople;
+    case 'food-shopping':
+      return speakingAssets.foodOut;
+    case 'travel-transport':
+      return speakingAssets.ottiTravel;
+    case 'work-study':
+      return speakingAssets.ottiProgress;
+    case 'home-services':
+      return speakingAssets.ottiReceptionist;
+    case 'plans-leisure':
+    case 'everyday':
+    default:
+      return speakingAssets.ottiHero;
+  }
+}
 
 export function PracticeMissionScreen() {
   const { missionId } = useParams();
@@ -19,11 +39,12 @@ export function PracticeMissionScreen() {
   }
 
   const responseBeats = mission.beats.filter((beat) => beat.type === 'required');
+  const missionVisual = missionVisualForWorld(mission.worldId);
 
   return (
     <section className="practice-start-page" dir="rtl">
       <div className="practice-start-visual" aria-hidden="true">
-        <img src={speakingAssets.foodOut} alt="" />
+        <img src={missionVisual} alt="" />
       </div>
 
       <article className="practice-start-card">
@@ -66,7 +87,7 @@ export function PracticeMissionScreen() {
                 <span>{index + 1}</span>
                 <div>
                   <strong>{beat.overviewAr ?? 'اتصرف في الموقف بطريقتك'}</strong>
-                  <small>{beat.id === 'greet_order' ? 'مش لازم جملة بعينها' : beat.id === 'choose_size' ? 'اختيار قصير طبيعي كفاية' : 'المهم تكمل التبادل بشكل طبيعي'}</small>
+                  <small>{index === 0 ? 'مش لازم تقول جملة بعينها' : 'المهم توصل المعنى وتكمل الموقف طبيعي'}</small>
                 </div>
               </li>
             ))}
