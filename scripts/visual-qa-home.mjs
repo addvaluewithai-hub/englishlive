@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { chromium } from 'playwright';
 import { availableLearnLessons, learnRoadmapLevelById } from '../src/learnV2/roadmap.ts';
@@ -44,7 +44,7 @@ try {
         assert.equal(await page.locator('nav a[aria-current="page"]').getAttribute('href'), '/home');
         assert.equal(await page.locator('vite-error-overlay').count(), 0);
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true, `${locale}/${experience}/${width}: horizontal overflow`);
-        assert.equal(await boundary.evaluate((node) => getComputedStyle(node).getPropertyValue('--motion-normal').trim()), '0ms');
+        assert.equal(await boundary.evaluate((node) => Number.parseFloat(getComputedStyle(node).getPropertyValue('--motion-normal'))), 0);
         assert.deepEqual(errors, []);
         if (width === 390 || width === 1440) await page.screenshot({ path: path.join(outputDir, `home-${locale}-${experience}-${width}.png`), fullPage: true });
 
@@ -93,4 +93,11 @@ try {
     }
   }
   console.log(`Home UI passed ${scenarios} viewport/locale/theme scenarios, plus navigation, persistence, progress, keyboard, and text resizing checks.`);
+  // Optional inspection fallback when Actions artifact storage is unavailable.
+  // These screenshots contain only the synthetic QA learner above.
+  if (process.env.VISUAL_QA_INLINE_SCREENSHOTS === '1') {
+    for (const name of ['home-ar-adult-390.png', 'home-en-adult-1440.png']) {
+      console.log(`HOME_SCREENSHOT ${name} ${(await readFile(path.join(outputDir, name))).toString('base64')}`);
+    }
+  }
 } finally { await browser.close(); }

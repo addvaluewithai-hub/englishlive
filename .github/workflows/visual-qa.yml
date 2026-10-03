@@ -47,11 +47,14 @@ jobs:
           done
           cat /tmp/englotti-vite.log
           exit 1
+      - name: Verify migrated Home
+        env:
+          VISUAL_QA_INLINE_SCREENSHOTS: '1'
+        run: node --import tsx scripts/visual-qa-home.mjs
       - name: Capture product screens
         run: |
           node scripts/visual-qa.mjs
           node scripts/visual-qa-speaking.mjs
-          node --import tsx scripts/visual-qa-home.mjs
       - name: Upload screenshots
         if: always()
         continue-on-error: true
