@@ -79,32 +79,6 @@
   grid-template-rows: 330px auto minmax(170px, 250px);
 }
 
-/* During teacher audio the center button becomes the explicit barge-in action.
- * The learner microphone itself stays closed until this is pressed or the
- * teacher finishes the turn. */
-.fs-mic-control.is-interrupt {
-  color: #fff;
-  background: linear-gradient(145deg, #ff6d8f, #e92655);
-  box-shadow: 0 0 0 14px #ffe8ee, 0 0 0 25px rgba(255,232,238,.55), 0 18px 36px rgba(255,53,104,.22);
-  animation: none;
-}
-
-.fs-mic-control.is-interrupt:disabled { opacity: 1; }
-
-.fs-interrupt-bars {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.fs-interrupt-bars i {
-  display: block;
-  width: 9px;
-  height: 38px;
-  border-radius: 99px;
-  background: currentColor;
-}
-
 .fs-recap-pending.is-error {
   border-color: #ffc9d6;
   background: linear-gradient(105deg, #fff5f8, #fff 70%);
@@ -115,7 +89,6 @@
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-/* Keep the Englotti wordmark visible on the live screen at phone widths. */
 @media (max-width: 620px) {
   .fs-live-stage {
     grid-template-rows: 260px auto minmax(160px, 210px);
@@ -132,33 +105,9 @@
   .fs-exchange .fs-bubble {
     width: min(88%, 520px);
   }
-
-  .fs-interrupt-bars i {
-    width: 8px;
-    height: 31px;
-  }
 }
 
 @media (max-width: 390px) {
-  .fs-live-header {
-    grid-template-columns: 38px auto minmax(82px, 1fr) auto;
-    gap: 6px;
-  }
-
-  .fs-live-brand strong {
-    display: inline !important;
-    font-size: 12px;
-    letter-spacing: -.025em;
-  }
-
-  .fs-live-brand .otti-mark {
-    width: 29px;
-    height: 29px;
-  }
-
-  .fs-live-title { font-size: 14px; }
-  .fs-live-mode { font-size: 10.5px; }
-
   .fs-exchange {
     max-height: 195px;
     padding-inline: 40px;
