@@ -17,3 +17,4 @@ jobs:
       - run: npm install --package-lock-only
       - run: npm ci
       - run: npm run check
+      - run: npm run test:ui

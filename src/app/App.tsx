@@ -1,4 +1,4 @@
-import { Link, NavLink, Route, Routes, useLocation } from 'react-router-dom';
+import { Link, NavLink, Route, Routes, matchPath, useLocation } from 'react-router-dom';
 import { RequireAuth } from '../auth/RequireAuth';
 import { OttiMark } from '../character/otti/OttiMark';
 import { ProductIcon } from '../components/ProductIcon';
@@ -34,12 +34,67 @@ import { SpeakingWorldScreen } from '../screens/SpeakingWorldScreen';
 import { StudioCurriculumScreen } from '../screens/StudioCurriculumScreen';
 import { StudioScreen } from '../screens/StudioScreen';
 import { UnitScreen } from '../screens/UnitScreen';
+import { AppLayout } from '../ui/layouts/AppLayout';
+import { LiveConversationLayout } from '../ui/layouts/LiveConversationLayout';
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
   isActive ? 'v2-nav-link is-active' : 'v2-nav-link';
 
 export function App() {
   const location = useLocation();
+  const isFreeSpeakSessionPath = /^\/speak\/(?!recap(?:\/|$)|scenario-recap(?:\/|$)|world(?:\/|$)|scenario(?:\/|$)|progress(?:\/|$)|live(?:\/|$))[^/]+/.test(location.pathname);
+
+  // Opt in per migrated route. Keep parameterized screens inside Routes so hooks retain route params.
+  const usesMigratedLayout = Boolean(
+    matchPath('/home', location.pathname)
+    || matchPath('/learn', location.pathname)
+    || matchPath('/learn/level/:levelId', location.pathname)
+    || matchPath('/learn/lesson/:lessonId', location.pathname)
+    || matchPath('/progress', location.pathname)
+    || matchPath('/practice', location.pathname)
+    || matchPath('/practice/:levelId/world/:worldId', location.pathname)
+    || matchPath('/practice/mission/:missionId', location.pathname)
+    || matchPath('/practice/complete/:missionId', location.pathname)
+    || matchPath('/speak', location.pathname),
+  );
+
+  if (usesMigratedLayout) {
+    return (
+      <AppLayout>
+        <Routes>
+          <Route path="/home" element={<RequireAuth><HomeScreen /></RequireAuth>} />
+          <Route path="/learn" element={<RequireAuth><LearnScreen /></RequireAuth>} />
+          <Route path="/learn/level/:levelId" element={<RequireAuth><LevelScreen /></RequireAuth>} />
+          <Route path="/learn/lesson/:lessonId" element={<RequireAuth><LearnV2LessonScreen /></RequireAuth>} />
+          <Route path="/progress" element={<RequireAuth><ProgressScreen /></RequireAuth>} />
+          <Route path="/practice" element={<RequireAuth><PracticeHomeScreen /></RequireAuth>} />
+          <Route path="/practice/:levelId/world/:worldId" element={<RequireAuth><PracticeWorldScreen /></RequireAuth>} />
+          <Route path="/practice/mission/:missionId" element={<RequireAuth><PracticeMissionScreen /></RequireAuth>} />
+          <Route path="/practice/complete/:missionId" element={<RequireAuth><PracticeCompleteScreen /></RequireAuth>} />
+          <Route path="/speak" element={<RequireAuth><PracticeHomeScreen /></RequireAuth>} />
+        </Routes>
+      </AppLayout>
+    );
+  }
+
+  const usesLiveConversationLayout = Boolean(
+    matchPath('/practice/live/:missionId', location.pathname)
+    || matchPath('/speak/live/:scenarioId', location.pathname)
+    || isFreeSpeakSessionPath,
+  );
+
+  if (usesLiveConversationLayout) {
+    return (
+      <LiveConversationLayout>
+        <Routes>
+          <Route path="/practice/live/:missionId" element={<RequireAuth><PracticeLiveScreen /></RequireAuth>} />
+          <Route path="/speak/live/:scenarioId" element={<RequireAuth><SpeakingLiveEntryScreen /></RequireAuth>} />
+          <Route path="/speak/:modeId" element={<RequireAuth><FreeSpeakSessionScreen /></RequireAuth>} />
+        </Routes>
+      </LiveConversationLayout>
+    );
+  }
+
   const isLanding = location.pathname === '/';
   const isAuth = location.pathname.startsWith('/auth/');
   const isOnboarding = location.pathname.startsWith('/onboarding');
@@ -53,7 +108,7 @@ export function App() {
   const isSpeakingRecap = location.pathname.startsWith('/speak/scenario-recap/');
   const isSpeakingScenario = location.pathname.startsWith('/speak/scenario/');
   const isSpeakingLive = location.pathname.startsWith('/speak/live/');
-  const isFreeSpeakSession = /^\/speak\/(?!recap(?:\/|$)|scenario-recap(?:\/|$)|world(?:\/|$)|scenario(?:\/|$)|progress(?:\/|$)|live(?:\/|$))[^/]+/.test(location.pathname);
+  const isFreeSpeakSession = isFreeSpeakSessionPath;
   const isSession = isLegacySession || isLesson || isSceneLesson || isFreeSpeakSession || isSpeakingLive || isPracticeLive;
   const isReview = location.pathname.startsWith('/review/') || location.pathname.startsWith('/lesson-review/');
   const isApp = !isLanding && !isAuth && !isOnboarding && !isStudio && !isSession && !isReview && !isSpeakingScenario;
@@ -105,7 +160,6 @@ export function App() {
           <Route path="/onboarding" element={<RequireAuth requireProfile={false}><OnboardingScreen /></RequireAuth>} />
           <Route path="/studio" element={<RequireAuth requireProfile={false}><StudioScreen /></RequireAuth>} />
           <Route path="/studio/curriculum" element={<RequireAuth requireProfile={false}><StudioCurriculumScreen /></RequireAuth>} />
-          <Route path="/home" element={<RequireAuth><HomeScreen /></RequireAuth>} />
           <Route path="/learn" element={<RequireAuth><LearnScreen /></RequireAuth>} />
           <Route path="/learn/lesson/:lessonId" element={<RequireAuth><LearnV2LessonScreen /></RequireAuth>} />
           <Route path="/learn/pilot/:lessonId" element={<RequireAuth><LegacyLearnPilotRedirect /></RequireAuth>} />

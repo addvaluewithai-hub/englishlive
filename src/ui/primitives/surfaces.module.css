@@ -1,0 +1,26 @@
+.card {
+  min-inline-size: 0;
+  margin: 0;
+  padding: var(--space-6);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--shadow-card);
+}
+.raised { background: var(--color-surface-raised); }
+.progress {
+  display: block;
+  inline-size: 100%;
+  block-size: 10px;
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--radius-pill);
+  appearance: none;
+  background: var(--color-border);
+  color: var(--color-primary);
+}
+.progress::-webkit-progress-bar { background: var(--color-border); border-radius: var(--radius-pill); }
+.progress::-webkit-progress-value { background: var(--color-primary); border-radius: var(--radius-pill); }
+.progress::-moz-progress-bar { background: var(--color-primary); border-radius: var(--radius-pill); }
+@media (max-width: 480px) { .card { padding: var(--space-5); } }

@@ -1,0 +1,186 @@
+.root:global(.practice-home),
+.root:global(.practice-world-screen),
+.root:global(.practice-start-page),
+.root:global(.practice-complete),
+.root:global(.practice-mission-missing) {
+  --practice-ink: var(--color-text);
+  --practice-muted: var(--color-text-muted);
+  --practice-line: var(--color-border);
+  --practice-soft: var(--color-background);
+  --practice-accent: var(--color-primary);
+  --practice-accent-soft: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface));
+  color: var(--color-text);
+  font-family: var(--font-body);
+}
+
+.root:global(.practice-home),
+.root:global(.practice-world-screen) {
+  padding-block: 0 var(--space-4);
+}
+
+.root :global(.practice-hero),
+.root :global(.practice-world-header),
+.root :global(.practice-start-card),
+.root:global(.practice-complete) {
+  border-color: var(--color-border);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.root :global(.practice-hero) {
+  background:
+    radial-gradient(circle at 84% 18%, color-mix(in srgb, var(--color-surface) 92%, transparent), transparent 34%),
+    linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 10%, var(--color-surface)), var(--color-surface) 52%, color-mix(in srgb, var(--color-secondary) 8%, var(--color-surface)));
+}
+
+.root :global(.practice-eyebrow),
+.root :global(.practice-section-kicker),
+.root :global(.practice-mission-go),
+.root :global(.practice-open-card small),
+.root :global(.practice-empty-world a),
+.root :global(.practice-start-heading small) {
+  color: var(--color-primary);
+}
+
+.root :global(.practice-hero h1),
+.root :global(.practice-world-header h1),
+.root :global(.practice-section-heading h2),
+.root :global(.practice-world-card strong),
+.root :global(.practice-mission-card h3),
+.root :global(.practice-start-heading h1),
+.root:global(.practice-complete) h1 {
+  color: var(--color-text);
+  font-family: var(--font-display);
+}
+
+.root :global(.practice-hero p),
+.root :global(.practice-world-header p),
+.root :global(.practice-level-note),
+.root :global(.practice-current-level),
+.root :global(.practice-library-count),
+.root :global(.practice-world-card p),
+.root :global(.practice-open-card p),
+.root :global(.practice-mission-card > p),
+.root :global(.practice-start-heading > div > strong),
+.root:global(.practice-complete) > p {
+  color: var(--color-text-muted);
+}
+
+.root :global(.practice-hero-pills span),
+.root :global(.practice-level-card),
+.root :global(.practice-world-card),
+.root :global(.practice-open-card),
+.root :global(.practice-world-levels),
+.root :global(.practice-mission-card),
+.root :global(.practice-start-role-row > span),
+.root :global(.practice-start-meta > span),
+.root :global(.practice-start-flow),
+.root :global(.practice-complete-summary > div),
+.root :global(.practice-complete-secondary) {
+  border-color: var(--color-border);
+  color: var(--color-text);
+  background: var(--color-surface);
+}
+
+.root :global(.practice-level-card:hover),
+.root :global(.practice-world-card:hover),
+.root :global(.practice-mission-card.is-live:hover),
+.root :global(.practice-open-card.is-live:hover) {
+  border-color: color-mix(in srgb, var(--color-primary) 35%, var(--color-border));
+  box-shadow: var(--shadow-card);
+}
+
+.root :global(.practice-level-card.is-selected),
+.root :global(.practice-world-levels a.is-selected),
+.root :global(.practice-mission-level),
+.root :global(.practice-open-icon),
+.root :global(.practice-start-level),
+.root :global(.practice-complete-mark) {
+  color: var(--color-primary);
+  background: var(--practice-accent-soft);
+}
+
+.root :global(.practice-level-card.is-selected) {
+  border-color: color-mix(in srgb, var(--color-primary) 45%, var(--color-border));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 12%, transparent);
+}
+
+.root :global(.practice-level-card span),
+.root :global(.practice-level-card.is-selected span),
+.root :global(.practice-world-card small),
+.root :global(.practice-world-card > svg),
+.root :global(.practice-world-levels > span),
+.root :global(.practice-world-levels a),
+.root :global(.practice-mission-card > strong),
+.root :global(.practice-mission-card footer),
+.root :global(.practice-live-side-label) {
+  color: var(--color-text-muted);
+}
+
+.root :global(.practice-world-emoji),
+.root :global(.practice-world-hero-emoji) {
+  background: var(--practice-accent-soft);
+}
+
+.root :global(.practice-world-header) {
+  background: linear-gradient(135deg, var(--color-surface), color-mix(in srgb, var(--color-primary) 5%, var(--color-surface)));
+}
+
+.root :global(.practice-back-link),
+.root :global(.practice-start-back) {
+  color: var(--color-text-muted);
+}
+
+.root :global(.practice-mission-status.is-live) { color: var(--color-success); }
+.root :global(.practice-mission-status.is-planned) { color: var(--color-text-muted); }
+.root :global(.practice-mission-card.is-planned) {
+  background: linear-gradient(180deg, var(--color-surface), var(--color-background));
+}
+
+.root :global(.practice-empty-world) {
+  border-color: color-mix(in srgb, var(--color-primary) 30%, var(--color-border));
+  background: color-mix(in srgb, var(--color-primary) 4%, var(--color-surface));
+}
+.root :global(.practice-empty-world p) { color: var(--color-text-muted); }
+
+.root :global(.practice-world-note),
+.root :global(.practice-start-goal),
+.root :global(.practice-start-hints),
+.root :global(.practice-complete-note) {
+  background: color-mix(in srgb, var(--color-primary) 7%, var(--color-surface));
+}
+.root :global(.practice-world-note strong),
+.root :global(.practice-start-goal > span) { color: var(--color-primary); }
+.root :global(.practice-world-note p),
+.root :global(.practice-start-hints p),
+.root :global(.practice-complete-note p) { color: var(--color-text-muted); }
+
+.root :global(.practice-start-visual) {
+  background: linear-gradient(145deg, color-mix(in srgb, var(--color-primary) 11%, var(--color-surface)), color-mix(in srgb, var(--color-secondary) 9%, var(--color-surface)));
+}
+
+.root :global(.practice-start-button),
+.root :global(.practice-complete-primary),
+.root :global(.practice-mission-missing a),
+.root :global(.practice-mission-missing button) {
+  color: var(--color-on-primary);
+  background: var(--color-primary);
+  box-shadow: var(--shadow-card);
+}
+
+.root :global(.practice-start-card),
+.root :global(.practice-world-card),
+.root :global(.practice-mission-card),
+.root :global(.practice-open-card),
+.root :global(.practice-complete),
+.root :global(.practice-empty-world) {
+  text-align: start;
+}
+
+.root :global([lang='ar'][dir='rtl']) { unicode-bidi: isolate; }
+.root :global([lang='en'][dir='ltr']) { unicode-bidi: isolate; }
+
+@media (prefers-reduced-motion: reduce) {
+  .root :global(.practice-level-card),
+  .root :global(.practice-world-card) { transition: none; }
+}

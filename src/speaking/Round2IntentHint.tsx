@@ -1,3 +1,4 @@
+import { useI18n } from '../i18n/LocaleProvider';
 import type { SpeakingTurn } from './types';
 import { learnV2GuidedConversationByScenarioId } from './learnV2Guided';
 import { useRound2StepIndex } from './round2PracticeRuntime';
@@ -13,6 +14,7 @@ export function Round2IntentHint({
   learnerTurn: boolean;
   turns: SpeakingTurn[];
 }) {
+  const { t } = useI18n();
   const stepIndex = useRound2StepIndex(scenarioId);
   if (round !== 'independent' || !learnerTurn) return null;
 
@@ -26,11 +28,11 @@ export function Round2IntentHint({
   if (!step?.round2HintAr) return null;
 
   return (
-    <aside className="round2-intent-card" aria-label="تلميح الجولة الثانية">
+    <aside className="round2-intent-card" aria-label={t('independent.hintLabel')}>
       <span aria-hidden="true">💡</span>
       <div>
-        <small>المعنى المطلوب — قولها بالإنجليزي بطريقتك</small>
-        <strong>{step.round2HintAr}</strong>
+        <small>{t('independent.hintHelp')}</small>
+        <strong lang="ar" dir="rtl">{step.round2HintAr}</strong>
       </div>
     </aside>
   );

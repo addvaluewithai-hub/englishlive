@@ -1,0 +1,8 @@
+/* Tokens are applied by AppLayout, never to :root during gradual migration. */
+@media (prefers-reduced-motion: reduce) {
+  [data-englotti-ui] {
+    --motion-fast: 0ms !important;
+    --motion-normal: 0ms !important;
+    --motion-slow: 0ms !important;
+  }
+}

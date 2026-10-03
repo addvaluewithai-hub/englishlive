@@ -7,6 +7,9 @@ on:
       - 'src/**'
       - 'scripts/visual-qa.mjs'
       - 'scripts/visual-qa-speaking.mjs'
+      - 'scripts/visual-qa-home.mjs'
+      - 'scripts/visual-qa-lesson.mjs'
+      - 'scripts/visual-qa-live-layout.mjs'
       - 'public/speaking-assets/**'
       - 'package.json'
       - 'package-lock.json'
@@ -46,6 +49,14 @@ jobs:
           done
           cat /tmp/englotti-vite.log
           exit 1
+      - name: Verify migrated core UI
+        env:
+          VISUAL_QA_INLINE_SCREENSHOTS: '1'
+        run: node --import tsx scripts/visual-qa-home.mjs
+      - name: Verify migrated Learn lesson
+        run: node --import tsx scripts/visual-qa-lesson.mjs
+      - name: Verify shared live conversation layout
+        run: node --import tsx scripts/visual-qa-live-layout.mjs
       - name: Capture product screens
         run: |
           node scripts/visual-qa.mjs
