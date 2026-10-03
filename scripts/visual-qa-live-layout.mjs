@@ -98,6 +98,36 @@ const independentCopy = {
     send: 'Send',
   },
 };
+const freeSpeakCopy = {
+  ar: {
+    header: 'محادثة حرة',
+    close: 'إنهاء المحادثة الحرة',
+    status: 'دورك الآن',
+    mode: 'دردشة عادية',
+    helpArabic: 'اشرح بالعربي',
+    mic: 'دورك',
+    keyboard: 'اكتب بدل الكلام',
+    history: 'سجل المحادثة',
+    closeHistory: 'إغلاق سجل المحادثة',
+    historyEmpty: 'لسه ما بدأناش كلام.',
+    placeholder: 'اكتب اللي عايز تقوله بالإنجليزي…',
+    send: 'إرسال',
+  },
+  en: {
+    header: 'Free Speak',
+    close: 'End Free Speak',
+    status: 'Your turn',
+    mode: 'Just chat',
+    helpArabic: 'Explain that in Arabic',
+    mic: 'Your turn',
+    keyboard: 'Type instead of speaking',
+    history: 'Conversation history',
+    closeHistory: 'Close conversation history',
+    historyEmpty: 'The conversation has not started yet.',
+    placeholder: 'Type what you want to say in English…',
+    send: 'Send',
+  },
+};
 
 await mkdir(outputDir, { recursive: true });
 const browser = await chromium.launch({ args: ['--no-sandbox'] });
@@ -203,6 +233,23 @@ try {
             await page.locator('.fs-keyboard-control').click();
           }
 
+          if (route.name === 'free-speak-live-foundation') {
+            const expected = freeSpeakCopy[locale];
+            const live = page.locator('.free-speak-live');
+            await live.waitFor();
+            assert.equal(await live.getAttribute('dir'), null, 'Free Speak must inherit the live layout direction');
+            assert.equal(await live.evaluate((node) => getComputedStyle(node).direction), locale === 'ar' ? 'rtl' : 'ltr');
+            assert.equal(await page.locator('.fs-live-title').innerText(), expected.header);
+            assert.equal(await page.locator('.fs-live-mode').innerText().then((text) => text.trim()), expected.mode);
+            assert.equal(await page.locator('.fs-live-close').getAttribute('aria-label'), expected.close);
+            assert.equal(await page.locator('.fs-live-status strong').innerText(), expected.status);
+            assert.equal(await page.locator('.fs-help-control strong').innerText(), expected.helpArabic);
+            assert.equal(await page.locator('.fs-mic-control small').innerText(), expected.mic);
+            assert.equal(await page.locator('.fs-keyboard-control').getAttribute('aria-label'), expected.keyboard);
+            assert.equal(await page.locator('.fs-history-button').getAttribute('aria-label'), expected.history);
+            assert.equal(await page.locator('.fs-bubble-teacher p').getAttribute('dir'), 'auto');
+          }
+
           assert.deepEqual(errors, []);
 
           if (locale === 'ar' && experience === 'adult' && width === 390) {
@@ -240,6 +287,33 @@ try {
     await context.close();
   }
 
+  for (const locale of ['ar', 'en']) {
+    const context = await browser.newContext({ viewport: { width: 390, height: 900 }, reducedMotion: 'reduce' });
+    await context.addInitScript(({ profile, locale }) => {
+      localStorage.setItem('englishlive.learner-profile.v1', JSON.stringify(profile));
+      localStorage.setItem('englotti.ui.locale.v1', JSON.stringify({ version: 1, value: locale }));
+      localStorage.setItem('englotti.ui.experience.v1', JSON.stringify({ version: 1, value: 'adult' }));
+    }, { profile, locale });
+    const page = await context.newPage();
+    await page.goto(`${baseUrl}/speak/just-chat`, { waitUntil: 'networkidle' });
+    const expected = freeSpeakCopy[locale];
+    await page.locator('.fs-history-button').click();
+    const history = page.locator('.fs-history-sheet');
+    assert.equal(await history.getAttribute('aria-label'), expected.history);
+    assert.equal(await history.locator('header strong').innerText(), expected.history);
+    assert.equal(await history.locator('header button').getAttribute('aria-label'), expected.closeHistory);
+    assert.equal(await page.locator('.fs-history-empty').innerText(), expected.historyEmpty);
+    await history.locator('header button').click();
+    await page.locator('.fs-keyboard-control').click();
+    const input = page.locator('.fs-type-row input');
+    assert.equal(await input.getAttribute('lang'), 'en');
+    assert.equal(await input.getAttribute('dir'), 'ltr');
+    assert.equal(await input.getAttribute('placeholder'), expected.placeholder);
+    assert.equal(await page.locator('.fs-type-row button').innerText(), expected.send);
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true, `Free Speak interactions ${locale}: horizontal overflow`);
+    await context.close();
+  }
+
   {
     const context = await browser.newContext({ viewport: { width: 390, height: 900 }, reducedMotion: 'reduce' });
     await context.addInitScript(({ profile }) => {
@@ -265,7 +339,7 @@ try {
   assert.equal(await page.locator('[data-englotti-live-ui]').count(), 0, 'non-live Practice must stay outside the live foundation boundary');
   await context.close();
 
-  console.log(`Live conversation foundation passed ${scenarios} locale/experience/viewport/route scenarios plus isolated Practice interaction checks.`);
+  console.log(`Live conversation foundation passed ${scenarios} locale/experience/viewport/route scenarios plus isolated Practice and Free Speak interaction checks.`);
 } finally {
   await browser.close();
 }
