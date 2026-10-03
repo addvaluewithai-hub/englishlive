@@ -16,6 +16,7 @@ const profile = {
 const routes = [
   { name: 'practice-live-foundation', path: '/practice/live/a1-ask-someone-to-repeat' },
   { name: 'guided-live-foundation', path: '/speak/live/learn-v2-a1-u1-l01' },
+  { name: 'independent-round2-foundation', path: '/speak/live/learn-v2-a1-u1-l01?round=independent' },
   { name: 'speaking-live-foundation', path: '/speak/live/hotel-room-problem?difficulty=recommended' },
   { name: 'free-speak-live-foundation', path: '/speak/just-chat' },
 ];
@@ -41,6 +42,34 @@ const guidedCopy = {
     yourTurn: 'YOUR TURN',
     help: 'Read it aloud — change what is inside [ ]',
     mic: 'Speak',
+  },
+};
+const independentCopy = {
+  ar: {
+    header: 'تدريب مستقل',
+    close: 'إنهاء المحادثة',
+    status: 'دورك الآن',
+    hintLabel: 'تلميح معنى الجولة الثانية',
+    hintHelp: 'المعنى المطلوب — قولها بالإنجليزي بطريقتك',
+    helpArabic: 'اشرح بالعربي',
+    mic: 'دورك',
+    keyboard: 'اكتب بدل الكلام',
+    copyLog: 'نسخ لوج المحادثة',
+    placeholder: 'اكتب اللي عايز تقوله…',
+    send: 'إرسال',
+  },
+  en: {
+    header: 'Independent practice',
+    close: 'End conversation',
+    status: 'Your turn',
+    hintLabel: 'Round 2 meaning hint',
+    hintHelp: 'Meaning to express — say it in English in your own way',
+    helpArabic: 'Explain in Arabic',
+    mic: 'Your turn',
+    keyboard: 'Type instead of speaking',
+    copyLog: 'Copy conversation log',
+    placeholder: 'Type what you want to say…',
+    send: 'Send',
   },
 };
 
@@ -103,6 +132,30 @@ try {
               assert.equal(await authoredNote.getAttribute('lang'), 'ar');
               assert.equal(await authoredNote.getAttribute('dir'), 'rtl');
             }
+          }
+
+          if (route.name === 'independent-round2-foundation') {
+            const expected = independentCopy[locale];
+            const live = page.locator('.sp-scenario-live');
+            await live.waitFor();
+            assert.equal(await live.getAttribute('dir'), null, 'independent live must inherit the live layout direction');
+            assert.equal(await live.evaluate((node) => getComputedStyle(node).direction), locale === 'ar' ? 'rtl' : 'ltr');
+            assert.equal((await page.locator('.fs-live-title').innerText()).includes(expected.header), true);
+            assert.equal(await page.locator('.fs-live-close').getAttribute('aria-label'), expected.close);
+            assert.equal(await page.locator('.fs-live-status strong').innerText(), expected.status);
+            assert.equal(await page.locator('.round2-intent-card').getAttribute('aria-label'), expected.hintLabel);
+            assert.equal(await page.locator('.round2-intent-card small').innerText(), expected.hintHelp);
+            assert.equal(await page.locator('.round2-intent-card strong').getAttribute('lang'), 'ar');
+            assert.equal(await page.locator('.round2-intent-card strong').getAttribute('dir'), 'rtl');
+            assert.ok((await page.locator('.round2-intent-card strong').innerText()).length > 0);
+            assert.equal(await page.locator('.sp-arabic-explain-button strong').innerText(), expected.helpArabic);
+            assert.equal(await page.locator('.fs-mic-control small').innerText(), expected.mic);
+            assert.equal(await page.locator('.fs-keyboard-control').getAttribute('aria-label'), expected.keyboard);
+            assert.equal(await page.locator('.sp-copy-log-button').getAttribute('aria-label'), expected.copyLog);
+            await page.locator('.fs-keyboard-control').click();
+            assert.equal(await page.locator('.fs-type-row input').getAttribute('placeholder'), expected.placeholder);
+            assert.equal(await page.locator('.fs-type-row button').innerText(), expected.send);
+            await page.locator('.fs-keyboard-control').click();
           }
 
           assert.deepEqual(errors, []);
