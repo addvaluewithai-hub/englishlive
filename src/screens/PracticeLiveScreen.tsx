@@ -36,9 +36,28 @@ function timeLabel(seconds: number) {
   return `${minutes}:${remaining}`;
 }
 
+function missionBackground(worldId: string) {
+  switch (worldId) {
+    case 'people-social':
+      return speakingAssets.meetingPeople;
+    case 'food-shopping':
+      return speakingAssets.foodOut;
+    case 'travel-transport':
+      return speakingAssets.ottiTravel;
+    case 'work-study':
+      return speakingAssets.ottiProgress;
+    case 'home-services':
+      return speakingAssets.ottiReceptionist;
+    case 'plans-leisure':
+    case 'everyday':
+    default:
+      return speakingAssets.ottiHero;
+  }
+}
+
 const statusCopy: Record<LiveStatus, { title: string; body: string }> = {
   idle: { title: 'جاهز؟', body: 'الموقف هيبدأ حالًا' },
-  connecting: { title: 'بنجهز الكافيه', body: 'ثواني ونبدأ' },
+  connecting: { title: 'بنجهز الموقف', body: 'ثواني ونبدأ' },
   listening: { title: 'دورك', body: 'قولها بطريقتك — والـHint موجود لو احتجته' },
   speaking: { title: 'Otti بيتكلم', body: 'اسمع أو قاطعه لو حابب ترد' },
   reconnecting: { title: 'بنرجّع الاتصال', body: 'ثواني ونكمل' },
@@ -205,13 +224,13 @@ export function PracticeLiveScreen() {
         `You are Otti, acting as ${mission.aiRoleAr} in a small real-life English roleplay.`,
         `Learner role: ${mission.learnerRoleAr}. Practical goal: ${mission.goalAr}`,
         runtime.promptEn,
-        'This is A1. Use short, clear English and one idea at a time. Give the learner enough silence to think.',
-        'Conversation comes first. Stay in role. Do not narrate the lesson, mention beats, hints, tools, scoring or progress.',
+        `Mission level is ${mission.level}. Keep wording, turn length, interaction complexity and support inside the authored level bounds. Give the learner enough silence to think.`,
+        'Conversation comes first. Stay in the authored role. Do not narrate the lesson, mention beats, hints, tools, scoring or progress.',
         'A UI PRACTICE HINT REQUEST is a private control event, never learner speech and never evidence that the learner attempted an answer.',
         'When that event arrives, do not talk. Call provide_practice_hint_bundle exactly once, echo its request_id exactly, and put the Arabic intent, contextual note if useful, useful English chunks and a complete example response in that one tool call. Then end silently.',
         'The generated full response is only help for that exact conversational moment. Never treat a different correct sentence as wrong because it differs from the example.',
         'When there is a genuine current-target error, correct it briefly, give the natural form, and let the learner try again before moving on.',
-        'Do not overpraise. React like a normal friendly cashier and keep turns brief.',
+        'Do not overpraise. React like the normal friendly real-world partner described by the authored mission and keep turns appropriate to its level.',
       ].join('\n\n');
 
       await queue.unlock();
@@ -232,7 +251,8 @@ export function PracticeLiveScreen() {
     if (!mission) return;
     if (visualQa) {
       runtime.reset();
-      setTeacherText('Hi! What can I get for you?');
+      const visualOpening = mission.canonicalDialogue.find((turn) => turn.speaker === 'ai_role')?.text ?? 'Ready.';
+      setTeacherText(visualOpening);
       setStatus('listening');
       setMicOpen(true);
       setElapsedSeconds(18);
@@ -337,6 +357,7 @@ export function PracticeLiveScreen() {
   const teacherSpeaking = status === 'speaking';
   const learnerTurn = status === 'listening' && micOpen;
   const statusText = statusCopy[status];
+  const stageBackground = missionBackground(mission.worldId);
 
   return (
     <section className="fs-live sp-scenario-live practice-live" dir="rtl">
@@ -354,7 +375,7 @@ export function PracticeLiveScreen() {
 
       <div
         className="fs-live-stage sp-scenario-stage practice-live-stage"
-        style={{ backgroundImage: `linear-gradient(180deg, rgba(255,247,243,.08), rgba(255,250,247,.74) 72%, #fffdfc 100%), url(${speakingAssets.foodOut})` }}
+        style={{ backgroundImage: `linear-gradient(180deg, rgba(255,247,243,.08), rgba(255,250,247,.74) 72%, #fffdfc 100%), url(${stageBackground})` }}
       >
         {teacherText ? (
           <article className="sp-otti-transcript" aria-live="polite">
