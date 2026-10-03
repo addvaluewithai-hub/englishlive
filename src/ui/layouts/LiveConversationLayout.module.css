@@ -1,0 +1,148 @@
+.root {
+  min-block-size: 100dvh;
+  inline-size: 100%;
+  background: var(--color-background);
+  color: var(--color-text);
+  font: 400 var(--text-md)/1.65 var(--font-body);
+  isolation: isolate;
+  overflow-x: clip;
+}
+.root :where(*) { box-sizing: border-box; }
+.root :where(a, button, input):focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 3px;
+}
+.main {
+  min-block-size: 100dvh;
+  inline-size: 100%;
+  margin: 0;
+  padding: 0;
+}
+.skip {
+  position: fixed;
+  inset-block-start: var(--space-3);
+  inset-inline-start: var(--space-3);
+  z-index: 300;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  text-decoration: none;
+  transform: translateY(-220%);
+}
+.skip:focus { transform: none; color: var(--color-on-primary); }
+
+/*
+ * The live runtimes still expose their proven fs-* hooks. This boundary maps
+ * those presentation hooks onto foundation tokens without taking ownership of
+ * transport, microphone, turn-taking, evidence or persistence state.
+ */
+.root :global(.fs-live) {
+  --fs-pink: var(--color-primary);
+  --fs-pink-strong: var(--color-primary-hover);
+  --fs-ink: var(--color-text);
+  --fs-muted: var(--color-text-muted);
+  --sp-pink: var(--color-primary);
+  min-block-size: 100dvh;
+  padding-block-end: 0;
+  color: var(--color-text);
+  background: var(--color-surface);
+  font-family: var(--font-body);
+}
+.root :global(.fs-live-header) {
+  border-color: var(--color-border);
+  background: color-mix(in srgb, var(--color-surface) 96%, transparent);
+}
+.root :global(.fs-live-close) { color: var(--color-text); }
+.root :global(.fs-live-title) { color: var(--color-text); }
+.root :global(.fs-live-mode) {
+  color: var(--color-primary);
+  background: var(--color-surface-raised);
+}
+.root :global(.fs-live-mode svg) { color: var(--color-primary); }
+.root :global(.fs-live-stage)::before {
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--color-primary) 11%, var(--color-surface)) 0 62%,
+    color-mix(in srgb, var(--color-primary) 5%, transparent) 63% 75%,
+    transparent 76%
+  );
+}
+.root :global(.fs-live-character-host) {
+  filter: drop-shadow(0 18px 25px color-mix(in srgb, var(--color-primary) 16%, transparent));
+}
+.root :global(.fs-live-status) {
+  border-color: color-mix(in srgb, var(--color-primary) 24%, var(--color-border));
+  background: color-mix(in srgb, var(--color-surface) 97%, transparent);
+  box-shadow: 0 12px 30px color-mix(in srgb, var(--color-text) 9%, transparent);
+}
+.root :global(.fs-live-status strong) { color: var(--color-primary); }
+.root :global(.fs-live-status.status-speaking strong) { color: var(--color-text); }
+.root :global(.fs-live-status.is-muted strong) { color: var(--color-text-muted); }
+.root :global(.fs-live-wave i) { background: var(--color-primary); }
+.root :global(.fs-history-button),
+.root :global(.fs-help-control),
+.root :global(.fs-keyboard-control) {
+  border-color: var(--color-border);
+  color: var(--color-text);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+.root :global(.fs-bubble-teacher) {
+  border-color: color-mix(in srgb, var(--color-primary) 20%, var(--color-border));
+  background: color-mix(in srgb, var(--color-primary) 7%, var(--color-surface));
+}
+.root :global(.fs-bubble-teacher::after) {
+  border-color: transparent color-mix(in srgb, var(--color-primary) 7%, var(--color-surface)) transparent transparent;
+}
+.root :global(.fs-bubble-avatar),
+.root :global(.fs-learner-dot) {
+  color: var(--color-primary);
+  background: var(--color-surface-raised);
+}
+.root :global(.fs-bubble-learner) {
+  border-color: color-mix(in srgb, var(--color-secondary) 18%, var(--color-border));
+  background: color-mix(in srgb, var(--color-secondary) 6%, var(--color-surface));
+}
+.root :global(.fs-live-controls) {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--color-surface) 72%, transparent), var(--color-surface) 24%);
+}
+.root :global(.fs-mic-control) {
+  background: linear-gradient(145deg, var(--color-primary), var(--color-primary-hover));
+  box-shadow:
+    0 0 0 14px color-mix(in srgb, var(--color-primary) 12%, var(--color-surface)),
+    0 0 0 25px color-mix(in srgb, var(--color-primary) 6%, transparent),
+    var(--shadow-floating);
+}
+.root :global(.fs-mic-control.is-muted) {
+  color: var(--color-text-muted);
+  background: var(--color-surface-raised);
+  box-shadow: 0 0 0 14px var(--color-background), var(--shadow-card);
+}
+.root :global(.fs-mic-meter) { background: var(--color-border); }
+.root :global(.fs-mic-meter span) {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--color-primary) 60%, white), var(--color-primary));
+}
+.root :global(.fs-type-row input) {
+  border-color: var(--color-border);
+  color: var(--color-text);
+  background: var(--color-surface);
+}
+.root :global(.fs-type-row button) {
+  color: var(--color-on-primary);
+  background: var(--color-primary);
+}
+.root :global(.fs-live-error) { color: var(--color-danger); }
+.root :global(.fs-ending-overlay) {
+  background: color-mix(in srgb, var(--color-surface) 94%, transparent);
+}
+.root :global(.fs-ending-overlay strong) { color: var(--color-text); }
+.root :global(.fs-ending-overlay i) { background: var(--color-primary); }
+
+@media (max-width: 620px) {
+  .root :global(.fs-live) { min-block-size: 100dvh; padding-block-end: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skip { transition: none; }
+}
