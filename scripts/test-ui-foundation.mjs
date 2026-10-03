@@ -12,7 +12,14 @@ test('every published catalog is complete and every message formats without unre
     assert.deepEqual(Object.keys(definition.catalog).sort(), keys);
     for (const key of keys) {
       for (const count of [0, 1, 2, 3, 11, 100]) {
-        const text = translate(locale, key, { name: 'Alex', number: 2, count, total: 7 });
+        const text = translate(locale, key, {
+          name: 'Alex',
+          number: 2,
+          count,
+          total: 7,
+          completed: 3,
+          level: 'A1',
+        });
         assert.ok(text.length > 0);
         assert.doesNotMatch(text, /\{\w+\}/);
       }
@@ -30,6 +37,8 @@ test('Arabic plural rules and locale-aware numbers work alongside English', () =
   assert.equal(translate('en', 'home.completed', { count: 2 }), '2 lessons completed');
   assert.equal(formatNumber('en', 1234.5), '1,234.5');
   assert.equal(formatNumber('ar', 2), '٢');
+  assert.equal(translate('en', 'learn.progressCount', { completed: 3, total: 10 }), '3 of 10 available lessons completed');
+  assert.equal(translate('ar', 'progress.title', { level: 'A1' }), 'خطواتك في A1');
   assert.throws(() => translate('en', 'home.greeting'), /Missing name/);
   assert.throws(() => translate('ar', 'home.completed'), /Missing plural count/);
 });

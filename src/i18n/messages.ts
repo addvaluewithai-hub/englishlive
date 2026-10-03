@@ -9,6 +9,10 @@ export interface MessageParams {
   'home.lesson': { number: number };
   'home.progressCount': { count: number; total: number };
   'home.completed': { count: number };
+  'learn.progressCount': { completed: number; total: number };
+  'progress.title': { level: string };
+  'progress.completedCount': { count: number; total: number };
+  'progress.unitTitle': { number: number };
 }
 
 export type Translator = <K extends MessageKey>(
