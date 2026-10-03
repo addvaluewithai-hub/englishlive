@@ -54,7 +54,10 @@
   background: color-mix(in srgb, var(--color-surface) 96%, transparent);
 }
 .root :global(.fs-live-close) { color: var(--color-text); }
-.root :global(.fs-live-title) { color: var(--color-text); }
+.root :global(.fs-live-title) {
+  color: var(--color-text);
+  direction: inherit;
+}
 .root :global(.fs-live-mode) {
   color: var(--color-primary);
   background: var(--color-surface-raised);
@@ -139,10 +142,64 @@
 .root :global(.fs-ending-overlay strong) { color: var(--color-text); }
 .root :global(.fs-ending-overlay i) { background: var(--color-primary); }
 
+/* Guided Round 1 is the first inner live surface migrated into this boundary. */
+.root :global(.guided-round-pill) {
+  border-color: color-mix(in srgb, var(--color-primary) 18%, var(--color-border));
+  color: var(--color-primary);
+  background: var(--color-surface-raised);
+}
+.root :global(.guided-progress i) {
+  background: color-mix(in srgb, var(--color-text-muted) 18%, transparent);
+  transition-duration: var(--motion-normal);
+}
+.root :global(.guided-progress i.is-current) { background: var(--color-primary); }
+.root :global(.guided-progress i.is-done) { background: var(--color-success); }
+.root :global(.guided-response-card) {
+  border-color: color-mix(in srgb, var(--color-primary) 20%, var(--color-border));
+  color: var(--color-text);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--color-primary) 5%, var(--color-surface)), var(--color-surface));
+  box-shadow: var(--shadow-card);
+  text-align: start;
+}
+.root :global(.guided-response-card > div span) { color: var(--color-primary); }
+.root :global(.guided-response-card > div small),
+.root :global(.guided-response-card > p) { color: var(--color-text-muted); }
+.root :global(.guided-response-card > strong) { color: var(--color-text); }
+.root :global(.guided-error) {
+  color: var(--color-danger);
+  background: color-mix(in srgb, var(--color-danger) 7%, var(--color-surface));
+}
+.root :global(.guided-error button) {
+  color: var(--color-danger);
+  background: var(--color-surface);
+}
+.root :global(.guided-finish) {
+  color: var(--color-text);
+  background: radial-gradient(circle at 50% 15%, color-mix(in srgb, var(--color-primary) 7%, var(--color-surface)) 0, var(--color-surface) 48%, var(--color-background) 100%);
+}
+.root :global(.guided-finish-card) {
+  border-color: var(--color-border);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-floating);
+}
+.root :global(.guided-finish-card > span) {
+  color: var(--color-success);
+  background: color-mix(in srgb, var(--color-success) 9%, var(--color-surface));
+}
+.root :global(.guided-finish-card h1) { color: var(--color-text); }
+.root :global(.guided-finish-card p),
+.root :global(.guided-finish-secondary) { color: var(--color-text-muted); }
+.root :global(.guided-finish-primary) {
+  color: var(--color-on-primary);
+  background: var(--color-primary);
+  box-shadow: var(--shadow-card);
+}
+
 @media (max-width: 620px) {
   .root :global(.fs-live) { min-block-size: 100dvh; padding-block-end: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .skip { transition: none; }
+  .root :global(.guided-progress i) { transition: none; }
 }
