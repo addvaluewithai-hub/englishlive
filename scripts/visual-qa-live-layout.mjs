@@ -160,7 +160,6 @@ try {
             assert.equal(await page.locator('.fs-type-row input').getAttribute('dir'), 'ltr');
             assert.equal(await page.locator('.fs-type-row input').getAttribute('placeholder'), expected.placeholder);
             assert.equal(await page.locator('.fs-type-row button').innerText(), expected.send);
-            await page.locator('.fs-keyboard-control').click();
           }
 
           if (route.name === 'guided-live-foundation') {
