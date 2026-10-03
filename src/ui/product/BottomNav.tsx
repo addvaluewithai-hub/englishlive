@@ -16,7 +16,7 @@ export function BottomNav() {
   return (
     <nav className={styles.nav} aria-label={t('nav.label')}>
       {destinations.map(({ to, label, icon }) => (
-        <NavLink key={to} to={to} end={to === '/home'} className={({ isActive }) => [styles.navLink, isActive ? styles.active : ''].join(' ')}>
+        <NavLink key={to} to={to} className={({ isActive }) => [styles.navLink, isActive ? styles.active : ''].join(' ')}>
           <ProductIcon name={icon} /><span>{t(label)}</span>
         </NavLink>
       ))}

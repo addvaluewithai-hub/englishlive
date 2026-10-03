@@ -1,4 +1,4 @@
-import { Link, NavLink, Route, Routes, useLocation } from 'react-router-dom';
+import { Link, NavLink, Route, Routes, matchPath, useLocation } from 'react-router-dom';
 import { RequireAuth } from '../auth/RequireAuth';
 import { OttiMark } from '../character/otti/OttiMark';
 import { ProductIcon } from '../components/ProductIcon';
@@ -42,7 +42,7 @@ const navClass = ({ isActive }: { isActive: boolean }) =>
 export function App() {
   const location = useLocation();
   // Opt in per migrated route. Legacy selectors never wrap the new UI.
-  if (/^\/home\/?$/i.test(location.pathname)) {
+  if (matchPath('/home', location.pathname)) {
     return <AppLayout><RequireAuth><HomeScreen /></RequireAuth></AppLayout>;
   }
   const isLanding = location.pathname === '/';
