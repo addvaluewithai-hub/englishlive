@@ -34,12 +34,17 @@ import { SpeakingWorldScreen } from '../screens/SpeakingWorldScreen';
 import { StudioCurriculumScreen } from '../screens/StudioCurriculumScreen';
 import { StudioScreen } from '../screens/StudioScreen';
 import { UnitScreen } from '../screens/UnitScreen';
+import { AppLayout } from '../ui/layouts/AppLayout';
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
   isActive ? 'v2-nav-link is-active' : 'v2-nav-link';
 
 export function App() {
   const location = useLocation();
+  // Opt in per migrated route. Legacy selectors never wrap the new UI.
+  if (/^\/home\/?$/.test(location.pathname)) {
+    return <AppLayout><RequireAuth><HomeScreen /></RequireAuth></AppLayout>;
+  }
   const isLanding = location.pathname === '/';
   const isAuth = location.pathname.startsWith('/auth/');
   const isOnboarding = location.pathname.startsWith('/onboarding');

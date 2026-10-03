@@ -7,6 +7,7 @@ on:
       - 'src/**'
       - 'scripts/visual-qa.mjs'
       - 'scripts/visual-qa-speaking.mjs'
+      - 'scripts/visual-qa-home.mjs'
       - 'public/speaking-assets/**'
       - 'package.json'
       - 'package-lock.json'
@@ -50,6 +51,7 @@ jobs:
         run: |
           node scripts/visual-qa.mjs
           node scripts/visual-qa-speaking.mjs
+          node --import tsx scripts/visual-qa-home.mjs
       - name: Upload screenshots
         if: always()
         continue-on-error: true

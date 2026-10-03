@@ -2,6 +2,9 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { App } from './app/App';
+import { LocaleProvider } from './i18n/LocaleProvider';
+import { ExperienceProvider } from './ui/theme/ExperienceProvider';
+import './ui/theme/tokens.css';
 import './styles.css';
 import './session-stage.css';
 import './m9-shell.css';
@@ -19,7 +22,6 @@ import './product-v5-final-polish.css';
 import './product-v6-session-polish.css';
 import './product-v7-final-qa.css';
 import './learn-journey.css';
-import './home-redesign.css';
 import './free-speak-v2.css';
 import './free-speak-v2-fixes.css';
 import './studio.css';
@@ -52,7 +54,11 @@ if (!root) throw new Error('Englotti root element was not found.');
 createRoot(root).render(
   <StrictMode>
     <BrowserRouter>
-      <App />
+      <LocaleProvider>
+        <ExperienceProvider>
+          <App />
+        </ExperienceProvider>
+      </LocaleProvider>
     </BrowserRouter>
   </StrictMode>,
 );
