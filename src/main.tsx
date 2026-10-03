@@ -36,7 +36,6 @@ import './speaking-v1-polish.css';
 import './speaking-live-shared.css';
 import './speaking-roadmap.css';
 import './scene-adaptive.css';
-import './learn-v2.css';
 import './guided-speaking.css';
 import './speaking-learn-live-tuning.css';
 import './practice.css';
