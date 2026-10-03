@@ -1,7 +1,10 @@
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { OttiMark } from '../character/otti/OttiMark';
+import { useI18n } from '../i18n/LocaleProvider';
+import { practiceJourneyCopy } from '../practice/journeyCopy';
 import { practiceMissionContractBySlug } from '../practice/missions/catalog';
 import type { PracticeSupportSummary } from '../practice/runtime';
+import styles from './PracticeJourney.module.css';
 
 type CompletionState = {
   support?: PracticeSupportSummary;
@@ -9,6 +12,8 @@ type CompletionState = {
 };
 
 export function PracticeCompleteScreen() {
+  const { locale, number } = useI18n();
+  const copy = practiceJourneyCopy[locale].complete;
   const { missionId } = useParams();
   const mission = practiceMissionContractBySlug(missionId);
   const location = useLocation();
@@ -16,38 +21,45 @@ export function PracticeCompleteScreen() {
   const support = state.support ?? { intentHints: 0, usefulLanguageReveals: 0, fullHelpReveals: 0 };
   const usedHelp = support.intentHints + support.usefulLanguageReveals + support.fullHelpReveals > 0;
 
-  if (!mission) return <section className="practice-mission-missing" dir="rtl"><h1>Mission completed</h1><Link to="/practice">الرجوع لـPractice</Link></section>;
+  if (!mission) {
+    return (
+      <section className={`${styles.root} practice-mission-missing`}>
+        <h1>{copy.missingTitle}</h1>
+        <Link to="/practice">{copy.backPractice}</Link>
+      </section>
+    );
+  }
 
   return (
-    <section className="practice-complete" dir="rtl">
+    <section className={`${styles.root} practice-complete`}>
       <div className="practice-complete-mark"><OttiMark /></div>
-      <span className="practice-eyebrow">Mission complete</span>
-      <h1>خلصت موقف «{mission.titleAr}»</h1>
-      <p>وصلت لنهاية الموقف بنجاح. ده معناه إنك تعاملت مع الـMission دي — مش حكم إن اللغة كلها بقت mastery.</p>
+      <span className="practice-eyebrow">{copy.eyebrow}</span>
+      <h1>{copy.title} <span lang="ar" dir="rtl">«{mission.titleAr}»</span></h1>
+      <p>{copy.body}</p>
 
       <div className="practice-complete-summary">
         <div>
-          <small>Hints بالعربي</small>
-          <strong>{support.intentHints}</strong>
+          <small>{copy.arabicHints}</small>
+          <strong>{number(support.intentHints)}</strong>
         </div>
         <div>
-          <small>Useful words</small>
-          <strong>{support.usefulLanguageReveals}</strong>
+          <small>{copy.usefulWords}</small>
+          <strong>{number(support.usefulLanguageReveals)}</strong>
         </div>
         <div>
-          <small>Full help</small>
-          <strong>{support.fullHelpReveals}</strong>
+          <small>{copy.fullHelp}</small>
+          <strong>{number(support.fullHelpReveals)}</strong>
         </div>
       </div>
 
       <section className="practice-complete-note">
-        <strong>{usedHelp ? 'استخدمت مساعدة؟ ممتاز — ده جزء من التدريب.' : 'المرة دي خلصتها من غير ما تفتح Hint.'}</strong>
-        <p>{usedHelp ? 'لو حابب تقوّي الاستقلال، أعد نفس الموقف وحاول تستخدم مساعدة أقل. مفيش عقوبة على إنك فتحت Hint.' : 'ممكن تعيدها تاني وتشوف هل نفس اللغة هتطلع بسهولة، أو ترجع للمكتبة لموقف جديد.'}</p>
+        <strong>{usedHelp ? copy.usedHelpTitle : copy.noHelpTitle}</strong>
+        <p>{usedHelp ? copy.usedHelpBody : copy.noHelpBody}</p>
       </section>
 
       <div className="practice-complete-actions">
-        <Link className="practice-complete-primary" to={`/practice/mission/${mission.slug}`}>أعيد الـMission</Link>
-        <Link className="practice-complete-secondary" to={`/practice/${mission.level}/world/${mission.worldId}`}>موقف تاني</Link>
+        <Link className="practice-complete-primary" to={`/practice/mission/${mission.slug}`}>{copy.retry}</Link>
+        <Link className="practice-complete-secondary" to={`/practice/${mission.level}/world/${mission.worldId}`}>{copy.another}</Link>
       </div>
     </section>
   );
