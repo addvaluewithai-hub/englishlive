@@ -10,6 +10,16 @@ export type PracticeSupportSummary = {
   fullHelpReveals: number;
 };
 
+export type PracticeAttemptStatus = 'valid' | 'genuine_error' | 'needs_repair' | 'off_intent';
+
+export type PracticeAttemptTrace = {
+  beatId: string;
+  status: PracticeAttemptStatus;
+  reasonEn: string;
+  naturalFormEn: string | null;
+  requiresRetry: boolean;
+};
+
 export type PracticeHintBundle = {
   beatId: string;
   intentAr: string;
@@ -59,6 +69,8 @@ export function usePracticeMissionRuntime(scenarioId?: string) {
   const [hintError, setHintError] = useState<string | null>(null);
   const finishAfterClosingRef = useRef(false);
   const finalClosingOutputRef = useRef(false);
+  const advanceAuthorizedFromBeatRef = useRef<string | null>(null);
+  const attemptTraceRef = useRef<PracticeAttemptTrace[]>([]);
 
   function clearCurrentBeatHint() {
     hintBundleRef.current = null;
@@ -80,6 +92,115 @@ export function usePracticeMissionRuntime(scenarioId?: string) {
     supportSummaryRef.current = emptySupportSummary();
     finishAfterClosingRef.current = false;
     finalClosingOutputRef.current = false;
+    advanceAuthorizedFromBeatRef.current = null;
+    attemptTraceRef.current = [];
+  }
+
+  function judgeAttempt(args: Record<string, unknown>) {
+    if (!contract) return { error: 'No authored Practice mission is active.' };
+    const current = contract.beats.find((candidate) => candidate.id === activeBeatIdRef.current) ?? null;
+    if (!current || current.type === 'ending') {
+      return { error: 'There is no active learner-response beat to judge.' };
+    }
+
+    const beatId = cleanText(args.beat_id, 80);
+    if (beatId !== current.id) {
+      advanceAuthorizedFromBeatRef.current = null;
+      return {
+        error: `Attempt judgement is stale: received ${beatId || 'missing'}, current beat is ${current.id}.`,
+        active_beat: current.id,
+        instruction: 'Judge only the learner attempt for the current authored beat.',
+      };
+    }
+
+    const status = cleanText(args.status, 40) as PracticeAttemptStatus;
+    const allowed: PracticeAttemptStatus[] = ['valid', 'genuine_error', 'needs_repair', 'off_intent'];
+    if (!allowed.includes(status)) {
+      advanceAuthorizedFromBeatRef.current = null;
+      return { error: `Unknown Practice attempt status: ${status || 'missing'}.` };
+    }
+
+    const reason = cleanText(args.reason_en, 240);
+    const naturalForm = cleanText(args.natural_form_en, 260);
+    const minorCorrection = Boolean(args.minor_correction === true && naturalForm);
+
+    if (status === 'valid') {
+      attemptTraceRef.current.push({
+        beatId: current.id,
+        status,
+        reasonEn: reason,
+        naturalFormEn: minorCorrection ? naturalForm : null,
+        requiresRetry: false,
+      });
+      advanceAuthorizedFromBeatRef.current = current.id;
+      return {
+        status,
+        active_beat: current.id,
+        authorized_next: current.next ?? null,
+        minor_correction: minorCorrection,
+        natural_form_en: minorCorrection ? naturalForm : '',
+        instruction: current.next
+          ? minorCorrection
+            ? `The communicative intent is complete. Briefly recast ONE clear learner error using "${naturalForm}" without requiring a retry, then call set_practice_beat for ${current.next} and continue naturally. Do not give a grammar lecture.`
+            : `The communicative intent is complete. You may now call set_practice_beat for ${current.next} and continue the roleplay naturally. Do not teach or praise unnecessarily.`
+          : 'The communicative intent is complete. Continue only according to the authored ending.',
+      };
+    }
+
+    advanceAuthorizedFromBeatRef.current = null;
+
+    if (status === 'genuine_error') {
+      if (!naturalForm) {
+        return {
+          error: 'genuine_error requires natural_form_en.',
+          instruction: 'Call judge_practice_attempt again with one short natural corrected form.',
+        };
+      }
+      attemptTraceRef.current.push({
+        beatId: current.id,
+        status,
+        reasonEn: reason,
+        naturalFormEn: naturalForm,
+        requiresRetry: true,
+      });
+      return {
+        status,
+        active_beat: current.id,
+        reason,
+        natural_form_en: naturalForm,
+        instruction: `Do NOT advance. Stay on ${current.id}. Give one brief correction using the natural form "${naturalForm}", then ask the learner to try the same move again. No grammar lecture unless the learner asks.`,
+      };
+    }
+
+    if (status === 'needs_repair') {
+      attemptTraceRef.current.push({
+        beatId: current.id,
+        status,
+        reasonEn: reason,
+        naturalFormEn: null,
+        requiresRetry: false,
+      });
+      return {
+        status,
+        active_beat: current.id,
+        reason,
+        instruction: `Do NOT advance. Stay on ${current.id}. Ask one short clarification or invite the learner to say the current move again more clearly. Do not invent a grammar error.`,
+      };
+    }
+
+    attemptTraceRef.current.push({
+      beatId: current.id,
+      status,
+      reasonEn: reason,
+      naturalFormEn: null,
+      requiresRetry: false,
+    });
+    return {
+      status,
+      active_beat: current.id,
+      reason,
+      instruction: `Do NOT advance. Stay on ${current.id}. The English may be grammatical, but it did not complete the current communicative intent. Redirect naturally to what is still needed without calling the learner's grammar wrong.`,
+    };
   }
 
   function setBeat(args: Record<string, unknown>) {
@@ -97,6 +218,17 @@ export function usePracticeMissionRuntime(scenarioId?: string) {
       };
     }
 
+    const wantsAuthoredAdvance = Boolean(current && beat.id === current.next);
+    if (wantsAuthoredAdvance && advanceAuthorizedFromBeatRef.current !== current?.id) {
+      return {
+        error: `Beat advance rejected until the latest learner attempt is judged valid: ${current?.id ?? 'none'} -> ${beat.id}`,
+        active_beat: current?.id ?? null,
+        instruction: current
+          ? `Stay on ${current.id}. First call judge_practice_attempt for the learner's latest meaningful attempt. Advance only if it returns valid.`
+          : 'Return to the first authored beat.',
+      };
+    }
+
     const allowedToAdvance = !current || beat.id === current.id || beat.id === current.next;
     if (!allowedToAdvance) {
       return {
@@ -111,7 +243,10 @@ export function usePracticeMissionRuntime(scenarioId?: string) {
     const changed = activeBeatIdRef.current !== beat.id;
     activeBeatIdRef.current = beat.id;
     setActiveBeatId(beat.id);
-    if (changed) clearCurrentBeatHint();
+    if (changed) {
+      advanceAuthorizedFromBeatRef.current = null;
+      clearCurrentBeatHint();
+    }
 
     if (beat.type === 'ending') {
       finishAfterClosingRef.current = true;
@@ -218,13 +353,58 @@ export function usePracticeMissionRuntime(scenarioId?: string) {
   const tools: LiveClientTool[] = contract ? [
     {
       declaration: {
+        name: 'judge_practice_attempt',
+        description: [
+          'Private pedagogical gate. After EVERY meaningful learner attempt on a required beat, call this BEFORE replying or advancing.',
+          'Classify the attempt semantically, not by exact wording.',
+          'valid = the current communicative intent is fulfilled clearly enough to continue. If there is one clear non-blocking English error worth teaching, keep status=valid, set minor_correction=true and provide one concise natural_form_en so Otti can recast it while continuing.',
+          'genuine_error = the learner attempted the current move but made a genuine English error that matters for clarity or the current correction focus. Supply one concise natural_form_en, then correct and require a retry on the same beat.',
+          'needs_repair = the attempt is unclear, incomplete or not understandable enough; ask a short clarification and stay on the same beat.',
+          'off_intent = the learner may be grammatical but did not perform the current communicative move; redirect without falsely calling the English wrong.',
+          'A UI hint request is NOT a learner attempt and must never be judged.',
+          'Never advance the beat before this tool returns valid for the latest meaningful learner attempt.',
+        ].join(' '),
+        behavior: 'BLOCKING',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            beat_id: {
+              type: 'STRING',
+              enum: contract.beats.filter((beat) => beat.type !== 'ending').map((beat) => beat.id),
+              description: 'The current authored learner-response beat.',
+            },
+            status: {
+              type: 'STRING',
+              enum: ['valid', 'genuine_error', 'needs_repair', 'off_intent'],
+              description: 'Semantic judgement of the latest learner attempt.',
+            },
+            reason_en: {
+              type: 'STRING',
+              description: 'Very short internal reason for the judgement. Never read this aloud.',
+            },
+            natural_form_en: {
+              type: 'STRING',
+              description: 'For genuine_error, one short natural corrected learner form. For valid + minor_correction=true, one short recast of the single clearest learner error. Otherwise use an empty string.',
+            },
+            minor_correction: {
+              type: 'BOOLEAN',
+              description: 'Only for status=valid. True when meaning succeeds but one clear non-blocking English error is worth a brief recast while continuing. Never use for accent/style or uncertain ASR artifacts.',
+            },
+          },
+          required: ['beat_id', 'status', 'reason_en', 'natural_form_en', 'minor_correction'],
+        },
+      },
+      handle: judgeAttempt,
+    },
+    {
+      declaration: {
         name: 'set_practice_beat',
         description: [
           'Private UI synchronization tool for an authored Practice mission.',
           'Before every partner turn that creates a learner response opportunity, call this silently with the beat you are opening.',
           'If you are correcting, clarifying or retrying the same learner intent, call the same beat again.',
-          'Only advance after the learner genuinely completes the current communicative intent.',
-          'The runtime also rejects beat skipping; move only to the authored next beat.',
+          'Only advance after judge_practice_attempt has classified the latest learner attempt as valid.',
+          'The runtime rejects advancement without that valid judgement and also rejects beat skipping; move only to the authored next beat.',
           'A UI hint request is not learner speech and can never advance the beat.',
           'Use close only after the final required learner intent is complete.',
           'Never mention this tool to the learner.',
@@ -324,6 +504,7 @@ export function usePracticeMissionRuntime(scenarioId?: string) {
       beat.correctionFocusEn?.length ? `Correction focus: ${beat.correctionFocusEn.join(' ')}` : '',
     ].filter(Boolean).join(' | ')).join('\n')}`,
     ...contract.promptPolicyEn,
+    'ATTEMPT GATE: after every meaningful learner attempt, before replying or changing beats, call judge_practice_attempt for the active beat. If valid, you may advance. If genuine_error, give one concise correction and require a retry on the same beat. If needs_repair, clarify. If off_intent, redirect without calling grammar wrong. Never judge UI hint events.',
     'Practice hints are contextual, not authored answer cards. Never volunteer one. When the UI explicitly requests a hint, use the whole conversation so far plus the mission grounding/models and call provide_practice_hint_bundle exactly once with ALL support layers and the same request_id. The UI may reveal those layers later without asking you again.',
   ].join('\n\n') : '';
 
@@ -360,6 +541,10 @@ export function usePracticeMissionRuntime(scenarioId?: string) {
     return { ...supportSummaryRef.current };
   }
 
+  function getAttemptTrace() {
+    return attemptTraceRef.current.map((item) => ({ ...item }));
+  }
+
   function noteTeacherOutput() {
     if (finishAfterClosingRef.current) finalClosingOutputRef.current = true;
   }
@@ -386,6 +571,7 @@ export function usePracticeMissionRuntime(scenarioId?: string) {
     revealSupport,
     hideSupport,
     getSupportSummary,
+    getAttemptTrace,
     noteTeacherOutput,
     consumeAutoFinishAfterTurn,
   };
