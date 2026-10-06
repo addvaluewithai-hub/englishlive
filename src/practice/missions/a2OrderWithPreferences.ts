@@ -2,7 +2,7 @@ import type { PracticeMissionContract } from '../types';
 
 export const A2_ORDER_WITH_PREFERENCES_MISSION: PracticeMissionContract = {
   sourceId: 'practice.a2.food.order-with-preferences.v1',
-  revision: 1,
+  revision: 2,
   slug: 'a2-order-with-preferences',
   level: 'A2',
   worldId: 'food-shopping',
