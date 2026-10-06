@@ -68,6 +68,7 @@ export function PracticeLiveScreen() {
   const replyTimings = useRef<Array<{ turn: number; delayMs: number }>>([]);
   const pausedRef = useRef(false);
   const repeatAfterPause = useRef(false);
+  const replyHasAudio = useRef(false);
   const [paused, setPaused] = useState(false);
   const [waitingForReply, setWaitingForReply] = useState(false);
   const conversationLogRef = useRef<PracticeConversationTurn[]>([]);
@@ -99,6 +100,7 @@ export function PracticeLiveScreen() {
     runtime.invalidateHint();
     if (speaker === 'learner') {
       firstReplyPending.current = true;
+      replyHasAudio.current = false;
       void runtime.reviewTurn([...conversationLogRef.current]);
     }
   }
@@ -224,6 +226,7 @@ export function PracticeLiveScreen() {
     runtime.reset();
     repeatAfterPause.current = false;
     firstReplyPending.current = false;
+    replyHasAudio.current = false;
     lastSpeechAt.current = null;
     const session = ++sessionGeneration.current;
 
@@ -275,6 +278,7 @@ export function PracticeLiveScreen() {
           if (pausedRef.current) { repeatAfterPause.current = true; return; }
           if (manualInterrupt.current) return;
           flushLearnerTurn();
+          replyHasAudio.current = true;
           setLearnerMicEnabled(false);
           if (firstReplyPending.current && lastSpeechAt.current !== null) {
             replyTimings.current.push({ turn: replyTimings.current.length + 1, delayMs: Math.round(performance.now() - lastSpeechAt.current) });
@@ -298,6 +302,12 @@ export function PracticeLiveScreen() {
         onTurnComplete: () => {
           manualInterrupt.current = false;
           queue.markTurnComplete();
+          if (!replyHasAudio.current) {
+            setWaitingForReply(false);
+            setLearnerMicEnabled(!pausedRef.current);
+            setStatus('listening');
+          }
+          replyHasAudio.current = false;
           flushTeacherTurn();
           teacherDraftRef.current = '';
         },
