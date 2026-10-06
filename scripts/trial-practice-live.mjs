@@ -16,7 +16,7 @@ const cases = [
     'I ordered a hot coffee, but this is tea. I have to leave in five minutes. What can you do?',
     'I prefer to give you one dollar back.',
     'I mean I would like the medium coffee and one dollar back.',
-    'Actually, can I have a full refund instead?',
+    'Actually, you already gave me one dollar back. Can I return the medium coffee and have a full refund instead?',
     'Yes, please. Thank you.',
   ] },
 ];
@@ -55,6 +55,8 @@ try {
       console.log(JSON.stringify({ mission: scenario.slug, learner: opening ? '[app opening]' : text, partner: response.output, firstAudioAfterTextMs: response.firstAudioMs, receivedAudioChunks: response.chunks }));
       assert.ok(response.output.trim(), 'The partner should respond with a transcript.');
       assert.ok(response.chunks > 0, 'The real provider should return audio.');
+      if (scenario.slug === 'a2-order-with-preferences' && text === 'Yes, thank you.') assert.doesNotMatch(response.output, /\?/, 'A complete routine exchange should close without a new payment-method question.');
+      if (scenario.slug === 'b1-resolve-wrong-order' && text.startsWith('Actually,')) assert.match(response.output, /three|3/i, 'One dollar was already returned; a full refund must return the remaining three.');
     }
     try {
       await live.connect(buildConversationPracticePrompt(mission), { silenceDurationMs: 1200 });

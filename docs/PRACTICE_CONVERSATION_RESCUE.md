@@ -6,7 +6,7 @@ Practice used the Live voice model to evaluate language and advance authored bea
 
 Learners can combine goals, change their choice, ask relevant questions, and use valid short answers. Goal observations are descriptive, never gates or mastery scores. A meaning-changing ambiguity still receives an in-role clarification. Notes appear in a closed notebook; learners choose when to read, pause, resume, or finish. Final review rechecks the transcript, including turns coalesced by the background queue.
 
-The B1 wrong-order scenario has four flexible opportunities. Available remedies stay consistent: the original coffee in ten minutes, a medium now plus one dollar returned, or a full four-dollar refund. Solutions are discovered through conversation rather than prescribed learner sentences.
+The B1 wrong-order scenario has four flexible opportunities. Available remedies stay consistent: the original coffee in ten minutes, a medium now plus one dollar returned, or a full four-dollar refund. If a dollar was already returned before the learner changes their remedy, only three dollars remain; the medium must be returned or cancelled. Solutions are discovered through conversation rather than prescribed learner sentences.
 
 ## Technical boundaries
 

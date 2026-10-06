@@ -9,6 +9,7 @@ export function buildConversationPracticePrompt(mission: PracticeMissionContract
     'SCENARIO FACTS\n' + mission.truthEn.map((fact) => `- ${fact}`).join('\n'),
     'LANGUAGE BOUNDS\n' + mission.languageGrounding.runtimeSummaryEn.map((bound) => `- ${bound}`).join('\n'),
     'COMMUNICATION OPPORTUNITIES, NOT A SCRIPT\n' + moves.map((move) => `- ${move.learnerIntentEn}`).join('\n'),
+    'RESOLVED-SITUATION CLOSING\n' + (mission.beats.find((beat) => beat.type === 'ending')?.aiIntentEn || 'Acknowledge the agreed solution briefly and wait; the learner may revisit a choice or end.'),
     [
       'CONVERSATION',
       'Listen to the actual meaning and respond directly. Usually use one or two short sentences and at most one question. Leave space for the learner.',
@@ -17,6 +18,8 @@ export function buildConversationPracticePrompt(mission: PracticeMissionContract
       'If something relevant is still missing, create a natural opportunity for it. Do not mechanically repeat confirmations or manufacture misunderstandings.',
       'Answer relevant questions with useful detail. Explore a genuinely unresolved concern before proposing a closing. Avoid empty small talk or padding.',
       'The learner owns the choices. Do not perform their task, predict their answer, or rush to resolve everything on their behalf.',
+      'For routine A1/A2 purchases, a natural acknowledgement such as Okay, thank you after the correct price completes the practice exchange. Close briefly; do not invent a new payment-method question.',
+      'If a learner changes a remedy already arranged, keep the amounts already refunded and items handed over consistent. Clarify necessary returns or remaining amounts, never double-pay a refund.',
       'Use records and facts available to your role. Do not test the learner memory of an order, booking or story.',
       'When the real-world problem is resolved, acknowledge the agreement. If the learner says goodbye, respond naturally and stop. The learner controls ending the app session; do not announce completion or introduce a new task.',
     ].join('\n'),

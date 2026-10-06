@@ -2,7 +2,7 @@ import type { PracticeMissionContract } from '../types';
 
 export const B1_RESOLVE_WRONG_ORDER_MISSION: PracticeMissionContract = {
   sourceId: 'practice.b1.food.resolve-wrong-order.v1',
-  revision: 6,
+  revision: 7,
   slug: 'b1-resolve-wrong-order', level: 'B1', worldId: 'food-shopping',
   titleAr: 'حل مشكلة في طلب غلط', titleEn: 'Resolve a wrong order',
   settingAr: 'كافيه بعد ما استلمت طلب مختلف عن اللي طلبته',
@@ -67,6 +67,7 @@ export const B1_RESOLVE_WRONG_ORDER_MISSION: PracticeMissionContract = {
     'A remake of the original large hot coffee takes ten minutes.',
     'A medium hot coffee with milk and no sugar is available now for three dollars; staff returns one dollar.',
     'A full four-dollar refund with no drink is also available. Explain options when relevant, never withhold them behind a scripted learner sentence.',
+    'Track money already returned: if the learner changes from the medium coffee plus one dollar back to a full refund, take back or cancel the medium and return only the remaining three dollars, so the total refund is four dollars, never five.',
     'Staff can explain that the drinks were mixed up at collection. Do not invent blame, extra compensation, or new store policies.',
     'If the learner asks for a manager, respond politely: the manager is busy, but staff can arrange either available remedy. This request is not a wrong answer.',
   ],
