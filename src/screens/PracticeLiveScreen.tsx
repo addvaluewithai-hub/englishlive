@@ -9,12 +9,13 @@ import { OttiMark } from '../character/otti/OttiMark';
 import { getCharacterDefinition } from '../character/registry';
 import { ProductIcon } from '../components/ProductIcon';
 import { loadPublishedCharacter } from '../content/client';
+import { useI18n } from '../i18n/LocaleProvider';
 import { GeminiLiveTransport } from '../live/GeminiLiveTransport';
 import type { LiveStatus } from '../live/types';
 import { PracticeHintCard } from '../practice/PracticeHintCard';
 import { practiceMissionContractBySlug } from '../practice/missions/catalog';
 import { usePracticeMissionRuntime } from '../practice/runtime';
-import { speakingAssets } from '../speaking/assets';
+import { LiveConversationHeader, LiveConversationStatus } from '../ui/product/LiveConversationChrome';
 
 function pcmSampleRate(mimeType: string) {
   const match = mimeType.match(/rate=(\d+)/i);
@@ -36,37 +37,10 @@ function timeLabel(seconds: number) {
   return `${minutes}:${remaining}`;
 }
 
-function missionBackground(worldId: string) {
-  switch (worldId) {
-    case 'people-social':
-      return speakingAssets.meetingPeople;
-    case 'food-shopping':
-      return speakingAssets.foodOut;
-    case 'travel-transport':
-      return speakingAssets.ottiTravel;
-    case 'work-study':
-      return speakingAssets.ottiProgress;
-    case 'home-services':
-      return speakingAssets.ottiReceptionist;
-    case 'plans-leisure':
-    case 'everyday':
-    default:
-      return speakingAssets.ottiHero;
-  }
-}
-
-const statusCopy: Record<LiveStatus, { title: string; body: string }> = {
-  idle: { title: 'جاهز؟', body: 'الموقف هيبدأ حالًا' },
-  connecting: { title: 'بنجهز الموقف', body: 'ثواني ونبدأ' },
-  listening: { title: 'دورك', body: 'قولها بطريقتك — والـHint موجود لو احتجته' },
-  speaking: { title: 'Otti بيتكلم', body: 'اسمع أو قاطعه لو حابب ترد' },
-  reconnecting: { title: 'بنرجّع الاتصال', body: 'ثواني ونكمل' },
-  error: { title: 'الاتصال وقف', body: 'جرّب تبدأ تاني' },
-};
-
 export function PracticeLiveScreen() {
   const { missionId } = useParams();
   const navigate = useNavigate();
+  const { t } = useI18n();
   const mission = practiceMissionContractBySlug(missionId);
   const runtime = usePracticeMissionRuntime(missionId);
   const character = getCharacterDefinition('otti');
@@ -240,7 +214,7 @@ export function PracticeLiveScreen() {
       await mic.start((chunk) => live.sendAudio(chunk), setMicLevel);
       live.sendText(mission.openingMoveEn);
     } catch (reason) {
-      const message = reason instanceof Error ? reason.message : 'تعذر بدء الـMission.';
+      const message = reason instanceof Error ? reason.message : t('practice.startError');
       setError(message);
       setStatus('error');
       await stopTransport();
@@ -323,7 +297,7 @@ export function PracticeLiveScreen() {
       'Do not speak, do not advance the beat, do not answer on the learner behalf outside the tool call, and after the tool result end the turn silently.',
     ].join('\n'));
     hintTimeoutRef.current = window.setTimeout(() => {
-      runtime.failHintRequest('Otti اتأخر في تجهيز الـHint. جرّب تاني.');
+      runtime.failHintRequest(t('practice.hintTimeout'));
       hintTimeoutRef.current = null;
     }, 8_000);
   }
@@ -346,9 +320,9 @@ export function PracticeLiveScreen() {
 
   if (!mission) {
     return (
-      <section className="practice-mission-missing" dir="rtl">
-        <h1>الـMission دي مش موجودة</h1>
-        <button type="button" onClick={() => navigate('/practice')}>الرجوع لـPractice</button>
+      <section className="practice-mission-missing">
+        <h1>{t('practice.missingTitle')}</h1>
+        <button type="button" onClick={() => navigate('/practice')}>{t('practice.back')}</button>
       </section>
     );
   }
@@ -356,30 +330,37 @@ export function PracticeLiveScreen() {
   const connecting = status === 'connecting' || status === 'reconnecting';
   const teacherSpeaking = status === 'speaking';
   const learnerTurn = status === 'listening' && micOpen;
-  const statusText = statusCopy[status];
-  const stageBackground = missionBackground(mission.worldId);
-
+  const statusText = {
+    idle: { title: t('practice.status.idle.title'), body: t('practice.status.idle.body') },
+    connecting: { title: t('practice.status.connecting.title'), body: t('practice.status.connecting.body') },
+    listening: { title: t('practice.status.listening.title'), body: t('practice.status.listening.body') },
+    speaking: { title: t('practice.status.speaking.title'), body: t('practice.status.speaking.body') },
+    reconnecting: { title: t('practice.status.reconnecting.title'), body: t('practice.status.reconnecting.body') },
+    error: { title: t('practice.status.error.title'), body: t('practice.status.error.body') },
+  }[status];
   return (
-    <section className="fs-live sp-scenario-live practice-live" dir="rtl">
-      <header className="fs-live-header sp-scenario-live-header">
-        <button type="button" className="fs-live-close" onClick={() => void finishMission(false)} aria-label="إنهاء التدريب" disabled={ending}>
-          <ProductIcon name="close" size={28} />
-        </button>
-        <div className="fs-live-brand" aria-label="Englotti">
-          <OttiMark />
-          <strong>Practice</strong>
-        </div>
-        <strong className="fs-live-title">{mission.level} • {mission.titleAr}</strong>
-        <span className="fs-live-mode sp-scenario-timer">◷ {timeLabel(elapsedSeconds)}</span>
-      </header>
+    <section className="fs-live sp-scenario-live practice-live">
+      <LiveConversationHeader
+        title={(
+          <>
+            <bdi dir="ltr">{mission.level}</bdi>
+            {' • '}
+            <span lang="ar" dir="rtl">{mission.titleAr}</span>
+          </>
+        )}
+        meta={<>◷ <bdi dir="ltr">{timeLabel(elapsedSeconds)}</bdi></>}
+        onClose={() => void finishMission(false)}
+        closeLabel={t('practice.leave')}
+        disabled={ending}
+        brandText={t('practice.headerTitle')}
+        className="sp-scenario-live-header"
+        metaClassName="fs-live-mode sp-scenario-timer"
+      />
 
-      <div
-        className="fs-live-stage sp-scenario-stage practice-live-stage"
-        style={{ backgroundImage: `linear-gradient(180deg, rgba(255,247,243,.08), rgba(255,250,247,.74) 72%, #fffdfc 100%), url(${stageBackground})` }}
-      >
+      <div className="fs-live-stage sp-scenario-stage practice-live-stage">
         {teacherText ? (
           <article className="sp-otti-transcript" aria-live="polite">
-            <small><bdi dir="ltr">Otti</bdi> • {mission.aiRoleAr}</small>
+            <small><bdi dir="ltr">Otti</bdi> • <span lang="ar" dir="rtl">{mission.aiRoleAr}</span></small>
             <p dir="auto">{teacherText}</p>
           </article>
         ) : null}
@@ -388,12 +369,19 @@ export function PracticeLiveScreen() {
           <CharacterHost ref={host} character={character} className="fs-live-character-host" />
         </div>
 
-        <div className={`fs-live-status status-${status}${learnerTurn ? ' is-open' : ''}`} aria-live="polite">
-          <span className="fs-live-wave" aria-hidden="true"><i /><i /><i /></span>
-          <span><strong>{statusText.title}</strong><small>{statusText.body}</small></span>
-        </div>
+        <LiveConversationStatus
+          status={status}
+          title={statusText.title}
+          body={statusText.body}
+          learnerTurn={learnerTurn}
+        />
 
-        {learnerDraft ? <p className="practice-live-heard" dir="auto">سمعتك: {learnerDraft}</p> : null}
+        {learnerDraft ? (
+          <p className="practice-live-heard">
+            <span>{t('practice.heardPrefix')}</span>{' '}
+            <span dir="auto">{learnerDraft}</span>
+          </p>
+        ) : null}
       </div>
 
       <div className="fs-live-controls practice-live-controls">
@@ -402,41 +390,50 @@ export function PracticeLiveScreen() {
         {keyboardOpen ? (
           <form className="fs-type-row" onSubmit={submitText}>
             <input
+              lang="en"
               dir="ltr"
               value={typedText}
               onChange={(event) => setTypedText(event.target.value)}
-              placeholder="Type what you want to say…"
+              placeholder={t('live.typePlaceholder')}
               autoFocus
             />
-            <button type="submit" disabled={!typedText.trim() || !learnerTurn}>إرسال</button>
+            <button type="submit" disabled={!typedText.trim() || !learnerTurn}>{t('live.send')}</button>
           </form>
         ) : null}
 
         <div className="fs-control-row practice-live-control-row">
-          <span className="practice-live-side-label">Hint ذكية</span>
+          <button
+            type="button"
+            className="fs-keyboard-control"
+            onClick={() => setKeyboardOpen((value) => !value)}
+            disabled={!learnerTurn}
+            aria-label={t('live.typeInstead')}
+          >
+            <ProductIcon name="keyboard" size={31} />
+          </button>
 
           <button
             type="button"
             className={`fs-mic-control${learnerTurn ? ' is-live' : ''}${teacherSpeaking ? ' is-interrupt' : ''}`}
             onClick={handleMicAction}
             disabled={connecting || ending || (status === 'listening' && !teacherSpeaking)}
-            aria-label={teacherSpeaking ? 'قاطع Otti واتكلم' : learnerTurn ? 'دورك تتكلم' : 'ابدأ التدريب'}
+            aria-label={teacherSpeaking ? t('live.interruptLabel') : learnerTurn ? t('live.yourTurnLabel') : t('practice.startLabel')}
           >
             {teacherSpeaking ? (
-              <><span className="fs-interrupt-bars" aria-hidden="true"><i /><i /></span><small>مقاطعة</small></>
+              <><span className="fs-interrupt-bars" aria-hidden="true"><i /><i /></span><small>{t('live.interrupt')}</small></>
             ) : (
-              <><ProductIcon name="speak" size={54} /><small>{learnerTurn ? 'دورك' : status === 'error' ? 'جرّب تاني' : 'استنى'}</small></>
+              <><ProductIcon name="speak" size={54} /><small>{learnerTurn ? t('live.yourTurn') : status === 'error' ? t('live.tryAgain') : t('live.wait')}</small></>
             )}
           </button>
 
           <button
             type="button"
-            className="fs-keyboard-control"
-            onClick={() => setKeyboardOpen((value) => !value)}
-            disabled={!learnerTurn}
-            aria-label="اكتب بدل الكلام"
+            className="practice-live-secondary-control"
+            disabled
+            aria-label={t('practice.moreComingSoon')}
+            title={t('practice.moreComingSoon')}
           >
-            <ProductIcon name="keyboard" size={31} />
+            <ProductIcon name="more" size={29} />
           </button>
         </div>
 
@@ -448,7 +445,7 @@ export function PracticeLiveScreen() {
         <div className="fs-ending-overlay" aria-live="polite">
           <div>
             <OttiMark />
-            <strong>بنقفل الـMission…</strong>
+            <strong>{t('practice.ending')}</strong>
             <span><i /><i /><i /></span>
           </div>
         </div>

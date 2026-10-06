@@ -16,12 +16,14 @@ import {
 } from '../freeSpeak/api';
 import { getFreeSpeakMode } from '../freeSpeak/modes';
 import type { FreeSpeakSpeaker, FreeSpeakTurn } from '../freeSpeak/types';
+import { useI18n } from '../i18n/LocaleProvider';
 import { GeminiLiveTransport } from '../live/GeminiLiveTransport';
 import type { LiveStatus } from '../live/types';
 import { buildRelationshipPrompt } from '../memory/context';
 import { RelationshipMemoryCollector } from '../memory/RelationshipMemoryCollector';
 import type { RelationshipMemoryProposal } from '../memory/types';
 import { comfortLabel, goalPrompt, readLearnerProfile } from '../product/profile';
+import { LiveConversationHeader, LiveConversationStatus } from '../ui/product/LiveConversationChrome';
 
 function pcmSampleRate(mimeType: string) {
   const match = mimeType.match(/rate=(\d+)/i);
@@ -42,31 +44,23 @@ function turnId(speaker: FreeSpeakSpeaker) {
   return `${speaker}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-const statusCopy: Record<LiveStatus, { title: string; body: string }> = {
-  idle: { title: 'جاهز؟', body: 'ابدأ لما تكون مستعد' },
-  connecting: { title: 'بنجهز المحادثة', body: 'ثواني وهنبدأ' },
-  listening: { title: 'دورك الآن', body: 'المايك مفتوح — اتكلم براحتك' },
-  speaking: { title: 'المدرس بيتكلم', body: 'لو عايز تقاطعه اضغط الزرار' },
-  reconnecting: { title: 'بنرجّع الاتصال', body: 'المحادثة محفوظة' },
-  error: { title: 'حصلت مشكلة بسيطة', body: 'جرّب تبدأ تاني' },
-};
-
-const modeUiCopy: Record<string, { title: string; body: string }> = {
-  'just-chat': { title: 'دردشة عادية', body: 'محادثة مفتوحة عن أي موضوع مألوف.' },
-  work: { title: 'محادثة عمل', body: 'كلام طبيعي عن الشغل والاجتماعات والخطط والقرارات.' },
-  travel: { title: 'السفر والمواقف اليومية', body: 'مواقف تلقائية في السفر والخدمات والأماكن الجديدة.' },
-  interview: { title: 'تدريب مقابلة', body: 'مقابلة واقعية وداعمة، من غير درجات أو تقييم مستوى.' },
-};
-
 export function FreeSpeakSessionScreen() {
   const { modeId } = useParams();
   const [params] = useSearchParams();
   const navigate = useNavigate();
+  const { t } = useI18n();
   const profile = readLearnerProfile();
   const character = getCharacterDefinition(params.get('character') ?? profile?.characterId);
   const mode = getFreeSpeakMode(modeId);
-  const modeCopy = modeUiCopy[mode.id] ?? { title: mode.title, body: mode.description };
+  const modeCopy = mode.id === 'work'
+    ? { title: t('freeSpeak.mode.work.title'), body: t('freeSpeak.mode.work.body') }
+    : mode.id === 'travel'
+      ? { title: t('freeSpeak.mode.travel.title'), body: t('freeSpeak.mode.travel.body') }
+      : mode.id === 'interview'
+        ? { title: t('freeSpeak.mode.interview.title'), body: t('freeSpeak.mode.interview.body') }
+        : { title: t('freeSpeak.mode.justChat.title'), body: t('freeSpeak.mode.justChat.body') };
   const resumeSessionId = params.get('resume');
+  const visualQa = import.meta.env.VITE_VISUAL_QA === '1';
 
   const host = useRef<CharacterHostHandle | null>(null);
   const transport = useRef<GeminiLiveTransport | null>(null);
@@ -152,6 +146,15 @@ export function FreeSpeakSessionScreen() {
   useEffect(() => {
     setTeacherDisplayName(character.name);
   }, [character.id, character.name]);
+
+  useEffect(() => {
+    if (!visualQa) return;
+    teacherDraftRef.current = 'Ready to chat.';
+    setTeacherDraft('Ready to chat.');
+    setStartedOnce(true);
+    setStatus('listening');
+    setMicOpen(true);
+  }, [visualQa]);
 
   useEffect(() => {
     const container = exchangeRef.current;
@@ -320,7 +323,7 @@ export function FreeSpeakSessionScreen() {
       setStartedOnce(true);
       live.sendText(`Start ${mode.title} naturally. Greet the learner briefly and make one genuine conversational move. Do not explain the mode or give instructions.`);
     } catch (reason) {
-      const message = reason instanceof Error ? reason.message : 'Could not start Free Speak.';
+      const message = reason instanceof Error ? reason.message : t('freeSpeak.startError');
       setError(message);
       setStatus('error');
       await stopTransport();
@@ -389,7 +392,14 @@ export function FreeSpeakSessionScreen() {
   const liveConversation = status === 'listening' || status === 'speaking';
   const teacherSpeaking = status === 'speaking';
   const learnerTurn = status === 'listening' && micOpen;
-  const statusText = statusCopy[status];
+  const statusText = {
+    idle: { title: t('freeSpeak.status.idle.title'), body: t('freeSpeak.status.idle.body') },
+    connecting: { title: t('freeSpeak.status.connecting.title'), body: t('freeSpeak.status.connecting.body') },
+    listening: { title: t('freeSpeak.status.listening.title'), body: t('freeSpeak.status.listening.body') },
+    speaking: { title: t('freeSpeak.status.speaking.title'), body: t('freeSpeak.status.speaking.body') },
+    reconnecting: { title: t('freeSpeak.status.reconnecting.title'), body: t('freeSpeak.status.reconnecting.body') },
+    error: { title: t('freeSpeak.status.error.title'), body: t('freeSpeak.status.error.body') },
+  }[status];
   const visibleTurns: FreeSpeakTurn[] = [
     ...turns,
     ...(learnerDraft.trim() ? [{ id: 'draft-learner', speaker: 'learner' as const, text: learnerDraft, atMs: durationSeconds() * 1_000 }] : []),
@@ -397,30 +407,27 @@ export function FreeSpeakSessionScreen() {
   ].slice(-8);
 
   return (
-    <section className="fs-live" dir="rtl">
-      <header className="fs-live-header">
-        <button type="button" className="fs-live-close" onClick={() => void finishConversation()} aria-label="إنهاء المحادثة">
-          <ProductIcon name="close" size={28} />
-        </button>
-        <div className="fs-live-brand" aria-label="Englotti">
-          <OttiMark />
-          <strong>Englotti</strong>
-        </div>
-        <strong className="fs-live-title">المحادثة الحرة</strong>
-        <span className="fs-live-mode"><ProductIcon name="speak" size={20} /> {modeCopy.title}</span>
-      </header>
+    <section className="fs-live free-speak-live">
+      <LiveConversationHeader
+        title={t('freeSpeak.headerTitle')}
+        meta={<><ProductIcon name="speak" size={20} /> {modeCopy.title}</>}
+        onClose={() => void finishConversation()}
+        closeLabel={t('freeSpeak.leave')}
+      />
 
       <div className="fs-live-stage">
         <div className="fs-live-character">
           <CharacterHost ref={host} character={character} className="fs-live-character-host" />
         </div>
 
-        <div className={`fs-live-status status-${status}${learnerTurn ? ' is-open' : ''}`} aria-live="polite">
-          <span className="fs-live-wave" aria-hidden="true"><i /><i /><i /></span>
-          <span><strong>{statusText.title}</strong><small>{statusText.body}</small></span>
-        </div>
+        <LiveConversationStatus
+          status={status}
+          title={statusText.title}
+          body={statusText.body}
+          learnerTurn={learnerTurn}
+        />
 
-        <button type="button" className="fs-history-button" onClick={() => setHistoryOpen(true)} aria-label="سجل المحادثة">
+        <button type="button" className="fs-history-button" onClick={() => setHistoryOpen(true)} aria-label={t('freeSpeak.history')}>
           <span aria-hidden="true">↶</span>
         </button>
 
@@ -439,7 +446,7 @@ export function FreeSpeakSessionScreen() {
           )) : (
             <article className="fs-bubble fs-bubble-teacher is-placeholder">
               <span className="fs-bubble-avatar" aria-hidden="true"><OttiMark /></span>
-              <p>{startedOnce ? 'المحادثة هتظهر هنا رسالة وراء رسالة.' : modeCopy.body}</p>
+              <p>{startedOnce ? t('freeSpeak.conversationAppears') : modeCopy.body}</p>
             </article>
           )}
         </div>
@@ -451,10 +458,12 @@ export function FreeSpeakSessionScreen() {
             <input
               value={typedText}
               onChange={(event) => setTypedText(event.target.value)}
-              placeholder="اكتب اللي عايز تقوله بالإنجليزي…"
+              placeholder={t('freeSpeak.typePlaceholder')}
+              lang="en"
+              dir="ltr"
               autoFocus
             />
-            <button type="submit" disabled={!typedText.trim() || !learnerTurn}>إرسال</button>
+            <button type="submit" disabled={!typedText.trim() || !learnerTurn}>{t('live.send')}</button>
           </form>
         ) : null}
 
@@ -466,7 +475,7 @@ export function FreeSpeakSessionScreen() {
             disabled={!learnerTurn}
           >
             <span>؟</span>
-            <strong>مش فاهم</strong>
+            <strong>{t('freeSpeak.clarifyArabic')}</strong>
           </button>
 
           <button
@@ -477,12 +486,12 @@ export function FreeSpeakSessionScreen() {
               else if (status === 'idle' || status === 'error') void startLive();
             }}
             disabled={connecting || ending || (liveConversation && !teacherSpeaking)}
-            aria-label={teacherSpeaking ? 'قاطع المدرس واتكلم' : learnerTurn ? 'دورك تتكلم' : 'ابدأ المحادثة'}
+            aria-label={teacherSpeaking ? t('freeSpeak.interruptLabel') : learnerTurn ? t('live.yourTurnLabel') : t('freeSpeak.startLabel')}
           >
             {teacherSpeaking ? (
-              <><span className="fs-interrupt-bars" aria-hidden="true"><i /><i /></span><small>مقاطعة</small></>
+              <><span className="fs-interrupt-bars" aria-hidden="true"><i /><i /></span><small>{t('live.interrupt')}</small></>
             ) : (
-              <><ProductIcon name="speak" size={54} /><small>{learnerTurn ? 'دورك' : !startedOnce && !connecting ? 'ابدأ' : 'استنى'}</small></>
+              <><ProductIcon name="speak" size={54} /><small>{learnerTurn ? t('live.yourTurn') : !startedOnce && !connecting ? t('freeSpeak.start') : t('live.wait')}</small></>
             )}
           </button>
 
@@ -491,7 +500,7 @@ export function FreeSpeakSessionScreen() {
             className="fs-keyboard-control"
             onClick={() => setKeyboardOpen((value) => !value)}
             disabled={!learnerTurn}
-            aria-label="اكتب بدل الكلام"
+            aria-label={t('live.typeInstead')}
           >
             <ProductIcon name="keyboard" size={31} />
           </button>
@@ -502,15 +511,18 @@ export function FreeSpeakSessionScreen() {
 
       {historyOpen ? (
         <div className="fs-history-backdrop" role="presentation" onClick={() => setHistoryOpen(false)}>
-          <aside className="fs-history-sheet" role="dialog" aria-modal="true" aria-label="سجل المحادثة" onClick={(event) => event.stopPropagation()}>
-            <header><strong>سجل المحادثة</strong><button type="button" onClick={() => setHistoryOpen(false)}><ProductIcon name="close" size={22} /></button></header>
+          <aside className="fs-history-sheet" role="dialog" aria-modal="true" aria-label={t('freeSpeak.history')} onClick={(event) => event.stopPropagation()}>
+            <header>
+              <strong>{t('freeSpeak.history')}</strong>
+              <button type="button" onClick={() => setHistoryOpen(false)} aria-label={t('freeSpeak.closeHistory')}><ProductIcon name="close" size={22} /></button>
+            </header>
             <div className="fs-history-list">
               {turns.length ? turns.map((turn) => (
                 <article key={turn.id} className={turn.speaker === 'learner' ? 'is-learner' : 'is-teacher'}>
-                  <small>{turn.speaker === 'learner' ? 'أنت' : teacherDisplayName}</small>
+                  <small>{turn.speaker === 'learner' ? t('freeSpeak.you') : teacherDisplayName}</small>
                   <p dir="auto">{turn.text}</p>
                 </article>
-              )) : <p className="fs-history-empty">لسه ما بدأناش كلام.</p>}
+              )) : <p className="fs-history-empty">{t('freeSpeak.historyEmpty')}</p>}
             </div>
           </aside>
         </div>
@@ -518,7 +530,7 @@ export function FreeSpeakSessionScreen() {
 
       {ending ? (
         <div className="fs-ending-overlay" aria-live="polite">
-          <div><OttiMark /><strong>بنجهّز ملخص المحادثة…</strong><span><i /><i /><i /></span></div>
+          <div><OttiMark /><strong>{t('live.preparingSummary')}</strong><span><i /><i /><i /></span></div>
         </div>
       ) : null}
     </section>

@@ -10,6 +10,7 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "check": "tsc --noEmit && vite build",
+    "test:ui": "node --import tsx --test scripts/test-ui-foundation.mjs",
     "preview": "vite preview",
     "cf:dev": "npm run build && wrangler pages dev dist",
     "cf:deploy": "npm run build && wrangler pages deploy dist",

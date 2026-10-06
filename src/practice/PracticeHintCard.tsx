@@ -1,3 +1,4 @@
+import { useI18n } from '../i18n/LocaleProvider';
 import { usePracticeMissionRuntime } from './runtime';
 
 type PracticeRuntime = ReturnType<typeof usePracticeMissionRuntime>;
@@ -11,6 +12,7 @@ export function PracticeHintCard({
   learnerTurn: boolean;
   onRequestHint: () => void;
 }) {
+  const { t } = useI18n();
   const { activeBeat, supportLevel, hintBundle, hintLoading, hintError } = runtime;
   if (!learnerTurn || !activeBeat || activeBeat.type === 'ending') return null;
 
@@ -25,13 +27,13 @@ export function PracticeHintCard({
           disabled={hintLoading}
         >
           <span aria-hidden="true">💡</span>
-          <strong>{hintLoading ? 'Otti بيجهّز Hint…' : 'محتاج Hint؟'}</strong>
+          <strong>{hintLoading ? t('practice.hint.loadingTitle') : t('practice.hint.readyTitle')}</strong>
           <small>
             {hintLoading
-              ? 'على حسب اللي حصل فعلًا في المحادثة'
+              ? t('practice.hint.loadingBody')
               : cached
-                ? 'الـHint جاهزة من نفس السياق — من غير request جديدة'
-                : 'هتتعمل على سياق المحادثة الحالية'}
+                ? t('practice.hint.cachedBody')
+                : t('practice.hint.requestBody')}
           </small>
         </button>
         {hintError ? <p className="practice-hint-error" role="alert">{hintError}</p> : null}
@@ -42,37 +44,37 @@ export function PracticeHintCard({
   if (!hintBundle || hintBundle.beatId !== activeBeat.id) return null;
 
   return (
-    <aside className="practice-hint-card" aria-label="مساعدة للموقف">
+    <aside className="practice-hint-card" aria-label={t('practice.hint.cardLabel')}>
       <header>
         <div>
           <span aria-hidden="true">💡</span>
-          <small>Hint ذكية من سياق المحادثة الحالية</small>
+          <small>{t('practice.hint.cardEyebrow')}</small>
         </div>
-        <button type="button" onClick={runtime.hideSupport} aria-label="إخفاء التلميح">×</button>
+        <button type="button" onClick={runtime.hideSupport} aria-label={t('practice.hint.hide')}>×</button>
       </header>
 
-      {hintBundle.contextAr ? <p className="practice-hint-context">{hintBundle.contextAr}</p> : null}
-      <strong className="practice-hint-intent">{hintBundle.intentAr}</strong>
+      {hintBundle.contextAr ? <p className="practice-hint-context" lang="ar" dir="rtl">{hintBundle.contextAr}</p> : null}
+      <strong className="practice-hint-intent" lang="ar" dir="rtl">{hintBundle.intentAr}</strong>
 
       {supportLevel >= 2 && hintBundle.usefulLanguageEn.length ? (
-        <div className="practice-hint-language" dir="ltr">
+        <div className="practice-hint-language" lang="en" dir="ltr">
           {hintBundle.usefulLanguageEn.map((item) => <span key={item}>{item}</span>)}
         </div>
       ) : null}
 
       {supportLevel >= 3 ? (
-        <div className="practice-hint-full" dir="ltr">
-          <small>Example for this exact moment — مش لازم تقولها بنفس الصياغة</small>
-          <strong>{hintBundle.fullResponseEn}</strong>
+        <div className="practice-hint-full">
+          <small>{t('practice.hint.fullExample')}</small>
+          <strong lang="en" dir="ltr">{hintBundle.fullResponseEn}</strong>
         </div>
       ) : null}
 
       <footer>
         {supportLevel < 2 && hintBundle.usefulLanguageEn.length ? (
-          <button type="button" onClick={() => runtime.revealSupport(2)}>كلمات تساعدني</button>
+          <button type="button" onClick={() => runtime.revealSupport(2)}>{t('practice.hint.usefulWords')}</button>
         ) : null}
         {supportLevel < 3 ? (
-          <button type="button" onClick={() => runtime.revealSupport(3)}>ساعدني أقولها</button>
+          <button type="button" onClick={() => runtime.revealSupport(3)}>{t('practice.hint.sayIt')}</button>
         ) : null}
       </footer>
     </aside>
