@@ -87,7 +87,6 @@ export function PracticeCompleteScreen() {
                   <small>{copy.betterEnglish}</small>
                   <strong lang="en" dir="ltr">{item.betterEn}</strong>
                 </div>
-                <p>{locale === 'ar' ? item.feedbackAr : item.feedbackEn}</p>
                 {item.requiresRetry ? <em>{copy.retried}</em> : null}
               </article>
             ))}
