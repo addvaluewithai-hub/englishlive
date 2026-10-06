@@ -68,37 +68,76 @@ export function PracticeMissionScreen() {
           <span>📍 {mission.settingAr}</span>
         </div>
 
-        <section className="practice-start-goal">
-          <span aria-hidden="true">◎</span>
-          <div>
-            <small>هدفك</small>
-            <strong>{mission.goalAr}</strong>
-          </div>
-        </section>
+        {mission.briefingAr ? (
+          <section className="practice-start-brief">
+            <header>
+              <small>الموقف</small>
+              <strong>{mission.briefingAr.situationAr}</strong>
+            </header>
 
-        <section className="practice-start-flow">
-          <header>
-            <small>المحادثة مصممة — مش محفوظة</small>
-            <strong>إيه اللي هتتمرّن عليه؟</strong>
-          </header>
-          <ol>
-            {responseBeats.map((beat, index) => (
-              <li key={beat.id}>
-                <span>{index + 1}</span>
-                <div>
-                  <strong>{beat.overviewAr ?? 'اتصرف في الموقف بطريقتك'}</strong>
-                  <small>{index === 0 ? 'مش لازم تقول جملة بعينها' : 'المهم توصل المعنى وتكمل الموقف طبيعي'}</small>
-                </div>
-              </li>
-            ))}
-          </ol>
-        </section>
+            {mission.briefingAr.factsAr?.length ? (
+              <div className="practice-start-brief-facts">
+                {mission.briefingAr.factsAr.map((fact) => (
+                  <div key={fact.label}>
+                    <small>{fact.label}</small>
+                    <strong dir="auto">{fact.value}</strong>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
+            <div className="practice-start-brief-moves">
+              <small>المطلوب منك</small>
+              <ol>
+                {mission.briefingAr.requiredMovesAr.map((move, index) => (
+                  <li key={move}>
+                    <span>{index + 1}</span>
+                    <strong>{move}</strong>
+                  </li>
+                ))}
+              </ol>
+            </div>
+
+            <footer>
+              <small>تنجح لما</small>
+              <strong>{mission.briefingAr.successAr}</strong>
+            </footer>
+          </section>
+        ) : (
+          <>
+            <section className="practice-start-goal">
+              <span aria-hidden="true">◎</span>
+              <div>
+                <small>هدفك</small>
+                <strong>{mission.goalAr}</strong>
+              </div>
+            </section>
+
+            <section className="practice-start-flow">
+              <header>
+                <small>المحادثة مصممة — مش محفوظة</small>
+                <strong>إيه اللي هتتمرّن عليه؟</strong>
+              </header>
+              <ol>
+                {responseBeats.map((beat, index) => (
+                  <li key={beat.id}>
+                    <span>{index + 1}</span>
+                    <div>
+                      <strong>{beat.overviewAr ?? 'اتصرف في الموقف بطريقتك'}</strong>
+                      <small>{index === 0 ? 'مش لازم تقول جملة بعينها' : 'المهم توصل المعنى وتكمل الموقف طبيعي'}</small>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          </>
+        )}
 
         <section className="practice-start-hints">
           <div className="practice-start-hint-icon" aria-hidden="true">💡</div>
           <div>
-            <strong>الـHint ذكية وبتتعمل وقتها</strong>
-            <p>لو وقفت واضغطت Hint، Otti يبني المساعدة على اللي حصل فعلًا في المحادثة. بنجيب المعنى والكلمات والمثال مرة واحدة، وبعدها أنت تكشف المستوى اللي محتاجه من غير requests زيادة.</p>
+            <strong>واقف؟ استخدم Hint</strong>
+            <p>المساعدة بتتولد من نفس اللحظة في الحوار، ومش بتغيّر المطلوب منك.</p>
           </div>
         </section>
 
