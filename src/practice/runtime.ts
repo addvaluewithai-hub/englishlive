@@ -12,6 +12,14 @@ export type PracticeSupportSummary = {
 
 export type PracticeAttemptStatus = 'valid' | 'genuine_error' | 'needs_repair' | 'off_intent';
 
+export type PracticeAttemptTrace = {
+  beatId: string;
+  status: PracticeAttemptStatus;
+  reasonEn: string;
+  naturalFormEn: string | null;
+  requiresRetry: boolean;
+};
+
 export type PracticeHintBundle = {
   beatId: string;
   intentAr: string;
@@ -62,6 +70,7 @@ export function usePracticeMissionRuntime(scenarioId?: string) {
   const finishAfterClosingRef = useRef(false);
   const finalClosingOutputRef = useRef(false);
   const advanceAuthorizedFromBeatRef = useRef<string | null>(null);
+  const attemptTraceRef = useRef<PracticeAttemptTrace[]>([]);
 
   function clearCurrentBeatHint() {
     hintBundleRef.current = null;
@@ -84,6 +93,7 @@ export function usePracticeMissionRuntime(scenarioId?: string) {
     finishAfterClosingRef.current = false;
     finalClosingOutputRef.current = false;
     advanceAuthorizedFromBeatRef.current = null;
+    attemptTraceRef.current = [];
   }
 
   function judgeAttempt(args: Record<string, unknown>) {
@@ -112,15 +122,27 @@ export function usePracticeMissionRuntime(scenarioId?: string) {
 
     const reason = cleanText(args.reason_en, 240);
     const naturalForm = cleanText(args.natural_form_en, 260);
+    const minorCorrection = Boolean(args.minor_correction === true && naturalForm);
 
     if (status === 'valid') {
+      attemptTraceRef.current.push({
+        beatId: current.id,
+        status,
+        reasonEn: reason,
+        naturalFormEn: minorCorrection ? naturalForm : null,
+        requiresRetry: false,
+      });
       advanceAuthorizedFromBeatRef.current = current.id;
       return {
         status,
         active_beat: current.id,
         authorized_next: current.next ?? null,
+        minor_correction: minorCorrection,
+        natural_form_en: minorCorrection ? naturalForm : '',
         instruction: current.next
-          ? `The communicative intent is complete. You may now call set_practice_beat for ${current.next} and continue the roleplay naturally. Do not teach or praise unnecessarily.`
+          ? minorCorrection
+            ? `The communicative intent is complete. Briefly recast ONE clear learner error using "${naturalForm}" without requiring a retry, then call set_practice_beat for ${current.next} and continue naturally. Do not give a grammar lecture.`
+            : `The communicative intent is complete. You may now call set_practice_beat for ${current.next} and continue the roleplay naturally. Do not teach or praise unnecessarily.`
           : 'The communicative intent is complete. Continue only according to the authored ending.',
       };
     }
@@ -134,6 +156,13 @@ export function usePracticeMissionRuntime(scenarioId?: string) {
           instruction: 'Call judge_practice_attempt again with one short natural corrected form.',
         };
       }
+      attemptTraceRef.current.push({
+        beatId: current.id,
+        status,
+        reasonEn: reason,
+        naturalFormEn: naturalForm,
+        requiresRetry: true,
+      });
       return {
         status,
         active_beat: current.id,
@@ -144,6 +173,13 @@ export function usePracticeMissionRuntime(scenarioId?: string) {
     }
 
     if (status === 'needs_repair') {
+      attemptTraceRef.current.push({
+        beatId: current.id,
+        status,
+        reasonEn: reason,
+        naturalFormEn: null,
+        requiresRetry: false,
+      });
       return {
         status,
         active_beat: current.id,
@@ -152,6 +188,13 @@ export function usePracticeMissionRuntime(scenarioId?: string) {
       };
     }
 
+    attemptTraceRef.current.push({
+      beatId: current.id,
+      status,
+      reasonEn: reason,
+      naturalFormEn: null,
+      requiresRetry: false,
+    });
     return {
       status,
       active_beat: current.id,
@@ -314,7 +357,7 @@ export function usePracticeMissionRuntime(scenarioId?: string) {
         description: [
           'Private pedagogical gate. After EVERY meaningful learner attempt on a required beat, call this BEFORE replying or advancing.',
           'Classify the attempt semantically, not by exact wording.',
-          'valid = the current communicative intent is fulfilled clearly enough to continue. Minor non-target mistakes that do not block meaning should normally still be valid.',
+          'valid = the current communicative intent is fulfilled clearly enough to continue. If there is one clear non-blocking English error worth teaching, keep status=valid, set minor_correction=true and provide one concise natural_form_en so Otti can recast it while continuing.',
           'genuine_error = the learner attempted the current move but made a genuine English error that matters for clarity or the current correction focus. Supply one concise natural_form_en, then correct and require a retry on the same beat.',
           'needs_repair = the attempt is unclear, incomplete or not understandable enough; ask a short clarification and stay on the same beat.',
           'off_intent = the learner may be grammatical but did not perform the current communicative move; redirect without falsely calling the English wrong.',
@@ -341,10 +384,14 @@ export function usePracticeMissionRuntime(scenarioId?: string) {
             },
             natural_form_en: {
               type: 'STRING',
-              description: 'For genuine_error, one short natural corrected learner form. Use an empty string for other statuses.',
+              description: 'For genuine_error, one short natural corrected learner form. For valid + minor_correction=true, one short recast of the single clearest learner error. Otherwise use an empty string.',
+            },
+            minor_correction: {
+              type: 'BOOLEAN',
+              description: 'Only for status=valid. True when meaning succeeds but one clear non-blocking English error is worth a brief recast while continuing. Never use for accent/style or uncertain ASR artifacts.',
             },
           },
-          required: ['beat_id', 'status', 'reason_en', 'natural_form_en'],
+          required: ['beat_id', 'status', 'reason_en', 'natural_form_en', 'minor_correction'],
         },
       },
       handle: judgeAttempt,
@@ -494,6 +541,10 @@ export function usePracticeMissionRuntime(scenarioId?: string) {
     return { ...supportSummaryRef.current };
   }
 
+  function getAttemptTrace() {
+    return attemptTraceRef.current.map((item) => ({ ...item }));
+  }
+
   function noteTeacherOutput() {
     if (finishAfterClosingRef.current) finalClosingOutputRef.current = true;
   }
@@ -520,6 +571,7 @@ export function usePracticeMissionRuntime(scenarioId?: string) {
     revealSupport,
     hideSupport,
     getSupportSummary,
+    getAttemptTrace,
     noteTeacherOutput,
     consumeAutoFinishAfterTurn,
   };
