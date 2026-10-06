@@ -123,8 +123,9 @@ export function PracticeLiveScreen() {
         '',
         '--- QA trace ---',
         ...trace.map((item) => {
+          const original = item.originalEn ? ` | said: ${item.originalEn}` : '';
           const correction = item.betterEn ? ` | better: ${item.betterEn}` : '';
-          return `[${item.beatId}] task=${item.taskStatus} | language=${item.languageStatus}${item.requiresRetry ? ' | retry required' : ''}${correction}`;
+          return `[${item.beatId}] task=${item.taskStatus} | language=${item.languageStatus}${item.requiresRetry ? ' | retry required' : ''}${original}${correction}`;
         }),
       ] : []),
     ].join('\n');
@@ -178,11 +179,12 @@ export function PracticeLiveScreen() {
     if (ending || !mission) return;
     setEnding(true);
     const support = runtime.getSupportSummary();
+    const corrections = runtime.getCorrectionSummary();
     await stopTransport();
     if (completed) {
       navigate(`/practice/complete/${mission.slug}`, {
         replace: true,
-        state: { support, durationSeconds: durationSeconds(), conversationText: conversationText() },
+        state: { support, corrections, durationSeconds: durationSeconds(), conversationText: conversationText() },
       });
     } else {
       navigate(`/practice/mission/${mission.slug}`, { replace: true });
@@ -280,21 +282,7 @@ export function PracticeLiveScreen() {
       mic.setEnabled(false);
       microphone.current = mic;
 
-      const prompt = [
-        `You are Otti, acting as ${mission.aiRoleAr} in a small real-life English roleplay.`,
-        `Learner role: ${mission.learnerRoleAr}. Practical goal: ${mission.goalAr}`,
-        runtime.promptEn,
-        `Mission level is ${mission.level}. Keep wording, turn length, interaction complexity and support inside the authored level bounds. Give the learner enough silence to think.`,
-        'Conversation comes first. Stay in the authored role. Do not narrate the lesson, mention beats, hints, tools, scoring or progress.',
-        'A UI PRACTICE HINT REQUEST is a private control event, never learner speech and never evidence that the learner attempted an answer.',
-        'When that event arrives, do not talk. Call provide_practice_hint_bundle exactly once, echo its request_id exactly, and put the Arabic intent, contextual note if useful, useful English chunks and a complete example response in that one tool call. Then end silently.',
-        'The generated full response is only help for that exact conversational moment. Never treat a different correct sentence as wrong because it differs from the example.',
-        'After EVERY meaningful learner turn, before replying or advancing, silently call evaluate_practice_turn exactly once for the active beat.',
-        'Evaluate task completion and English quality separately. The UI owns all teaching feedback and corrected wording.',
-        'Never read feedback_ar, feedback_en or better_en aloud. If retry_required is true, stay on the same beat and give at most one short neutral cue such as "Try that again."',
-        'If the task is fulfilled with a minor English error, let the UI show Better English and continue the roleplay naturally without forcing a retry.',
-        'Do not overpraise. React like the normal friendly real-world partner described by the authored mission and keep turns appropriate to its level.',
-      ].join('\n\n');
+      const prompt = runtime.promptEn;
 
       await queue.unlock();
       await live.connect(prompt, { voiceName: characterConfig.voiceName ?? undefined });
