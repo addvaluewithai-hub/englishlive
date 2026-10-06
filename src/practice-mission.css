@@ -584,6 +584,15 @@
 }
 
 @media (max-width: 520px) {
+  .practice-start-brief-facts {
+    grid-template-columns: 1fr;
+  }
+
+  .practice-copy-log {
+    padding: 6px 8px;
+    font-size: 10px;
+  }
+
   .practice-start-role-row,
   .practice-start-meta {
     gap: 6px;
@@ -605,4 +614,122 @@
   .practice-live-side-label {
     display: none;
   }
+}
+
+
+.practice-start-brief {
+  display: grid;
+  gap: 14px;
+  padding: 17px;
+  border: 1px solid var(--practice-line);
+  border-radius: 20px;
+  background: #fff;
+}
+
+.practice-start-brief header small,
+.practice-start-brief-moves > small,
+.practice-start-brief footer small {
+  display: block;
+  margin-bottom: 4px;
+  color: #8a83a8;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.practice-start-brief header strong,
+.practice-start-brief footer strong {
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.practice-start-brief-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.practice-start-brief-facts > div {
+  padding: 12px;
+  border-radius: 14px;
+  background: #f7f7fb;
+}
+
+.practice-start-brief-facts small,
+.practice-start-brief-facts strong {
+  display: block;
+}
+
+.practice-start-brief-facts small {
+  margin-bottom: 4px;
+  color: var(--practice-muted);
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.practice-start-brief-facts strong {
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.practice-start-brief-moves ol {
+  display: grid;
+  gap: 8px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.practice-start-brief-moves li {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 9px;
+  align-items: start;
+}
+
+.practice-start-brief-moves li > span {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  background: #f1eefc;
+  color: var(--practice-accent);
+  font-size: 11px;
+  font-weight: 950;
+}
+
+.practice-start-brief-moves li > strong {
+  padding-top: 4px;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.practice-start-brief footer {
+  padding: 11px 12px;
+  border-radius: 13px;
+  background: #f5f2ff;
+}
+
+.practice-copy-log {
+  padding: 7px 10px;
+  border: 1px solid rgba(255,255,255,.24);
+  border-radius: 10px;
+  background: rgba(255,255,255,.12);
+  color: inherit;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.practice-complete-copy {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid rgba(117, 89, 217, .2);
+  border-radius: 14px;
+  background: #faf8ff;
+  color: #634fc0;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
 }
