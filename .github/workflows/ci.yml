@@ -20,3 +20,8 @@ jobs:
       - run: npm run test:ui
 
       - run: npm run test:practice
+      - name: Trial real Practice voice on the rescue preview
+        if: github.head_ref == 'feat/practice-conversation-rescue' && github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          PRACTICE_TRIAL_ORIGIN: 'https://feat-practice-conversation-r.englishlive-a04.pages.dev'
+        run: node --import tsx scripts/trial-practice-live.mjs

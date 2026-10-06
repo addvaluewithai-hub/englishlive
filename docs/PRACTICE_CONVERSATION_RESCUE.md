@@ -22,7 +22,7 @@ The B1 wrong-order scenario has four flexible opportunities. Available remedies 
 
 ## Validation
 
-Run `npm run check`, `npm run test:ui`, and `npm run test:practice`. CI runs all three. The Practice tests exercise authenticated JWT verification with a mocked provider, transcript-source safeguards, malformed responses, goal filtering, multi-layer hints, every mission's opening, and Live wire configuration with a fake socket. They do not establish real provider judgement quality or real microphone latency.
+Run `npm run check`, `npm run test:ui`, and `npm run test:practice`. CI runs all three. The Practice tests exercise authenticated JWT verification with a mocked provider, transcript-source safeguards, malformed responses, goal filtering, multi-layer hints, every mission's opening, and Live wire configuration with a fake socket. They do not establish real provider judgement quality or real microphone latency. On this same-repository rescue branch, CI also runs a real Live provider trial with fictional typed A2/B1 dialogue through the app transport and verifies audio/transcript responses. It prints dialogue and text-to-first-audio timings without logging tokens. Microphone capture, audible playback latency, and the authenticated coach provider still require signed-in trials.
 
 Try these conversations in the deployed preview:
 
