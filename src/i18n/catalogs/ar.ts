@@ -237,6 +237,7 @@ export const ar = {
   'practice.status.error.body': 'جرّب تبدأ تاني',
   'practice.heardPrefix': 'سمعتك:',
   'practice.smartHintSideLabel': 'Hint ذكية',
+  'practice.moreComingSoon': 'خيارات إضافية — قريبًا',
   'practice.startLabel': 'ابدأ التدريب',
   'practice.ending': 'بنقفل الـMission…',
   'practice.startError': 'تعذر بدء الـMission.',
