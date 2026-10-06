@@ -12,6 +12,7 @@ import { loadPublishedCharacter } from '../content/client';
 import { useI18n } from '../i18n/LocaleProvider';
 import { GeminiLiveTransport } from '../live/GeminiLiveTransport';
 import type { LiveStatus } from '../live/types';
+import { PracticeFeedbackCard } from '../practice/PracticeFeedbackCard';
 import { PracticeHintCard } from '../practice/PracticeHintCard';
 import { practiceMissionContractBySlug } from '../practice/missions/catalog';
 import { usePracticeMissionRuntime } from '../practice/runtime';
@@ -113,7 +114,7 @@ export function PracticeLiveScreen() {
     if (pendingTeacher && !(last?.speaker === 'otti' && last.text === pendingTeacher)) {
       turns.push({ speaker: 'otti', text: pendingTeacher });
     }
-    const trace = runtime.getAttemptTrace();
+    const trace = runtime.getEvaluationTrace();
     return [
       `Practice: ${mission.level} — ${mission.titleEn}`,
       '',
@@ -122,8 +123,8 @@ export function PracticeLiveScreen() {
         '',
         '--- QA trace ---',
         ...trace.map((item) => {
-          const correction = item.naturalFormEn ? ` | correction: ${item.naturalFormEn}` : '';
-          return `[${item.beatId}] ${item.status}${item.requiresRetry ? ' | retry required' : ''}${correction}`;
+          const correction = item.betterEn ? ` | better: ${item.betterEn}` : '';
+          return `[${item.beatId}] task=${item.taskStatus} | language=${item.languageStatus}${item.requiresRetry ? ' | retry required' : ''}${correction}`;
         }),
       ] : []),
     ].join('\n');
@@ -288,9 +289,10 @@ export function PracticeLiveScreen() {
         'A UI PRACTICE HINT REQUEST is a private control event, never learner speech and never evidence that the learner attempted an answer.',
         'When that event arrives, do not talk. Call provide_practice_hint_bundle exactly once, echo its request_id exactly, and put the Arabic intent, contextual note if useful, useful English chunks and a complete example response in that one tool call. Then end silently.',
         'The generated full response is only help for that exact conversational moment. Never treat a different correct sentence as wrong because it differs from the example.',
-        'After EVERY meaningful learner attempt, before replying or advancing, silently call judge_practice_attempt for the active beat. Never advance unless it returns valid.',
-        'When judge_practice_attempt returns genuine_error, correct it briefly using the supplied natural form and let the learner retry the SAME move before moving on.',
-        'When judge_practice_attempt returns valid with minor_correction=true, briefly recast that ONE clear error and continue without forcing a retry. Never correct accent/style or uncertain transcript artifacts.',
+        'After EVERY meaningful learner turn, before replying or advancing, silently call evaluate_practice_turn exactly once for the active beat.',
+        'Evaluate task completion and English quality separately. The UI owns all teaching feedback and corrected wording.',
+        'Never read feedback_ar, feedback_en or better_en aloud. If retry_required is true, stay on the same beat and give at most one short neutral cue such as "Try that again."',
+        'If the task is fulfilled with a minor English error, let the UI show Better English and continue the roleplay naturally without forcing a retry.',
         'Do not overpraise. React like the normal friendly real-world partner described by the authored mission and keep turns appropriate to its level.',
       ].join('\n\n');
 
@@ -501,6 +503,8 @@ export function PracticeLiveScreen() {
             ? (locale === 'ar' ? 'تم النسخ ✓' : 'Copied ✓')
             : (locale === 'ar' ? 'نسخ الحوار' : 'Copy conversation')}
         </button>
+
+        <PracticeFeedbackCard runtime={runtime} />
 
         <PracticeHintCard runtime={runtime} learnerTurn={learnerTurn} onRequestHint={requestContextualHint} />
 
