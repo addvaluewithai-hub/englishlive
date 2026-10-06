@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { OttiMark } from '../character/otti/OttiMark';
 import { useI18n } from '../i18n/LocaleProvider';
@@ -9,6 +10,7 @@ import styles from './PracticeJourney.module.css';
 type CompletionState = {
   support?: PracticeSupportSummary;
   durationSeconds?: number;
+  conversationText?: string;
 };
 
 export function PracticeCompleteScreen() {
@@ -20,6 +22,14 @@ export function PracticeCompleteScreen() {
   const state = (location.state ?? {}) as CompletionState;
   const support = state.support ?? { intentHints: 0, usefulLanguageReveals: 0, fullHelpReveals: 0 };
   const usedHelp = support.intentHints + support.usefulLanguageReveals + support.fullHelpReveals > 0;
+  const [copied, setCopied] = useState(false);
+
+  async function copyConversation() {
+    if (!state.conversationText) return;
+    await navigator.clipboard.writeText(state.conversationText);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1800);
+  }
 
   if (!mission) {
     return (
@@ -56,6 +66,12 @@ export function PracticeCompleteScreen() {
         <strong>{usedHelp ? copy.usedHelpTitle : copy.noHelpTitle}</strong>
         <p>{usedHelp ? copy.usedHelpBody : copy.noHelpBody}</p>
       </section>
+
+      {state.conversationText ? (
+        <button type="button" className="practice-complete-copy" onClick={() => void copyConversation()}>
+          {copied ? copy.copiedConversation : copy.copyConversation}
+        </button>
+      ) : null}
 
       <div className="practice-complete-actions">
         <Link className="practice-complete-primary" to={`/practice/mission/${mission.slug}`}>{copy.retry}</Link>
