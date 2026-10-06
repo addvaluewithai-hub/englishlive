@@ -13,6 +13,21 @@ export const A2_ORDER_WITH_PREFERENCES_MISSION: PracticeMissionContract = {
   aiRoleAr: 'موظف الكافيه',
   goalAr: 'اطلب مشروب، قول تفضيلاتك في الحجم والحرارة والإضافات، وكمّل الطلب طبيعي.',
   durationMinutes: 5,
+  briefingAr: {
+    situationAr: 'أنت في كافيه وعايز تطلب مشروب بالطريقة اللي تناسبك.',
+    factsAr: [
+      { label: 'المتاح', value: 'Coffee أو Tea' },
+      { label: 'الاختيارات', value: 'Small/Large • Hot/Cold • Milk/Sugar' },
+    ],
+    requiredMovesAr: [
+      'اطلب Coffee أو Tea.',
+      'اختار الحجم.',
+      'قول تفضلك: Hot أو Cold.',
+      'حدد Milk/Sugar أو ارفضهم.',
+      'اقفل الطلب طبيعي.',
+    ],
+    successAr: 'تكمّل الطلب وتوصل كل تفضيلاتك بوضوح.',
+  },
   languageGrounding: {
     sourceRepo: 'addvaluewithai-hub/english-course',
     sourceLevel: 'A2',
