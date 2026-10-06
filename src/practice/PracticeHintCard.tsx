@@ -1,7 +1,7 @@
 import { useI18n } from '../i18n/LocaleProvider';
-import { usePracticeMissionRuntime } from './runtime';
+import type { useConversationPracticeRuntime } from './conversationRuntime';
 
-type PracticeRuntime = ReturnType<typeof usePracticeMissionRuntime>;
+type PracticeRuntime = ReturnType<typeof useConversationPracticeRuntime>;
 
 export function PracticeHintCard({
   runtime,
@@ -80,3 +80,4 @@ export function PracticeHintCard({
     </aside>
   );
 }
+

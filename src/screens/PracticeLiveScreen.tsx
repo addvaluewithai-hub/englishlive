@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { MicrophonePcmStream } from '../audio/MicrophonePcmStream';
 import { PcmPlaybackQueue } from '../audio/PcmPlaybackQueue';
 import { CharacterHost, type CharacterHostHandle } from '../character/CharacterHost';
@@ -15,13 +15,12 @@ import type { LiveStatus } from '../live/types';
 import { PracticeFeedbackCard } from '../practice/PracticeFeedbackCard';
 import { PracticeHintCard } from '../practice/PracticeHintCard';
 import { practiceMissionContractBySlug } from '../practice/missions/catalog';
-import { usePracticeMissionRuntime } from '../practice/runtime';
+import { useConversationPracticeRuntime } from '../practice/conversationRuntime';
+import type { ConversationTurn } from '../practice/conversationTypes';
+import { buildConversationOpening } from '../practice/conversationPrompt';
 import { LiveConversationHeader, LiveConversationStatus } from '../ui/product/LiveConversationChrome';
 
-type PracticeConversationTurn = {
-  speaker: 'learner' | 'otti';
-  text: string;
-};
+type PracticeConversationTurn = ConversationTurn;
 
 function pcmSampleRate(mimeType: string) {
   const match = mimeType.match(/rate=(\d+)/i);
@@ -48,7 +47,9 @@ export function PracticeLiveScreen() {
   const navigate = useNavigate();
   const { t, locale } = useI18n();
   const mission = practiceMissionContractBySlug(missionId);
-  const runtime = usePracticeMissionRuntime(missionId);
+  const runtime = useConversationPracticeRuntime(missionId);
+  const [searchParams] = useSearchParams();
+  const silenceDurationMs = searchParams.get('pace') === 'relaxed' ? 2400 : 1200;
   const character = getCharacterDefinition('otti');
   const visualQa = import.meta.env.VITE_VISUAL_QA === '1';
 
@@ -59,9 +60,16 @@ export function PracticeLiveScreen() {
   const performer = useRef<CharacterPerformanceController | null>(null);
   const startedAtMs = useRef<number | null>(null);
   const manualInterrupt = useRef(false);
+  const sessionGeneration = useRef(0);
   const teacherDraftRef = useRef('');
   const learnerDraftRef = useRef('');
-  const hintTimeoutRef = useRef<number | null>(null);
+  const lastSpeechAt = useRef<number | null>(null);
+  const firstReplyPending = useRef(false);
+  const replyTimings = useRef<Array<{ turn: number; delayMs: number }>>([]);
+  const pausedRef = useRef(false);
+  const repeatAfterPause = useRef(false);
+  const [paused, setPaused] = useState(false);
+  const [waitingForReply, setWaitingForReply] = useState(false);
   const conversationLogRef = useRef<PracticeConversationTurn[]>([]);
   const learnerTurnLoggedRef = useRef(false);
   const copyResetTimerRef = useRef<number | null>(null);
@@ -87,7 +95,12 @@ export function PracticeLiveScreen() {
     if (!value) return;
     const last = conversationLogRef.current.at(-1);
     if (last?.speaker === speaker && last.text === value) return;
-    conversationLogRef.current.push({ speaker, text: value });
+    conversationLogRef.current.push({ id: `turn-${conversationLogRef.current.length + 1}`, speaker, text: value });
+    runtime.invalidateHint();
+    if (speaker === 'learner') {
+      firstReplyPending.current = true;
+      void runtime.reviewTurn([...conversationLogRef.current]);
+    }
   }
 
   function flushLearnerTurn() {
@@ -108,11 +121,11 @@ export function PracticeLiveScreen() {
     if (!mission) return '';
     const turns = [...conversationLogRef.current];
     const pendingLearner = learnerDraftRef.current.trim();
-    if (pendingLearner && !learnerTurnLoggedRef.current) turns.push({ speaker: 'learner', text: pendingLearner });
+    if (pendingLearner && !learnerTurnLoggedRef.current) turns.push({ id: 'pending-learner', speaker: 'learner', text: pendingLearner });
     const pendingTeacher = teacherDraftRef.current.trim();
     const last = turns.at(-1);
     if (pendingTeacher && !(last?.speaker === 'otti' && last.text === pendingTeacher)) {
-      turns.push({ speaker: 'otti', text: pendingTeacher });
+      turns.push({ id: 'pending-otti', speaker: 'otti', text: pendingTeacher });
     }
     const trace = runtime.getEvaluationTrace();
     return [
@@ -121,13 +134,16 @@ export function PracticeLiveScreen() {
       ...turns.map((turn) => `${turn.speaker === 'otti' ? 'Otti' : 'Learner'}: ${turn.text}`),
       ...(trace.length ? [
         '',
-        '--- QA trace ---',
+        '--- Background coach ---',
         ...trace.map((item) => {
           const original = item.originalEn ? ` | said: ${item.originalEn}` : '';
           const correction = item.betterEn ? ` | better: ${item.betterEn}` : '';
-          return `[${item.beatId}] task=${item.taskStatus} | language=${item.languageStatus}${item.requiresRetry ? ' | retry required' : ''}${original}${correction}`;
+          return `[${item.beatId}] language=${item.languageStatus}${original}${correction} | ${item.reasonEn}`;
         }),
       ] : []),
+      '',
+      `Voice: no tools | pause tolerance: ${silenceDurationMs}ms`,
+      ...replyTimings.current.map((sample) => `Reply ${sample.turn}: ${sample.delayMs}ms after last detected learner speech`),
     ].join('\n');
   }
 
@@ -153,14 +169,9 @@ export function PracticeLiveScreen() {
     if (!enabled) setMicLevel(0);
   }
 
-  function clearHintTimeout() {
-    if (hintTimeoutRef.current === null) return;
-    window.clearTimeout(hintTimeoutRef.current);
-    hintTimeoutRef.current = null;
-  }
 
   async function stopTransport() {
-    clearHintTimeout();
+    sessionGeneration.current++;
     transport.current?.endAudioStream();
     transport.current?.close();
     transport.current = null;
@@ -178,13 +189,15 @@ export function PracticeLiveScreen() {
   async function finishMission(completed: boolean) {
     if (ending || !mission) return;
     setEnding(true);
+    flushLearnerTurn();
+    flushTeacherTurn();
     const support = runtime.getSupportSummary();
     const corrections = runtime.getCorrectionSummary();
     await stopTransport();
     if (completed) {
       navigate(`/practice/complete/${mission.slug}`, {
         replace: true,
-        state: { support, corrections, durationSeconds: durationSeconds(), conversationText: conversationText() },
+        state: { support, corrections, durationSeconds: durationSeconds(), conversationText: conversationText(), transcript: [...conversationLogRef.current], achievedGoalIds: runtime.achievedGoalIds },
       });
     } else {
       navigate(`/practice/mission/${mission.slug}`, { replace: true });
@@ -204,10 +217,19 @@ export function PracticeLiveScreen() {
     setTeacherText('');
     setLearnerDraft('');
     setConversationCopied(false);
+    setPaused(false);
+    pausedRef.current = false;
+    setWaitingForReply(false);
+    replyTimings.current = [];
     runtime.reset();
+    repeatAfterPause.current = false;
+    firstReplyPending.current = false;
+    lastSpeechAt.current = null;
+    const session = ++sessionGeneration.current;
 
     try {
       const publishedCharacter = await loadPublishedCharacter(character);
+      if (session !== sessionGeneration.current) return;
       const characterConfig = publishedCharacter.content;
       const characterPerformance = new CharacterPerformanceController(() => host.current);
       performer.current = characterPerformance;
@@ -222,7 +244,8 @@ export function PracticeLiveScreen() {
           characterPerformance.speechStart();
         },
         onSpeechEnd: () => {
-          setLearnerMicEnabled(true);
+          setWaitingForReply(false);
+          setLearnerMicEnabled(!pausedRef.current);
           setStatus((current) => current === 'idle' || current === 'error' ? current : 'listening');
           characterPerformance.speechEnd();
         },
@@ -239,9 +262,9 @@ export function PracticeLiveScreen() {
           setLearnerDraft(next);
         },
         onOutputTranscript: (text) => {
+          if (pausedRef.current) { repeatAfterPause.current = true; return; }
           if (manualInterrupt.current) return;
           flushLearnerTurn();
-          runtime.noteTeacherOutput();
           setLearnerMicEnabled(false);
           queue.pushTranscript(text);
           const next = appendTranscript(teacherDraftRef.current, text);
@@ -249,9 +272,15 @@ export function PracticeLiveScreen() {
           setTeacherText(next);
         },
         onAudio: (data, mimeType) => {
+          if (pausedRef.current) { repeatAfterPause.current = true; return; }
           if (manualInterrupt.current) return;
           flushLearnerTurn();
           setLearnerMicEnabled(false);
+          if (firstReplyPending.current && lastSpeechAt.current !== null) {
+            replyTimings.current.push({ turn: replyTimings.current.length + 1, delayMs: Math.round(performance.now() - lastSpeechAt.current) });
+            firstReplyPending.current = false;
+          }
+          setWaitingForReply(false);
           void queue.enqueue(data, pcmSampleRate(mimeType));
         },
         onPerformanceCue: (cue) => characterPerformance.applyCue(cue),
@@ -262,7 +291,8 @@ export function PracticeLiveScreen() {
           manualInterrupt.current = false;
           queue.interrupt();
           characterPerformance.interrupt();
-          setLearnerMicEnabled(true);
+          setLearnerMicEnabled(!pausedRef.current);
+          setWaitingForReply(false);
           setStatus('listening');
         },
         onTurnComplete: () => {
@@ -270,12 +300,9 @@ export function PracticeLiveScreen() {
           queue.markTurnComplete();
           flushTeacherTurn();
           teacherDraftRef.current = '';
-          if (runtime.consumeAutoFinishAfterTurn()) {
-            window.setTimeout(() => void finishMission(true), 500);
-          }
         },
         onError: (message) => setError(message),
-      }, runtime.tools);
+      });
       transport.current = live;
 
       const mic = new MicrophonePcmStream();
@@ -285,12 +312,19 @@ export function PracticeLiveScreen() {
       const prompt = runtime.promptEn;
 
       await queue.unlock();
-      await live.connect(prompt, { voiceName: characterConfig.voiceName ?? undefined });
+      if (session !== sessionGeneration.current) { await queue.close(); return; }
+      await live.connect(prompt, { voiceName: characterConfig.voiceName ?? undefined, silenceDurationMs });
+      if (session !== sessionGeneration.current) { live.close(); await queue.close(); return; }
       startedAtMs.current = Date.now();
       setElapsedSeconds(0);
-      await mic.start((chunk) => live.sendAudio(chunk), setMicLevel);
-      live.sendText(mission.openingMoveEn);
+      await mic.start((chunk) => live.sendAudio(chunk), (level) => {
+        setMicLevel(level);
+        if (level > 0.045) lastSpeechAt.current = performance.now();
+      });
+      if (session !== sessionGeneration.current) { await mic.stop(); return; }
+      live.sendText(buildConversationOpening(mission));
     } catch (reason) {
+      if (session !== sessionGeneration.current) return;
       const message = reason instanceof Error ? reason.message : t('practice.startError');
       setError(message);
       setStatus('error');
@@ -313,9 +347,9 @@ export function PracticeLiveScreen() {
     const startTimer = window.setTimeout(() => void startLive(), 0);
     const clock = window.setInterval(() => setElapsedSeconds(durationSeconds()), 1000);
     return () => {
+      sessionGeneration.current++;
       window.clearTimeout(startTimer);
       window.clearInterval(clock);
-      clearHintTimeout();
       if (copyResetTimerRef.current !== null) window.clearTimeout(copyResetTimerRef.current);
       transport.current?.close();
       void microphone.current?.stop();
@@ -332,9 +366,6 @@ export function PracticeLiveScreen() {
     else if (status === 'idle' || status === 'error') host.current?.setMode('idle');
   }, [status]);
 
-  useEffect(() => {
-    if (!runtime.hintLoading) clearHintTimeout();
-  }, [runtime.hintLoading]);
 
   function interruptTeacher() {
     const live = transport.current;
@@ -344,7 +375,8 @@ export function PracticeLiveScreen() {
     manualInterrupt.current = true;
     playback.current?.interrupt();
     performer.current?.interrupt();
-    setLearnerMicEnabled(true);
+    setLearnerMicEnabled(!pausedRef.current);
+    setWaitingForReply(false);
     setStatus('listening');
   }
 
@@ -358,28 +390,30 @@ export function PracticeLiveScreen() {
   }
 
   function requestContextualHint() {
-    if (visualQa) return;
-    const live = transport.current;
-    const beat = runtime.activeBeat;
-    if (!live?.connected || status !== 'listening' || !micOpen || !beat || beat.type === 'ending') return;
-    const requestId = runtime.beginHintRequest();
-    if (!requestId) return;
+    if (visualQa || !transport.current?.connected || paused || waitingForReply) return;
+    void runtime.requestHint([...conversationLogRef.current]);
+  }
 
-    clearHintTimeout();
-    live.sendText([
-      'UI PRACTICE HINT REQUEST — private control event, NOT learner speech, NOT an answer attempt.',
-      `request_id: ${requestId}`,
-      `Current authored beat: ${beat.id}.`,
-      `Current learner intent: ${beat.learnerIntentEn}`,
-      'Use the ENTIRE conversation context up to this moment, including any detour, clarification, unavailable option or correction that just happened.',
-      'Call provide_practice_hint_bundle exactly once and echo the request_id exactly. Fill ALL layers in that single tool call: contextual Egyptian-Arabic intent, optional context/recovery note, useful English chunks, and one complete natural learner response that works right now.',
-      'Keep the support appropriate to this mission level and scenario truth. The full response is an example, not a required sentence.',
-      'Do not speak, do not advance the beat, do not answer on the learner behalf outside the tool call, and after the tool result end the turn silently.',
-    ].join('\n'));
-    hintTimeoutRef.current = window.setTimeout(() => {
-      runtime.failHintRequest(t('practice.hintTimeout'));
-      hintTimeoutRef.current = null;
-    }, 8_000);
+  function finishSpeaking() {
+    if (!transport.current?.connected || pausedRef.current || !learnerDraftRef.current.trim()) return;
+    setLearnerMicEnabled(false);
+    transport.current.endAudioStream();
+    setWaitingForReply(true);
+  }
+
+  function togglePause() {
+    const next = !pausedRef.current;
+    pausedRef.current = next;
+    setPaused(next);
+    if (next) {
+      if (status === 'speaking') { repeatAfterPause.current = true; interruptTeacher(); }
+      setLearnerMicEnabled(false);
+    } else if (repeatAfterPause.current && transport.current?.connected) {
+      repeatAfterPause.current = false;
+      manualInterrupt.current = false;
+      setWaitingForReply(true);
+      transport.current.sendText('PRIVATE UI RESUME: the learner paused and missed your last reply. Briefly repeat it, then wait. This is a control event, not learner speech.');
+    } else if (status === 'listening' && !waitingForReply) setLearnerMicEnabled(true);
   }
 
   function submitText(event: FormEvent) {
@@ -394,8 +428,12 @@ export function PracticeLiveScreen() {
     const live = transport.current;
     if (!live?.connected || status !== 'listening' || !micOpen) return;
     appendConversationTurn('learner', value);
+    learnerDraftRef.current = value;
+    lastSpeechAt.current = performance.now();
     learnerTurnLoggedRef.current = true;
     live.sendText(value);
+    setWaitingForReply(true);
+    setLearnerMicEnabled(false);
     setTypedText('');
     setKeyboardOpen(false);
   }
@@ -411,7 +449,7 @@ export function PracticeLiveScreen() {
 
   const connecting = status === 'connecting' || status === 'reconnecting';
   const teacherSpeaking = status === 'speaking';
-  const learnerTurn = status === 'listening' && micOpen;
+  const learnerTurn = status === 'listening' && micOpen && !paused && !waitingForReply;
   const statusText = {
     idle: { title: t('practice.status.idle.title'), body: t('practice.status.idle.body') },
     connecting: { title: t('practice.status.connecting.title'), body: t('practice.status.connecting.body') },
@@ -431,8 +469,8 @@ export function PracticeLiveScreen() {
           </>
         )}
         meta={<>◷ <bdi dir="ltr">{timeLabel(elapsedSeconds)}</bdi></>}
-        onClose={() => void finishMission(false)}
-        closeLabel={t('practice.leave')}
+        onClose={() => void finishMission(true)}
+        closeLabel={locale === 'ar' ? 'إنهاء ومراجعة' : 'Finish and review'}
         disabled={ending}
         brandText={t('practice.headerTitle')}
         className="sp-scenario-live-header"
@@ -442,11 +480,11 @@ export function PracticeLiveScreen() {
       {mission.briefing ? (
         <aside className="practice-live-task" aria-label={locale === 'ar' ? 'ملخص المهمة' : 'Mission summary'}>
           <div>
-            <small>{locale === 'ar' ? 'دلوقتي' : 'Now'}</small>
+            <small>{locale === 'ar' ? 'هدفك' : 'Your goal'}</small>
             <strong>
               {locale === 'ar'
-                ? (runtime.activeBeat?.overviewAr ?? mission.briefing.situationAr)
-                : (runtime.activeBeat?.learnerIntentEn ?? mission.briefing.situationEn)}
+                ? mission.goalAr
+                : mission.briefing.successEn}
             </strong>
           </div>
           {mission.briefing.facts?.map((fact) => (
@@ -472,8 +510,8 @@ export function PracticeLiveScreen() {
 
         <LiveConversationStatus
           status={status}
-          title={statusText.title}
-          body={statusText.body}
+          title={paused ? (locale === 'ar' ? 'خد وقتك' : 'Take your time') : waitingForReply ? (locale === 'ar' ? 'Otti بيرد عليك' : 'Otti is responding') : statusText.title}
+          body={paused ? (locale === 'ar' ? 'راجع ملاحظاتك، واضغط نكمل لما تكون جاهز.' : 'Review your notes, then resume when ready.') : statusText.body}
           learnerTurn={learnerTurn}
         />
 
@@ -486,6 +524,23 @@ export function PracticeLiveScreen() {
       </div>
 
       <div className="fs-live-controls practice-live-controls">
+        <div className="practice-conversation-goals" aria-label={locale === 'ar' ? 'فرص الكلام' : 'Speaking opportunities'}>
+          {runtime.goals.map((goal) => <span key={goal.id} className={runtime.achievedGoalIds.includes(goal.id) ? 'is-observed' : ''}>
+            <span aria-hidden="true">{runtime.achievedGoalIds.includes(goal.id) ? '✓' : '○'}</span>{' '}
+            {locale === 'ar' ? goal.overviewAr : goal.learnerIntentEn}
+          </span>)}
+        </div>
+        <div className="practice-conversation-actions">
+          <button type="button" onClick={togglePause} disabled={connecting || ending || waitingForReply}>
+            {paused ? (locale === 'ar' ? 'نكمل' : 'Resume') : (locale === 'ar' ? 'وقفة للمراجعة' : 'Pause to review')}
+          </button>
+          <button type="button" onClick={finishSpeaking} disabled={!learnerTurn || !learnerDraft.trim()}>
+            {locale === 'ar' ? 'خلصت كلامي' : 'Done speaking'}
+          </button>
+          <button type="button" onClick={() => void finishMission(true)} disabled={ending}>
+            {locale === 'ar' ? 'إنهاء ومراجعة' : 'Finish and review'}
+          </button>
+        </div>
         <button type="button" className="practice-copy-log" onClick={() => void copyConversation()}>
           {conversationCopied
             ? (locale === 'ar' ? 'تم النسخ ✓' : 'Copied ✓')
@@ -494,7 +549,7 @@ export function PracticeLiveScreen() {
 
         <PracticeFeedbackCard runtime={runtime} />
 
-        <PracticeHintCard runtime={runtime} learnerTurn={learnerTurn} onRequestHint={requestContextualHint} />
+        <PracticeHintCard runtime={runtime} learnerTurn={learnerTurn && !paused} onRequestHint={requestContextualHint} />
 
         {keyboardOpen ? (
           <form className="fs-type-row" onSubmit={submitText}>
@@ -547,6 +602,7 @@ export function PracticeLiveScreen() {
         </div>
 
         <div className="fs-mic-meter" aria-hidden="true"><span style={{ width: `${Math.max(learnerTurn ? 3 : 0, micLevel * 100)}%` }} /></div>
+        {runtime.coachError ? <p className="practice-coach-status">{locale === 'ar' ? 'الملاحظات مش متاحة حاليًا. كمل كلامك، ونحاول تاني في المراجعة.' : 'Feedback is unavailable for now. Keep talking; we will retry at review.'}</p> : null}
         {error ? <p className="fs-live-error" role="alert">{error}</p> : null}
       </div>
 
@@ -562,3 +618,4 @@ export function PracticeLiveScreen() {
     </section>
   );
 }
+

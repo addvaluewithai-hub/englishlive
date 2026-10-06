@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ProductIcon } from '../components/ProductIcon';
 import { useI18n } from '../i18n/LocaleProvider';
@@ -31,6 +32,7 @@ export function PracticeMissionScreen() {
   const copy = practiceJourneyCopy[locale].mission;
   const { missionId } = useParams();
   const mission = practiceMissionContractBySlug(missionId);
+  const [relaxed, setRelaxed] = useState(false);
 
   if (!mission) {
     return (
@@ -96,7 +98,7 @@ export function PracticeMissionScreen() {
             ) : null}
 
             <div className="practice-start-brief-moves">
-              <small>{copy.required}</small>
+              <small>{locale === 'ar' ? 'فرصتك تتدرّب على' : 'Opportunities to practise'}</small>
               <ol>
                 {briefingMoves.map((move, index) => (
                   <li key={move}>
@@ -156,7 +158,12 @@ export function PracticeMissionScreen() {
           <span>✓ {copy.correction}</span>
         </div>
 
-        <Link className="practice-start-button" to={`/practice/live/${mission.slug}`}>
+        <label className="practice-pause-choice">
+          <input type="checkbox" checked={relaxed} onChange={(event) => setRelaxed(event.target.checked)} />
+          <span>{locale === 'ar' ? 'وقت تفكير أطول بين الجمل' : 'More thinking time between phrases'}</span>
+        </label>
+        <p className="practice-start-conversation-note">{locale === 'ar' ? 'اتكلم بطريقتك. الملاحظات هتستناك، وإنت تختار وقت المراجعة.' : 'Use your own words. Feedback can wait; you choose when to review.'}</p>
+        <Link className="practice-start-button" to={`/practice/live/${mission.slug}${relaxed ? '?pace=relaxed' : ''}`}>
           <ProductIcon name="speak" size={30} />
           <span>{copy.start}</span>
           <ProductIcon name="chevron" size={23} />
@@ -165,3 +172,4 @@ export function PracticeMissionScreen() {
     </section>
   );
 }
+

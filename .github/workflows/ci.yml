@@ -18,3 +18,5 @@ jobs:
       - run: npm ci
       - run: npm run check
       - run: npm run test:ui
+
+      - run: npm run test:practice

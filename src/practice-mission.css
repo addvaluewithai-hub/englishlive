@@ -1225,3 +1225,55 @@
   color: var(--color-text-muted, #72798d);
   font-size: 12px;
 }
+.practice-conversation-goals {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  width: min(760px, 100%);
+  margin: 0 auto 12px;
+}
+.practice-conversation-goals > span {
+  border: 1px solid var(--color-border, #e4dff0);
+  border-radius: 10px;
+  padding: 6px 9px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--color-text-muted, #6c6580);
+  background: var(--color-surface, #fff);
+}
+.practice-conversation-goals > .is-observed {
+  color: var(--color-primary, #6650a0);
+  background: color-mix(in srgb, var(--color-primary, #7559d9) 9%, var(--color-surface, #fff));
+}
+.practice-conversation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin: 0 auto 12px;
+}
+.practice-conversation-actions button,
+.practice-notebook-toggle {
+  border: 1px solid var(--color-border, #e4dff0);
+  border-radius: 12px;
+  padding: 9px 12px;
+  background: var(--color-surface, #fff);
+  color: var(--color-primary, #6650a0);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.practice-conversation-actions button:disabled { opacity: .45; cursor: default; }
+.practice-feedback-notebook { width: min(760px, 100%); margin: 0 auto 12px; }
+.practice-notebook-toggle { display: flex; gap: 10px; align-items: center; width: 100%; justify-content: space-between; }
+.practice-notebook-toggle small { color: var(--color-text-muted, #77708a); font-size: 10px; }
+.practice-notebook-pages { max-height: 300px; overflow-y: auto; padding-top: 8px; }
+.practice-pause-choice { display: flex; align-items: center; gap: 9px; font-size: 13px; padding: 12px 0; cursor: pointer; }
+.practice-pause-choice input { width: 18px; height: 18px; accent-color: var(--color-primary, #7559d9); }
+.practice-start-conversation-note,
+.practice-coach-status,
+.practice-review-evidence-note { font-size: 12px; line-height: 1.7; color: var(--color-text-muted, #77708a); }
+.practice-coach-status { text-align: center; }
+.practice-review-duration { font-size: 12px; color: var(--color-text-muted, #77708a); }
+.practice-conversation-goals.is-recap { margin-top: 20px; }
