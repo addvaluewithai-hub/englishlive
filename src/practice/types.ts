@@ -17,6 +17,20 @@ export type PracticeLanguageGrounding = {
   runtimeSummaryEn: string[];
 };
 
+export type PracticeMissionBriefing = {
+  situationAr: string;
+  situationEn: string;
+  facts?: Array<{
+    labelAr: string;
+    labelEn: string;
+    value: string;
+  }>;
+  requiredMovesAr: string[];
+  requiredMovesEn: string[];
+  successAr: string;
+  successEn: string;
+};
+
 export type PracticeCanonicalTurn = {
   beatId: string;
   speaker: 'ai_role' | 'learner';
@@ -48,6 +62,7 @@ export type PracticeMissionContract = {
   aiRoleAr: string;
   goalAr: string;
   durationMinutes: number;
+  briefing?: PracticeMissionBriefing;
   languageGrounding: PracticeLanguageGrounding;
   truthEn: string[];
   canonicalDialogue: PracticeCanonicalTurn[];
