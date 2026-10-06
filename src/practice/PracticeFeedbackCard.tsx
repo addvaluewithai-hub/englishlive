@@ -13,7 +13,8 @@ export function PracticeFeedbackCard({ runtime }: { runtime: PracticeRuntime }) 
         correction: feedback.requiresRetry ? 'صحّح دي الأول' : 'Better English',
         task_redirect: 'المطلوب دلوقتي',
         repair: 'قولها تاني',
-        better: 'ممكن تقول',
+        original: 'إنت قلت',
+        better: 'الأفضل',
         retry: 'جرّبها تاني بطريقتك قبل ما نكمل.',
         dismiss: 'إخفاء الملاحظة',
       }
@@ -21,7 +22,8 @@ export function PracticeFeedbackCard({ runtime }: { runtime: PracticeRuntime }) 
         correction: feedback.requiresRetry ? 'Fix this first' : 'Better English',
         task_redirect: 'What you need to do now',
         repair: 'Try that again',
-        better: 'A natural way to say it',
+        original: 'You said',
+        better: 'Better English',
         retry: 'Try the same move again in your own words before continuing.',
         dismiss: 'Hide feedback',
       };
@@ -45,6 +47,13 @@ export function PracticeFeedbackCard({ runtime }: { runtime: PracticeRuntime }) 
       </header>
 
       {body ? <p>{body}</p> : null}
+
+      {feedback.originalEn ? (
+        <div className="practice-feedback-original">
+          <small>{copy.original}</small>
+          <span lang="en" dir="ltr">{feedback.originalEn}</span>
+        </div>
+      ) : null}
 
       {feedback.betterEn ? (
         <div className="practice-feedback-better">
