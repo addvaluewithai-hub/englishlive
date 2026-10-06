@@ -26,7 +26,7 @@ const expectedPrimary = {
 };
 const practiceCopy = {
   ar: {
-    close: 'إنهاء التدريب',
+    close: 'إنهاء ومراجعة',
     status: 'دورك',
     hintTitle: 'محتاج تلميح؟',
     hintBody: 'هتتعمل على سياق المحادثة الحالية',
@@ -36,7 +36,7 @@ const practiceCopy = {
     send: 'إرسال',
   },
   en: {
-    close: 'End practice',
+    close: 'Finish and review',
     status: 'Your turn',
     hintTitle: 'Need a hint?',
     hintBody: 'It will use the current conversation context',
@@ -283,6 +283,25 @@ try {
     assert.equal(await input.getAttribute('placeholder'), expected.placeholder);
     assert.equal(await page.locator('.fs-type-row button').innerText(), expected.send);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true, `Practice composer ${locale}: horizontal overflow`);
+    const pause = page.getByRole('button', { name: locale === 'ar' ? 'وقفة للمراجعة' : 'Pause to review', exact: true });
+    await pause.click();
+    assert.equal(await page.locator('.fs-live-status strong').innerText(), locale === 'ar' ? 'خد وقتك' : 'Take your time');
+    assert.equal(await page.locator('.practice-hint-toggle').count(), 0, 'help does not pretend to be a learner turn while paused');
+    await page.getByRole('button', { name: locale === 'ar' ? 'نكمل' : 'Resume', exact: true }).click();
+    assert.equal(await page.locator('.fs-live-status strong').innerText(), expected.status);
+    await page.goto(`${baseUrl}/practice/mission/b1-resolve-wrong-order`, { waitUntil: 'networkidle' });
+    const start = page.locator('.practice-start-button');
+    await page.locator('.practice-pause-choice input').check();
+    assert.equal(await start.getAttribute('href'), '/practice/live/b1-resolve-wrong-order?pace=relaxed');
+    await start.click();
+    assert.equal(await page.locator('.practice-conversation-goals > span').count(), 4);
+    assert.equal(await page.locator('.practice-conversation-goals > .is-observed').count(), 0, 'goals must not be claimed without observed speech');
+    await page.locator('.practice-conversation-actions').getByRole('button', { name: expected.close, exact: true }).click();
+    await page.locator('.practice-complete').waitFor();
+    assert.equal(await page.locator('.practice-complete h1').innerText(), locale === 'ar' ? 'مراجعة محادثتك' : 'Your conversation review');
+    assert.equal(await page.locator('.practice-conversation-goals > .is-observed').count(), 0);
+    assert.equal(await page.locator('.practice-complete-correction-list').count(), 0);
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true, `Practice recap ${locale}: horizontal overflow`);
     await context.close();
   }
 
@@ -342,3 +361,4 @@ try {
 } finally {
   await browser.close();
 }
+
