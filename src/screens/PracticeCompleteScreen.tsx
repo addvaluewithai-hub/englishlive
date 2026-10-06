@@ -4,11 +4,12 @@ import { OttiMark } from '../character/otti/OttiMark';
 import { useI18n } from '../i18n/LocaleProvider';
 import { practiceJourneyCopy } from '../practice/journeyCopy';
 import { practiceMissionContractBySlug } from '../practice/missions/catalog';
-import type { PracticeSupportSummary } from '../practice/runtime';
+import type { PracticeCorrectionRecord, PracticeSupportSummary } from '../practice/runtime';
 import styles from './PracticeJourney.module.css';
 
 type CompletionState = {
   support?: PracticeSupportSummary;
+  corrections?: PracticeCorrectionRecord[];
   durationSeconds?: number;
   conversationText?: string;
 };
@@ -22,6 +23,7 @@ export function PracticeCompleteScreen() {
   const state = (location.state ?? {}) as CompletionState;
   const support = state.support ?? { intentHints: 0, usefulLanguageReveals: 0, fullHelpReveals: 0 };
   const usedHelp = support.intentHints + support.usefulLanguageReveals + support.fullHelpReveals > 0;
+  const corrections = state.corrections ?? [];
   const [copied, setCopied] = useState(false);
 
   async function copyConversation() {
@@ -66,6 +68,36 @@ export function PracticeCompleteScreen() {
         <strong>{usedHelp ? copy.usedHelpTitle : copy.noHelpTitle}</strong>
         <p>{usedHelp ? copy.usedHelpBody : copy.noHelpBody}</p>
       </section>
+
+      {corrections.length ? (
+        <section className="practice-complete-corrections">
+          <header>
+            <small>{copy.correctionsEyebrow}</small>
+            <strong>{copy.correctionsTitle}</strong>
+            <p>{copy.correctionsBody}</p>
+          </header>
+          <div className="practice-complete-correction-list">
+            {corrections.map((item, index) => (
+              <article key={`${item.beatId}-${index}`}>
+                <div>
+                  <small>{copy.youSaid}</small>
+                  <span lang="en" dir="ltr">{item.originalEn}</span>
+                </div>
+                <div>
+                  <small>{copy.betterEnglish}</small>
+                  <strong lang="en" dir="ltr">{item.betterEn}</strong>
+                </div>
+                <p>{locale === 'ar' ? item.feedbackAr : item.feedbackEn}</p>
+                {item.requiresRetry ? <em>{copy.retried}</em> : null}
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : (
+        <section className="practice-complete-corrections is-empty">
+          <strong>{copy.noCorrections}</strong>
+        </section>
+      )}
 
       {state.conversationText ? (
         <button type="button" className="practice-complete-copy" onClick={() => void copyConversation()}>
