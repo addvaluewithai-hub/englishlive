@@ -104,7 +104,8 @@ export const B1_RESOLVE_WRONG_ORDER_MISSION: PracticeMissionContract = {
       correctionFocusEn: [
         'Accept any clear natural explanation of expected versus received.',
         'If the learner only says something is wrong, ask for the missing detail instead of pretending the mismatch is known.',
-        'Correct genuine English errors only when they materially reduce clarity.',
+        'Past-order wording is part of the current move: a clear form error such as "I order a large coffee" for the completed order should be corrected briefly to a natural past form such as "I ordered a large coffee", then retried before advancing.',
+        'Correct other genuine errors when they materially reduce clarity; do not nitpick style or accent.',
       ],
       next: 'confirm_original',
     },
