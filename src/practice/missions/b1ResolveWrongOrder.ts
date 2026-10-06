@@ -2,7 +2,7 @@ import type { PracticeMissionContract } from '../types';
 
 export const B1_RESOLVE_WRONG_ORDER_MISSION: PracticeMissionContract = {
   sourceId: 'practice.b1.food.resolve-wrong-order.v1',
-  revision: 3,
+  revision: 4,
   slug: 'b1-resolve-wrong-order',
   level: 'B1',
   worldId: 'food-shopping',
