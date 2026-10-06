@@ -207,8 +207,8 @@ export function usePracticeMissionRuntime(scenarioId?: string) {
         languageStatus,
         feedbackAr: feedbackAr || 'الإنجليزي ممكن يكون مفهوم، لكن لسه المطلوب في الخطوة دي ما اتعملش.',
         feedbackEn: feedbackEn || 'Your English may be understandable, but the current task move is still incomplete.',
-        originalEn: null,
-        betterEn: null,
+        originalEn: languageStatus === 'minor_error' ? originalEn : null,
+        betterEn: languageStatus === 'minor_error' ? betterEn : null,
         requiresRetry: false,
       };
     } else if (languageStatus === 'minor_error') {
@@ -226,14 +226,14 @@ export function usePracticeMissionRuntime(scenarioId?: string) {
     }
 
     setTurnFeedback(feedback);
-    if (feedback?.kind === 'correction' && feedback.originalEn && feedback.betterEn) {
+    if ((languageStatus === 'minor_error' || languageStatus === 'important_error') && originalEn && betterEn) {
       correctionHistoryRef.current.push({
         beatId: current.id,
-        originalEn: feedback.originalEn,
-        betterEn: feedback.betterEn,
-        feedbackAr: feedback.feedbackAr,
-        feedbackEn: feedback.feedbackEn,
-        requiresRetry: feedback.requiresRetry,
+        originalEn,
+        betterEn,
+        feedbackAr: feedback?.feedbackAr || feedbackAr,
+        feedbackEn: feedback?.feedbackEn || feedbackEn,
+        requiresRetry,
       });
     }
     advanceAuthorizedFromBeatRef.current = mayAdvance ? current.id : null;
