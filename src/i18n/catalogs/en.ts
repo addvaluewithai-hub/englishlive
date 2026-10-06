@@ -230,6 +230,7 @@ export const en = {
   'practice.status.error.body': 'Try starting again',
   'practice.heardPrefix': 'Heard you:',
   'practice.smartHintSideLabel': 'Smart hint',
+  'practice.moreComingSoon': 'More options — coming soon',
   'practice.startLabel': 'Start practice',
   'practice.ending': 'Closing this mission…',
   'practice.startError': 'Could not start this mission.',
