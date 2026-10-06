@@ -14,6 +14,15 @@ export type PracticeTaskStatus = 'fulfilled' | 'incomplete' | 'off_intent' | 'un
 export type PracticeLanguageStatus = 'clean' | 'minor_error' | 'important_error' | 'unclear';
 export type PracticeFeedbackKind = 'correction' | 'task_redirect' | 'repair';
 
+export type PracticeCorrectionRecord = {
+  beatId: string;
+  originalEn: string;
+  betterEn: string;
+  feedbackAr: string;
+  feedbackEn: string;
+  requiresRetry: boolean;
+};
+
 export type PracticeTurnFeedback = {
   beatId: string;
   kind: PracticeFeedbackKind;
@@ -21,6 +30,7 @@ export type PracticeTurnFeedback = {
   languageStatus: PracticeLanguageStatus;
   feedbackAr: string;
   feedbackEn: string;
+  originalEn: string | null;
   betterEn: string | null;
   requiresRetry: boolean;
 };
@@ -30,6 +40,7 @@ export type PracticeEvaluationTrace = {
   taskStatus: PracticeTaskStatus;
   languageStatus: PracticeLanguageStatus;
   reasonEn: string;
+  originalEn: string | null;
   betterEn: string | null;
   requiresRetry: boolean;
 };
@@ -85,6 +96,7 @@ export function usePracticeMissionRuntime(scenarioId?: string) {
   const finalClosingOutputRef = useRef(false);
   const advanceAuthorizedFromBeatRef = useRef<string | null>(null);
   const [turnFeedback, setTurnFeedback] = useState<PracticeTurnFeedback | null>(null);
+  const correctionHistoryRef = useRef<PracticeCorrectionRecord[]>([]);
   const evaluationTraceRef = useRef<PracticeEvaluationTrace[]>([]);
 
   function clearCurrentBeatHint() {
@@ -109,6 +121,7 @@ export function usePracticeMissionRuntime(scenarioId?: string) {
     finalClosingOutputRef.current = false;
     advanceAuthorizedFromBeatRef.current = null;
     setTurnFeedback(null);
+    correctionHistoryRef.current = [];
     evaluationTraceRef.current = [];
   }
 
@@ -143,6 +156,7 @@ export function usePracticeMissionRuntime(scenarioId?: string) {
     const reasonEn = cleanText(args.reason_en, 260);
     const feedbackAr = cleanText(args.feedback_ar, 220);
     const feedbackEn = cleanText(args.feedback_en, 220);
+    const originalEn = cleanText(args.original_en, 320);
     const betterEn = cleanText(args.better_en, 320);
 
     const languageNeedsRetry = languageStatus === 'important_error';
@@ -151,11 +165,11 @@ export function usePracticeMissionRuntime(scenarioId?: string) {
     const taskFulfilled = taskStatus === 'fulfilled';
     const mayAdvance = taskFulfilled && !requiresRetry;
 
-    if ((languageStatus === 'minor_error' || languageStatus === 'important_error') && !betterEn) {
+    if ((languageStatus === 'minor_error' || languageStatus === 'important_error') && (!originalEn || !betterEn)) {
       advanceAuthorizedFromBeatRef.current = null;
       return {
-        error: `${languageStatus} requires better_en.`,
-        instruction: 'Evaluate again and provide one concise natural learner version in better_en.',
+        error: `${languageStatus} requires original_en and better_en.`,
+        instruction: 'Evaluate again. Copy the learner error or problematic fragment into original_en exactly as heard/transcribed, and provide one concise natural learner version in better_en.',
       };
     }
 
@@ -168,6 +182,7 @@ export function usePracticeMissionRuntime(scenarioId?: string) {
         languageStatus,
         feedbackAr: feedbackAr || 'فيه غلطة مهمة في الإنجليزي هنا. شوف الصياغة الطبيعية وجرّب تاني.',
         feedbackEn: feedbackEn || 'There is an important English error here. Check the natural version and try again.',
+        originalEn,
         betterEn,
         requiresRetry: true,
       };
@@ -179,6 +194,7 @@ export function usePracticeMissionRuntime(scenarioId?: string) {
         languageStatus,
         feedbackAr: feedbackAr || 'الكلام مش واضح كفاية للموقف. قوله تاني بشكل أوضح.',
         feedbackEn: feedbackEn || 'That was not clear enough for this situation. Try saying it again more clearly.',
+        originalEn: null,
         betterEn: null,
         requiresRetry: true,
       };
@@ -190,6 +206,7 @@ export function usePracticeMissionRuntime(scenarioId?: string) {
         languageStatus,
         feedbackAr: feedbackAr || 'الإنجليزي ممكن يكون مفهوم، لكن لسه المطلوب في الخطوة دي ما اتعملش.',
         feedbackEn: feedbackEn || 'Your English may be understandable, but the current task move is still incomplete.',
+        originalEn: null,
         betterEn: null,
         requiresRetry: false,
       };
@@ -201,18 +218,30 @@ export function usePracticeMissionRuntime(scenarioId?: string) {
         languageStatus,
         feedbackAr: feedbackAr || 'المعنى وصل. دي صياغة أنضف للإنجليزي.',
         feedbackEn: feedbackEn || 'The meaning worked. Here is a cleaner English version.',
+        originalEn,
         betterEn,
         requiresRetry: false,
       };
     }
 
     setTurnFeedback(feedback);
+    if (feedback?.kind === 'correction' && feedback.originalEn && feedback.betterEn) {
+      correctionHistoryRef.current.push({
+        beatId: current.id,
+        originalEn: feedback.originalEn,
+        betterEn: feedback.betterEn,
+        feedbackAr: feedback.feedbackAr,
+        feedbackEn: feedback.feedbackEn,
+        requiresRetry: feedback.requiresRetry,
+      });
+    }
     advanceAuthorizedFromBeatRef.current = mayAdvance ? current.id : null;
     evaluationTraceRef.current.push({
       beatId: current.id,
       taskStatus,
       languageStatus,
       reasonEn,
+      originalEn: originalEn || null,
       betterEn: betterEn || null,
       requiresRetry,
     });
@@ -448,12 +477,16 @@ export function usePracticeMissionRuntime(scenarioId?: string) {
               type: 'STRING',
               description: 'Very short English learner-facing feedback equivalent. Empty string when no feedback is needed.',
             },
+            original_en: {
+              type: 'STRING',
+              description: 'For minor_error or important_error, copy the exact learner error or shortest problematic English fragment from the latest transcript. Preserve what the learner actually said; do not silently fix it. Empty string for clean/unclear language.',
+            },
             better_en: {
               type: 'STRING',
               description: 'One concise natural corrected learner version for minor_error or important_error. Empty string for clean or unclear language.',
             },
           },
-          required: ['beat_id', 'task_status', 'language_status', 'reason_en', 'feedback_ar', 'feedback_en', 'better_en'],
+          required: ['beat_id', 'task_status', 'language_status', 'reason_en', 'feedback_ar', 'feedback_en', 'original_en', 'better_en'],
         },
       },
       handle: evaluateTurn,
@@ -607,6 +640,10 @@ export function usePracticeMissionRuntime(scenarioId?: string) {
     setTurnFeedback(null);
   }
 
+  function getCorrectionSummary() {
+    return correctionHistoryRef.current.map((item) => ({ ...item }));
+  }
+
   function getEvaluationTrace() {
     return evaluationTraceRef.current.map((item) => ({ ...item }));
   }
@@ -639,6 +676,7 @@ export function usePracticeMissionRuntime(scenarioId?: string) {
     hideSupport,
     getSupportSummary,
     dismissTurnFeedback,
+    getCorrectionSummary,
     getEvaluationTrace,
     noteTeacherOutput,
     consumeAutoFinishAfterTurn,
