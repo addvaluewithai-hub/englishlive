@@ -15,7 +15,6 @@ import type { LiveStatus } from '../live/types';
 import { PracticeHintCard } from '../practice/PracticeHintCard';
 import { practiceMissionContractBySlug } from '../practice/missions/catalog';
 import { usePracticeMissionRuntime } from '../practice/runtime';
-import { speakingAssets } from '../speaking/assets';
 import { LiveConversationHeader, LiveConversationStatus } from '../ui/product/LiveConversationChrome';
 
 function pcmSampleRate(mimeType: string) {
@@ -36,25 +35,6 @@ function timeLabel(seconds: number) {
   const minutes = Math.floor(seconds / 60).toString().padStart(2, '0');
   const remaining = Math.floor(seconds % 60).toString().padStart(2, '0');
   return `${minutes}:${remaining}`;
-}
-
-function missionBackground(worldId: string) {
-  switch (worldId) {
-    case 'people-social':
-      return speakingAssets.meetingPeople;
-    case 'food-shopping':
-      return speakingAssets.foodOut;
-    case 'travel-transport':
-      return speakingAssets.ottiTravel;
-    case 'work-study':
-      return speakingAssets.ottiProgress;
-    case 'home-services':
-      return speakingAssets.ottiReceptionist;
-    case 'plans-leisure':
-    case 'everyday':
-    default:
-      return speakingAssets.ottiHero;
-  }
 }
 
 export function PracticeLiveScreen() {
@@ -358,8 +338,6 @@ export function PracticeLiveScreen() {
     reconnecting: { title: t('practice.status.reconnecting.title'), body: t('practice.status.reconnecting.body') },
     error: { title: t('practice.status.error.title'), body: t('practice.status.error.body') },
   }[status];
-  const stageBackground = missionBackground(mission.worldId);
-
   return (
     <section className="fs-live sp-scenario-live practice-live">
       <LiveConversationHeader
@@ -379,10 +357,7 @@ export function PracticeLiveScreen() {
         metaClassName="fs-live-mode sp-scenario-timer"
       />
 
-      <div
-        className="fs-live-stage sp-scenario-stage practice-live-stage"
-        style={{ backgroundImage: `linear-gradient(180deg, rgba(255,247,243,.08), rgba(255,250,247,.74) 72%, #fffdfc 100%), url(${stageBackground})` }}
-      >
+      <div className="fs-live-stage sp-scenario-stage practice-live-stage">
         {teacherText ? (
           <article className="sp-otti-transcript" aria-live="polite">
             <small><bdi dir="ltr">Otti</bdi> • <span lang="ar" dir="rtl">{mission.aiRoleAr}</span></small>
@@ -427,7 +402,15 @@ export function PracticeLiveScreen() {
         ) : null}
 
         <div className="fs-control-row practice-live-control-row">
-          <span className="practice-live-side-label">{t('practice.smartHintSideLabel')}</span>
+          <button
+            type="button"
+            className="fs-keyboard-control"
+            onClick={() => setKeyboardOpen((value) => !value)}
+            disabled={!learnerTurn}
+            aria-label={t('live.typeInstead')}
+          >
+            <ProductIcon name="keyboard" size={31} />
+          </button>
 
           <button
             type="button"
@@ -445,12 +428,12 @@ export function PracticeLiveScreen() {
 
           <button
             type="button"
-            className="fs-keyboard-control"
-            onClick={() => setKeyboardOpen((value) => !value)}
-            disabled={!learnerTurn}
-            aria-label={t('live.typeInstead')}
+            className="practice-live-secondary-control"
+            disabled
+            aria-label={t('practice.moreComingSoon')}
+            title={t('practice.moreComingSoon')}
           >
-            <ProductIcon name="keyboard" size={31} />
+            <ProductIcon name="more" size={29} />
           </button>
         </div>
 
