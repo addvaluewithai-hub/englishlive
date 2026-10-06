@@ -45,6 +45,10 @@ export function PracticeMissionScreen() {
 
   const responseBeats = mission.beats.filter((beat) => beat.type === 'required');
   const missionVisual = missionVisualForWorld(mission.worldId);
+  const briefing = mission.briefing;
+  const briefingSituation = briefing ? (locale === 'ar' ? briefing.situationAr : briefing.situationEn) : '';
+  const briefingMoves = briefing ? (locale === 'ar' ? briefing.requiredMovesAr : briefing.requiredMovesEn) : [];
+  const briefingSuccess = briefing ? (locale === 'ar' ? briefing.successAr : briefing.successEn) : '';
 
   return (
     <section className={`${styles.root} practice-start-page`}>
@@ -73,31 +77,70 @@ export function PracticeMissionScreen() {
           <span>📍 <span lang="ar" dir="rtl">{mission.settingAr}</span></span>
         </div>
 
-        <section className="practice-start-goal">
-          <span aria-hidden="true">◎</span>
-          <div>
-            <small>{copy.goal}</small>
-            <strong lang="ar" dir="rtl">{mission.goalAr}</strong>
-          </div>
-        </section>
+        {briefing ? (
+          <section className="practice-start-brief">
+            <header>
+              <small>{copy.situation}</small>
+              <strong>{briefingSituation}</strong>
+            </header>
 
-        <section className="practice-start-flow">
-          <header>
-            <small>{copy.flowKicker}</small>
-            <strong>{copy.flowTitle}</strong>
-          </header>
-          <ol>
-            {responseBeats.map((beat, index) => (
-              <li key={beat.id}>
-                <span>{number(index + 1)}</span>
-                <div>
-                  <strong lang="ar" dir="rtl">{beat.overviewAr ?? copy.defaultBeat}</strong>
-                  <small>{index === 0 ? copy.firstBeatHelp : copy.nextBeatHelp}</small>
-                </div>
-              </li>
-            ))}
-          </ol>
-        </section>
+            {briefing.facts?.length ? (
+              <div className="practice-start-brief-facts">
+                {briefing.facts.map((fact) => (
+                  <div key={fact.value}>
+                    <small>{locale === 'ar' ? fact.labelAr : fact.labelEn}</small>
+                    <strong dir="ltr">{fact.value}</strong>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
+            <div className="practice-start-brief-moves">
+              <small>{copy.required}</small>
+              <ol>
+                {briefingMoves.map((move, index) => (
+                  <li key={move}>
+                    <span>{number(index + 1)}</span>
+                    <strong>{move}</strong>
+                  </li>
+                ))}
+              </ol>
+            </div>
+
+            <footer>
+              <small>{copy.success}</small>
+              <strong>{briefingSuccess}</strong>
+            </footer>
+          </section>
+        ) : (
+          <>
+            <section className="practice-start-goal">
+              <span aria-hidden="true">◎</span>
+              <div>
+                <small>{copy.goal}</small>
+                <strong lang="ar" dir="rtl">{mission.goalAr}</strong>
+              </div>
+            </section>
+
+            <section className="practice-start-flow">
+              <header>
+                <small>{copy.flowKicker}</small>
+                <strong>{copy.flowTitle}</strong>
+              </header>
+              <ol>
+                {responseBeats.map((beat, index) => (
+                  <li key={beat.id}>
+                    <span>{number(index + 1)}</span>
+                    <div>
+                      <strong lang="ar" dir="rtl">{beat.overviewAr ?? copy.defaultBeat}</strong>
+                      <small>{index === 0 ? copy.firstBeatHelp : copy.nextBeatHelp}</small>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          </>
+        )}
 
         <section className="practice-start-hints">
           <div className="practice-start-hint-icon" aria-hidden="true">💡</div>
