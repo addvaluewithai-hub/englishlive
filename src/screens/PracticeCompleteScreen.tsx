@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { OttiMark } from '../character/otti/OttiMark';
 import { practiceMissionContractBySlug } from '../practice/missions/catalog';
@@ -6,6 +7,7 @@ import type { PracticeSupportSummary } from '../practice/runtime';
 type CompletionState = {
   support?: PracticeSupportSummary;
   durationSeconds?: number;
+  conversationText?: string;
 };
 
 export function PracticeCompleteScreen() {
@@ -15,6 +17,14 @@ export function PracticeCompleteScreen() {
   const state = (location.state ?? {}) as CompletionState;
   const support = state.support ?? { intentHints: 0, usefulLanguageReveals: 0, fullHelpReveals: 0 };
   const usedHelp = support.intentHints + support.usefulLanguageReveals + support.fullHelpReveals > 0;
+  const [copied, setCopied] = useState(false);
+
+  async function copyConversation() {
+    if (!state.conversationText) return;
+    await navigator.clipboard.writeText(state.conversationText);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1800);
+  }
 
   if (!mission) return <section className="practice-mission-missing" dir="rtl"><h1>Mission completed</h1><Link to="/practice">الرجوع لـPractice</Link></section>;
 
@@ -44,6 +54,12 @@ export function PracticeCompleteScreen() {
         <strong>{usedHelp ? 'استخدمت مساعدة؟ ممتاز — ده جزء من التدريب.' : 'المرة دي خلصتها من غير ما تفتح Hint.'}</strong>
         <p>{usedHelp ? 'لو حابب تقوّي الاستقلال، أعد نفس الموقف وحاول تستخدم مساعدة أقل. مفيش عقوبة على إنك فتحت Hint.' : 'ممكن تعيدها تاني وتشوف هل نفس اللغة هتطلع بسهولة، أو ترجع للمكتبة لموقف جديد.'}</p>
       </section>
+
+      {state.conversationText ? (
+        <button type="button" className="practice-complete-copy" onClick={() => void copyConversation()}>
+          {copied ? 'تم نسخ الحوار ✓' : 'نسخ المحادثة'}
+        </button>
+      ) : null}
 
       <div className="practice-complete-actions">
         <Link className="practice-complete-primary" to={`/practice/mission/${mission.slug}`}>أعيد الـMission</Link>
