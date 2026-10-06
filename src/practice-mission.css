@@ -1131,3 +1131,97 @@
   font-size: 13px;
   line-height: 1.45;
 }
+
+
+.practice-complete-corrections {
+  display: grid;
+  gap: 12px;
+  width: min(760px, 100%);
+  margin: 14px auto 0;
+}
+
+.practice-complete-corrections > header {
+  display: grid;
+  gap: 4px;
+}
+
+.practice-complete-corrections > header small {
+  color: var(--color-text-muted, #81879b);
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.practice-complete-corrections > header strong {
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.practice-complete-corrections > header p {
+  margin: 0;
+  color: var(--color-text-muted, #6b7287);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.practice-complete-correction-list {
+  display: grid;
+  gap: 10px;
+}
+
+.practice-complete-correction-list article {
+  display: grid;
+  gap: 8px;
+  padding: 13px;
+  border: 1px solid var(--color-border, #e6e7ee);
+  border-radius: 15px;
+  background: var(--color-surface, #fff);
+}
+
+.practice-complete-correction-list article > div {
+  display: grid;
+  gap: 3px;
+}
+
+.practice-complete-correction-list small {
+  color: var(--color-text-muted, #858ba0);
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.practice-complete-correction-list span {
+  color: var(--color-text-muted, #666d80);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.practice-complete-correction-list strong {
+  color: var(--color-text, #26304b);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.practice-complete-correction-list article > p {
+  margin: 0;
+  color: var(--color-text-muted, #6b7287);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.practice-complete-correction-list em {
+  width: fit-content;
+  padding: 4px 7px;
+  border-radius: 8px;
+  background: color-mix(in srgb, #d97706 10%, var(--color-surface, #fff));
+  color: #a65e08;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 850;
+}
+
+.practice-complete-corrections.is-empty {
+  padding: 12px 13px;
+  border-radius: 13px;
+  background: var(--color-background, #f7f7fb);
+  color: var(--color-text-muted, #72798d);
+  font-size: 12px;
+}
