@@ -61,6 +61,7 @@ export function PracticeLiveScreen() {
   const startedAtMs = useRef<number | null>(null);
   const manualInterrupt = useRef(false);
   const sessionGeneration = useRef(0);
+  const replyTimeout = useRef<number | null>(null);
   const teacherDraftRef = useRef('');
   const learnerDraftRef = useRef('');
   const lastSpeechAt = useRef<number | null>(null);
@@ -172,7 +173,33 @@ export function PracticeLiveScreen() {
   }
 
 
+  function clearReplyTimeout() {
+    if (replyTimeout.current !== null) window.clearTimeout(replyTimeout.current);
+    replyTimeout.current = null;
+  }
+
+  function armReplyTimeout() {
+    clearReplyTimeout();
+    const session = sessionGeneration.current;
+    replyTimeout.current = window.setTimeout(() => {
+      replyTimeout.current = null;
+      if (session !== sessionGeneration.current || pausedRef.current) return;
+      // Do not mistake a learner who is still speaking for an unresponsive partner.
+      if (microphone.current?.isEnabled && lastSpeechAt.current !== null && performance.now() - lastSpeechAt.current < 25_000) {
+        armReplyTimeout();
+        return;
+      }
+      void stopTransport().catch(() => undefined).then(() => {
+        if (sessionGeneration.current !== session + 1) return;
+        setWaitingForReply(false);
+        setStatus('error');
+        setError(locale === 'ar' ? 'Otti ما ردّش في الوقت المتوقع. ملاحظاتك لسه موجودة؛ تقدر تنهي وتراجع، أو تبدأ محاولة جديدة.' : 'Otti did not respond in time. Your notes are still here; finish and review, or start a new attempt.');
+      });
+    }, 25_000);
+  }
+
   async function stopTransport() {
+    clearReplyTimeout();
     sessionGeneration.current++;
     transport.current?.endAudioStream();
     transport.current?.close();
@@ -259,6 +286,7 @@ export function PracticeLiveScreen() {
       const live = new GeminiLiveTransport({
         onStatus: setStatus,
         onInputTranscript: (text) => {
+          armReplyTimeout();
           if (!learnerDraftRef.current.trim()) learnerTurnLoggedRef.current = false;
           const next = appendTranscript(learnerDraftRef.current, text);
           learnerDraftRef.current = next;
@@ -278,6 +306,7 @@ export function PracticeLiveScreen() {
           if (pausedRef.current) { repeatAfterPause.current = true; return; }
           if (manualInterrupt.current) return;
           flushLearnerTurn();
+          clearReplyTimeout();
           replyHasAudio.current = true;
           setLearnerMicEnabled(false);
           if (firstReplyPending.current && lastSpeechAt.current !== null) {
@@ -300,6 +329,7 @@ export function PracticeLiveScreen() {
           setStatus('listening');
         },
         onTurnComplete: () => {
+          clearReplyTimeout();
           manualInterrupt.current = false;
           queue.markTurnComplete();
           if (!replyHasAudio.current) {
@@ -332,6 +362,8 @@ export function PracticeLiveScreen() {
         if (level > 0.045) lastSpeechAt.current = performance.now();
       });
       if (session !== sessionGeneration.current) { await mic.stop(); return; }
+      setWaitingForReply(true);
+      armReplyTimeout();
       live.sendText(buildConversationOpening(mission));
     } catch (reason) {
       if (session !== sessionGeneration.current) return;
@@ -358,6 +390,7 @@ export function PracticeLiveScreen() {
     const clock = window.setInterval(() => setElapsedSeconds(durationSeconds()), 1000);
     return () => {
       sessionGeneration.current++;
+      clearReplyTimeout();
       window.clearTimeout(startTimer);
       window.clearInterval(clock);
       if (copyResetTimerRef.current !== null) window.clearTimeout(copyResetTimerRef.current);
@@ -408,6 +441,7 @@ export function PracticeLiveScreen() {
     if (!transport.current?.connected || pausedRef.current || !learnerDraftRef.current.trim()) return;
     setLearnerMicEnabled(false);
     transport.current.endAudioStream();
+    armReplyTimeout();
     setWaitingForReply(true);
   }
 
@@ -416,12 +450,14 @@ export function PracticeLiveScreen() {
     pausedRef.current = next;
     setPaused(next);
     if (next) {
+      clearReplyTimeout();
       if (status === 'speaking') { repeatAfterPause.current = true; interruptTeacher(); }
       setLearnerMicEnabled(false);
     } else if (repeatAfterPause.current && transport.current?.connected) {
       repeatAfterPause.current = false;
       manualInterrupt.current = false;
       setWaitingForReply(true);
+      armReplyTimeout();
       transport.current.sendText('PRIVATE UI RESUME: the learner paused and missed your last reply. Briefly repeat it, then wait. This is a control event, not learner speech.');
     } else if (status === 'listening' && !waitingForReply) setLearnerMicEnabled(true);
   }
@@ -441,6 +477,7 @@ export function PracticeLiveScreen() {
     learnerDraftRef.current = value;
     lastSpeechAt.current = performance.now();
     learnerTurnLoggedRef.current = true;
+    armReplyTimeout();
     live.sendText(value);
     setWaitingForReply(true);
     setLearnerMicEnabled(false);

@@ -11,7 +11,7 @@ The B1 wrong-order scenario has four flexible opportunities. Available remedies 
 ## Technical boundaries
 
 - Only Practice uses the new runtime. Learn and other speaking modes retain their existing runtimes.
-- Practice passes no Live tools and never sends legacy tool-opening instructions.
+- Practice passes no Live tools and never sends legacy tool-opening instructions. A missing reply has a 25-second watchdog, with notes retained and explicit review/retry controls instead of an indefinite wait. The watchdog allows an actively speaking learner to continue.
 - Practice's automatic silence tolerance is 1,200 ms; the optional thinking-time setting is 2,400 ms. Other modes retain 3,600 ms. These are configuration values, not measured response-time promises.
 - Done speaking sends audioStreamEnd to the existing automatic VAD session. Latency samples in Copy conversation are approximate client measurements from the last detected speech to the first received reply audio, not sound reaching the learner's ears.
 - `/api/practice/coach` requires the existing verified user JWT. Provider keys remain server-side. It reuses the app's Gemini Interactions API pattern, sets `store: false`, and defaults to `gemini-3.5-flash-lite`. `PRACTICE_COACH_MODEL` can override this without changing Live's model.
@@ -22,7 +22,7 @@ The B1 wrong-order scenario has four flexible opportunities. Available remedies 
 
 ## Validation
 
-Run `npm run check`, `npm run test:ui`, and `npm run test:practice`. CI runs all three. The Practice tests exercise authenticated JWT verification with a mocked provider, transcript-source safeguards, malformed responses, goal filtering, multi-layer hints, every mission's opening, and Live wire configuration with a fake socket. They do not establish real provider judgement quality or real microphone latency. On this same-repository rescue branch, CI also runs a real Live provider trial with fictional typed A2/B1 dialogue through the app transport and verifies audio/transcript responses. It prints dialogue and text-to-first-audio timings without logging tokens. Microphone capture, audible playback latency, and the authenticated coach provider still require signed-in trials.
+Run `npm run check`, `npm run test:ui`, and `npm run test:practice`. CI runs all three. The Practice tests exercise authenticated JWT verification with a mocked provider, transcript-source safeguards, malformed responses, goal filtering, multi-layer hints, every mission's opening, and Live wire configuration with a fake socket. They do not establish real provider judgement quality or real microphone latency. The separate manual script `PRACTICE_TRIAL_ORIGIN=https://feat-practice-conversation-r.englishlive-a04.pages.dev node --import tsx scripts/trial-practice-live.mjs` runs a real Live provider trial with fictional typed A2/B1 dialogue through the app transport and verifies audio/transcript responses. It is separate from deterministic CI: initial trials returned audio in roughly 0.5–1.9 seconds after typed input, and a subsequent trial also encountered a 30-second provider non-response. Both observations matter; they do not establish microphone performance. It prints dialogue and text-to-first-audio timings without logging tokens. Microphone capture, audible playback latency, and the authenticated coach provider still require signed-in trials.
 
 Try these conversations in the deployed preview:
 
