@@ -294,6 +294,7 @@ try {
     await page.locator('.practice-pause-choice input').check();
     assert.equal(await start.getAttribute('href'), '/practice/live/b1-resolve-wrong-order?pace=relaxed');
     await start.click();
+    await page.locator('.practice-live .practice-conversation-goals > span').first().waitFor();
     assert.equal(await page.locator('.practice-conversation-goals > span').count(), 4);
     assert.equal(await page.locator('.practice-conversation-goals > .is-observed').count(), 0, 'goals must not be claimed without observed speech');
     await page.locator('.practice-conversation-actions').getByRole('button', { name: expected.close, exact: true }).click();
