@@ -830,3 +830,198 @@
     display: none;
   }
 }
+
+
+.practice-start-brief {
+  display: grid;
+  gap: 14px;
+  padding: 17px;
+  border: 1px solid var(--color-border, var(--practice-line));
+  border-radius: 20px;
+  background: var(--color-surface, #fff);
+}
+
+.practice-start-brief header small,
+.practice-start-brief-moves > small,
+.practice-start-brief footer small {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--color-text-muted, #8a83a8);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.practice-start-brief header strong,
+.practice-start-brief footer strong {
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.practice-start-brief-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.practice-start-brief-facts > div {
+  min-width: 0;
+  padding: 12px;
+  border-radius: 14px;
+  background: var(--color-background, #f7f7fb);
+}
+
+.practice-start-brief-facts small,
+.practice-start-brief-facts strong {
+  display: block;
+}
+
+.practice-start-brief-facts small {
+  margin-bottom: 4px;
+  color: var(--color-text-muted, #6b7390);
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.practice-start-brief-facts strong {
+  overflow-wrap: anywhere;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.practice-start-brief-moves ol {
+  display: grid;
+  gap: 8px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.practice-start-brief-moves li {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 9px;
+  align-items: start;
+}
+
+.practice-start-brief-moves li > span {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--color-primary, #7559d9) 10%, var(--color-surface, #fff));
+  color: var(--color-primary, #7559d9);
+  font-size: 11px;
+  font-weight: 950;
+}
+
+.practice-start-brief-moves li > strong {
+  padding-top: 4px;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.practice-start-brief footer {
+  padding: 11px 12px;
+  border-radius: 13px;
+  background: color-mix(in srgb, var(--color-primary, #7559d9) 7%, var(--color-surface, #fff));
+}
+
+.practice-live-task {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: min(980px, calc(100% - 28px));
+  margin: 8px auto 0;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border, rgba(31,45,79,.09));
+  border-radius: 14px;
+  background: var(--color-surface-raised, #fff);
+  color: var(--color-text, #46506a);
+  box-shadow: var(--shadow-card, 0 8px 20px rgba(35,39,80,.05));
+}
+
+.practice-live-task > div {
+  min-width: 0;
+  flex: 1 1 260px;
+}
+
+.practice-live-task > div small,
+.practice-live-task > div strong,
+.practice-live-task > span small,
+.practice-live-task > span bdi {
+  display: block;
+}
+
+.practice-live-task > div small,
+.practice-live-task > span small {
+  color: var(--color-text-muted, #8a83a8);
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.practice-live-task > div strong {
+  margin-top: 2px;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.practice-live-task > span {
+  flex: 0 1 auto;
+  padding: 6px 8px;
+  border-radius: 10px;
+  background: var(--color-background, #f7f7fb);
+}
+
+.practice-live-task > span bdi {
+  margin-top: 2px;
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.practice-copy-log,
+.practice-complete-copy {
+  border: 1px solid var(--color-border, rgba(117,89,217,.2));
+  border-radius: 12px;
+  background: var(--color-surface, #fff);
+  color: var(--color-primary, #634fc0);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.practice-copy-log {
+  display: block;
+  width: fit-content;
+  margin: 0 auto 10px;
+  padding: 7px 10px;
+}
+
+.practice-complete-copy {
+  width: 100%;
+  padding: 12px 14px;
+}
+
+
+@media (max-width: 520px) {
+  .practice-start-brief-facts {
+    grid-template-columns: 1fr;
+  }
+
+  .practice-live-task {
+    align-items: stretch;
+    overflow-x: auto;
+    width: calc(100% - 18px);
+    padding: 7px 8px;
+  }
+
+  .practice-live-task > div {
+    min-width: 180px;
+  }
+
+  .practice-live-task > span {
+    min-width: max-content;
+  }
+}
