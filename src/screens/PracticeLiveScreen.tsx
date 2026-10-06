@@ -17,6 +17,11 @@ import { practiceMissionContractBySlug } from '../practice/missions/catalog';
 import { usePracticeMissionRuntime } from '../practice/runtime';
 import { LiveConversationHeader, LiveConversationStatus } from '../ui/product/LiveConversationChrome';
 
+type PracticeConversationTurn = {
+  speaker: 'learner' | 'otti';
+  text: string;
+};
+
 function pcmSampleRate(mimeType: string) {
   const match = mimeType.match(/rate=(\d+)/i);
   return match ? Number(match[1]) : 24_000;
@@ -40,7 +45,7 @@ function timeLabel(seconds: number) {
 export function PracticeLiveScreen() {
   const { missionId } = useParams();
   const navigate = useNavigate();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const mission = practiceMissionContractBySlug(missionId);
   const runtime = usePracticeMissionRuntime(missionId);
   const character = getCharacterDefinition('otti');
@@ -56,6 +61,9 @@ export function PracticeLiveScreen() {
   const teacherDraftRef = useRef('');
   const learnerDraftRef = useRef('');
   const hintTimeoutRef = useRef<number | null>(null);
+  const conversationLogRef = useRef<PracticeConversationTurn[]>([]);
+  const learnerTurnLoggedRef = useRef(false);
+  const copyResetTimerRef = useRef<number | null>(null);
 
   const [status, setStatus] = useState<LiveStatus>('idle');
   const [micOpen, setMicOpen] = useState(false);
@@ -67,9 +75,74 @@ export function PracticeLiveScreen() {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [ending, setEnding] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [conversationCopied, setConversationCopied] = useState(false);
 
   function durationSeconds() {
     return startedAtMs.current ? Math.max(0, Math.round((Date.now() - startedAtMs.current) / 1_000)) : 0;
+  }
+
+  function appendConversationTurn(speaker: PracticeConversationTurn['speaker'], text: string) {
+    const value = text.trim();
+    if (!value) return;
+    const last = conversationLogRef.current.at(-1);
+    if (last?.speaker === speaker && last.text === value) return;
+    conversationLogRef.current.push({ speaker, text: value });
+  }
+
+  function flushLearnerTurn() {
+    if (learnerTurnLoggedRef.current) return;
+    const value = learnerDraftRef.current.trim();
+    if (!value) return;
+    appendConversationTurn('learner', value);
+    learnerTurnLoggedRef.current = true;
+  }
+
+  function flushTeacherTurn() {
+    const value = teacherDraftRef.current.trim();
+    if (!value) return;
+    appendConversationTurn('otti', value);
+  }
+
+  function conversationText() {
+    if (!mission) return '';
+    const turns = [...conversationLogRef.current];
+    const pendingLearner = learnerDraftRef.current.trim();
+    if (pendingLearner && !learnerTurnLoggedRef.current) turns.push({ speaker: 'learner', text: pendingLearner });
+    const pendingTeacher = teacherDraftRef.current.trim();
+    const last = turns.at(-1);
+    if (pendingTeacher && !(last?.speaker === 'otti' && last.text === pendingTeacher)) {
+      turns.push({ speaker: 'otti', text: pendingTeacher });
+    }
+    const trace = runtime.getAttemptTrace();
+    return [
+      `Practice: ${mission.level} — ${mission.titleEn}`,
+      '',
+      ...turns.map((turn) => `${turn.speaker === 'otti' ? 'Otti' : 'Learner'}: ${turn.text}`),
+      ...(trace.length ? [
+        '',
+        '--- QA trace ---',
+        ...trace.map((item) => {
+          const correction = item.naturalFormEn ? ` | correction: ${item.naturalFormEn}` : '';
+          return `[${item.beatId}] ${item.status}${item.requiresRetry ? ' | retry required' : ''}${correction}`;
+        }),
+      ] : []),
+    ].join('\n');
+  }
+
+  async function copyConversation() {
+    const value = conversationText();
+    if (!value) return;
+    try {
+      await navigator.clipboard.writeText(value);
+      setConversationCopied(true);
+      if (copyResetTimerRef.current !== null) window.clearTimeout(copyResetTimerRef.current);
+      copyResetTimerRef.current = window.setTimeout(() => {
+        setConversationCopied(false);
+        copyResetTimerRef.current = null;
+      }, 1800);
+    } catch {
+      setError(locale === 'ar' ? 'معرفتش أنسخ الحوار تلقائيًا. جرّب تاني.' : 'Could not copy the conversation. Try again.');
+    }
   }
 
   function setLearnerMicEnabled(enabled: boolean) {
@@ -106,7 +179,10 @@ export function PracticeLiveScreen() {
     const support = runtime.getSupportSummary();
     await stopTransport();
     if (completed) {
-      navigate(`/practice/complete/${mission.slug}`, { replace: true, state: { support, durationSeconds: durationSeconds() } });
+      navigate(`/practice/complete/${mission.slug}`, {
+        replace: true,
+        state: { support, durationSeconds: durationSeconds(), conversationText: conversationText() },
+      });
     } else {
       navigate(`/practice/mission/${mission.slug}`, { replace: true });
     }
@@ -120,8 +196,11 @@ export function PracticeLiveScreen() {
     setMicOpen(false);
     teacherDraftRef.current = '';
     learnerDraftRef.current = '';
+    learnerTurnLoggedRef.current = false;
+    conversationLogRef.current = [];
     setTeacherText('');
     setLearnerDraft('');
+    setConversationCopied(false);
     runtime.reset();
 
     try {
@@ -151,12 +230,14 @@ export function PracticeLiveScreen() {
       const live = new GeminiLiveTransport({
         onStatus: setStatus,
         onInputTranscript: (text) => {
+          if (!learnerDraftRef.current.trim()) learnerTurnLoggedRef.current = false;
           const next = appendTranscript(learnerDraftRef.current, text);
           learnerDraftRef.current = next;
           setLearnerDraft(next);
         },
         onOutputTranscript: (text) => {
           if (manualInterrupt.current) return;
+          flushLearnerTurn();
           runtime.noteTeacherOutput();
           setLearnerMicEnabled(false);
           queue.pushTranscript(text);
@@ -166,12 +247,15 @@ export function PracticeLiveScreen() {
         },
         onAudio: (data, mimeType) => {
           if (manualInterrupt.current) return;
+          flushLearnerTurn();
           setLearnerMicEnabled(false);
           void queue.enqueue(data, pcmSampleRate(mimeType));
         },
         onPerformanceCue: (cue) => characterPerformance.applyCue(cue),
         onPerformanceCancelled: () => characterPerformance.cancelCue(),
         onInterrupted: () => {
+          flushTeacherTurn();
+          teacherDraftRef.current = '';
           manualInterrupt.current = false;
           queue.interrupt();
           characterPerformance.interrupt();
@@ -181,6 +265,7 @@ export function PracticeLiveScreen() {
         onTurnComplete: () => {
           manualInterrupt.current = false;
           queue.markTurnComplete();
+          flushTeacherTurn();
           teacherDraftRef.current = '';
           if (runtime.consumeAutoFinishAfterTurn()) {
             window.setTimeout(() => void finishMission(true), 500);
@@ -203,7 +288,9 @@ export function PracticeLiveScreen() {
         'A UI PRACTICE HINT REQUEST is a private control event, never learner speech and never evidence that the learner attempted an answer.',
         'When that event arrives, do not talk. Call provide_practice_hint_bundle exactly once, echo its request_id exactly, and put the Arabic intent, contextual note if useful, useful English chunks and a complete example response in that one tool call. Then end silently.',
         'The generated full response is only help for that exact conversational moment. Never treat a different correct sentence as wrong because it differs from the example.',
-        'When there is a genuine current-target error, correct it briefly, give the natural form, and let the learner try again before moving on.',
+        'After EVERY meaningful learner attempt, before replying or advancing, silently call judge_practice_attempt for the active beat. Never advance unless it returns valid.',
+        'When judge_practice_attempt returns genuine_error, correct it briefly using the supplied natural form and let the learner retry the SAME move before moving on.',
+        'When judge_practice_attempt returns valid with minor_correction=true, briefly recast that ONE clear error and continue without forcing a retry. Never correct accent/style or uncertain transcript artifacts.',
         'Do not overpraise. React like the normal friendly real-world partner described by the authored mission and keep turns appropriate to its level.',
       ].join('\n\n');
 
@@ -239,6 +326,7 @@ export function PracticeLiveScreen() {
       window.clearTimeout(startTimer);
       window.clearInterval(clock);
       clearHintTimeout();
+      if (copyResetTimerRef.current !== null) window.clearTimeout(copyResetTimerRef.current);
       transport.current?.close();
       void microphone.current?.stop();
       void playback.current?.close();
@@ -261,6 +349,8 @@ export function PracticeLiveScreen() {
   function interruptTeacher() {
     const live = transport.current;
     if (status !== 'speaking' || !live?.connected) return;
+    flushTeacherTurn();
+    teacherDraftRef.current = '';
     manualInterrupt.current = true;
     playback.current?.interrupt();
     performer.current?.interrupt();
@@ -313,6 +403,8 @@ export function PracticeLiveScreen() {
     }
     const live = transport.current;
     if (!live?.connected || status !== 'listening' || !micOpen) return;
+    appendConversationTurn('learner', value);
+    learnerTurnLoggedRef.current = true;
     live.sendText(value);
     setTypedText('');
     setKeyboardOpen(false);
@@ -357,6 +449,25 @@ export function PracticeLiveScreen() {
         metaClassName="fs-live-mode sp-scenario-timer"
       />
 
+      {mission.briefing ? (
+        <aside className="practice-live-task" aria-label={locale === 'ar' ? 'ملخص المهمة' : 'Mission summary'}>
+          <div>
+            <small>{locale === 'ar' ? 'دلوقتي' : 'Now'}</small>
+            <strong>
+              {locale === 'ar'
+                ? (runtime.activeBeat?.overviewAr ?? mission.briefing.situationAr)
+                : (runtime.activeBeat?.learnerIntentEn ?? mission.briefing.situationEn)}
+            </strong>
+          </div>
+          {mission.briefing.facts?.map((fact) => (
+            <span key={fact.value}>
+              <small>{locale === 'ar' ? fact.labelAr : fact.labelEn}</small>
+              <bdi dir="ltr">{fact.value}</bdi>
+            </span>
+          ))}
+        </aside>
+      ) : null}
+
       <div className="fs-live-stage sp-scenario-stage practice-live-stage">
         {teacherText ? (
           <article className="sp-otti-transcript" aria-live="polite">
@@ -385,6 +496,12 @@ export function PracticeLiveScreen() {
       </div>
 
       <div className="fs-live-controls practice-live-controls">
+        <button type="button" className="practice-copy-log" onClick={() => void copyConversation()}>
+          {conversationCopied
+            ? (locale === 'ar' ? 'تم النسخ ✓' : 'Copied ✓')
+            : (locale === 'ar' ? 'نسخ الحوار' : 'Copy conversation')}
+        </button>
+
         <PracticeHintCard runtime={runtime} learnerTurn={learnerTurn} onRequestHint={requestContextualHint} />
 
         {keyboardOpen ? (
