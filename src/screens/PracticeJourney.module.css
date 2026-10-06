@@ -177,6 +177,26 @@
   text-align: start;
 }
 
+
+.root:global(.practice-world-screen),
+.root :global(.practice-world-header),
+.root :global(.practice-world-title-row),
+.root :global(.practice-world-title-row > div),
+.root :global(.practice-world-levels),
+.root :global(.practice-world-levels > div),
+.root :global(.practice-mission-section),
+.root :global(.practice-section-heading),
+.root :global(.practice-section-heading > div),
+.root :global(.practice-mission-grid),
+.root :global(.practice-mission-card) {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+
+.root:global(.practice-world-screen) {
+  inline-size: 100%;
+}
+
 .root :global([lang='ar'][dir='rtl']) { unicode-bidi: isolate; }
 .root :global([lang='en'][dir='ltr']) { unicode-bidi: isolate; }
 
