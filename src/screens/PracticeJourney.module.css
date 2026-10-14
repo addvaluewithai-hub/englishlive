@@ -204,3 +204,42 @@
   .root :global(.practice-level-card),
   .root :global(.practice-world-card) { transition: none; }
 }
+
+/* Otti now guides the learner by voice before and after the roleplay. */
+.root :global(.practice-otti-narrator) {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--color-primary) 6%, var(--color-surface));
+}
+.root :global(.practice-otti-narrator-head) {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+}
+.root :global(.practice-otti-narrator-head svg) { width: 54px; height: 54px; flex-shrink: 0; }
+.root :global(.practice-otti-narrator-head > div) { display: grid; gap: 4px; min-width: 0; }
+.root :global(.practice-otti-narrator-head strong) { font-size: 1.1rem; }
+.root :global(.practice-otti-narrator-head small),
+.root :global(.practice-otti-subtitles) { color: var(--color-text-muted); }
+.root :global(.practice-otti-narrator button) {
+  color: var(--color-on-primary);
+  background: var(--color-primary);
+  border: 0;
+  border-radius: 999px;
+  min-height: 48px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 10px 18px;
+}
+.root :global(.practice-otti-narrator button:focus-visible) { outline: 3px solid var(--color-text); outline-offset: 3px; }
+.root :global(.practice-otti-subtitles) {
+  margin: 0;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+  max-height: 8rem;
+  overflow: auto;
+}
