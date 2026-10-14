@@ -98,3 +98,20 @@
 }
 
 .tutor-missing { padding: 32px; max-width: 600px; margin: 0 auto; }
+
+/* Opt-in, metadata-only support trace. Keep long sessions usable on mobile. */
+.tutor-debug-trace { display: grid; gap: 8px; min-width: 0; }
+.tutor-debug-trace pre {
+  max-height: 260px;
+  overflow: auto;
+  margin: 0;
+  padding: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font: 11px/1.5 ui-monospace, SFMono-Regular, Consolas, monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.tutor-live-debug { align-self: center; margin: 6px; padding-inline: 16px; }
