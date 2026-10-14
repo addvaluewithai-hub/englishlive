@@ -134,3 +134,97 @@
 @media (prefers-reduced-motion: reduce) {
   .tutor-live .fs-mic-control.is-live { animation: none; }
 }
+
+/* Session 2 — the mic and clear turn status take precedence over decorative chrome. */
+.is-roleplay .tutor-stage.practice-live-stage,
+.is-review .tutor-stage.practice-live-stage {
+  min-height: min(54dvh, 465px);
+  grid-template-rows: minmax(175px, 1fr) auto auto;
+  padding-bottom: 10px;
+}
+.is-roleplay .sp-scenario-character, .is-review .sp-scenario-character {
+  transform: translateY(0);
+  max-height: min(32dvh, 285px);
+}
+.is-roleplay .tutor-dock.fs-live-controls,
+.is-review .tutor-dock.fs-live-controls {
+  border-top: 1px solid var(--color-border);
+  padding: 12px max(10px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom));
+  background: var(--color-surface);
+  z-index: 20;
+}
+.tutor-live .tutor-hold-control {
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  min-width: 132px;
+  min-height: 132px;
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+.tutor-live .tutor-hold-control.is-holding {
+  transform: scale(1.06);
+  box-shadow: 0 0 0 9px rgba(0,111,107,.14), 0 0 0 20px rgba(0,111,107,.06);
+}
+.tutor-live .tutor-hold-control.is-holding small { font-weight: 850; }
+.tutor-live .tutor-hold-control:disabled { opacity: .55; cursor: default; }
+.tutor-live .tutor-control-row { align-items: center; }
+.tutor-live .tutor-stage-extra { width: min(640px, calc(100% - 14px)); }
+.tutor-live .tutor-goals {
+  width: 100%;
+  max-width: 640px;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 17px;
+  background: var(--color-surface-raised);
+  overflow: hidden;
+}
+.tutor-live .tutor-goals > summary {
+  list-style: none;
+  display: flex; align-items: center; gap: 9px;
+  min-height: 48px; padding: 10px 15px;
+  font-size: 13px; cursor: pointer; color: var(--color-text);
+}
+.tutor-live .tutor-goals > summary::-webkit-details-marker { display: none; }
+.tutor-live .tutor-goals > summary > span:first-child {
+  font-size: 23px; color: var(--color-primary);
+}
+.tutor-live .tutor-goals > summary small {
+  margin-inline-start: auto; color: var(--color-primary); font-weight: 850; direction: ltr;
+}
+.tutor-live .tutor-goals-chevron { color: var(--color-text-muted); font-size: 17px; }
+.tutor-live .tutor-goals-explainer {
+  margin: 0; padding: 0 15px 8px; font-size: 11px; color: var(--color-text-muted);
+}
+.tutor-live .tutor-goal-items { display: grid; gap: 6px; padding: 0 12px 12px; }
+.tutor-live .tutor-goal-items > span {
+  display: flex; gap: 8px; align-items: center; padding: 8px 10px;
+  background: var(--color-background); border-radius: 11px;
+  font-size: 12px; color: var(--color-text-muted);
+}
+.tutor-live .tutor-goal-items > span.is-observed { color: var(--color-primary); }
+.tutor-live .tutor-goal-items > span > span { font-weight: 800; font-size: 16px; }
+/* Hints appear in progressive stages; the example remains a deliberate last click. */
+.tutor-live .practice-hint-toggle {
+  max-width: 640px;
+  border-color: var(--color-border); border-radius: 16px;
+  background: var(--color-surface-raised); color: var(--color-text);
+}
+.tutor-live .practice-hint-card {
+  max-width: 640px; border-color: var(--color-border);
+  background: var(--color-surface-raised); color: var(--color-text);
+}
+.tutor-live .practice-hint-full { border: 1px solid var(--color-border); }
+@media (max-width: 620px) {
+  .is-roleplay .tutor-stage.practice-live-stage,
+  .is-review .tutor-stage.practice-live-stage {
+    min-height: min(51dvh, 425px);
+    grid-template-rows: minmax(150px, 1fr) auto auto;
+  }
+  .tutor-live .tutor-hold-control { min-width: 116px; min-height: 116px; }
+  .tutor-live .tutor-control-row.fs-control-row { gap: 7px; }
+  .tutor-live .tutor-hold-control small { font-size: 11px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tutor-live .tutor-hold-control { transition: none; }
+}
