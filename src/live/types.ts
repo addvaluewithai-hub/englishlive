@@ -11,6 +11,8 @@ export interface LiveSessionConfig {
   voiceName?: string;
   /** Per-session pause tolerance; other modes retain their existing default. */
   silenceDurationMs?: number;
+  /** When true, do not request unreliable Live input text in this session. */
+  disableInputTranscription?: boolean;
 }
 
 export interface LiveCallbacks {
