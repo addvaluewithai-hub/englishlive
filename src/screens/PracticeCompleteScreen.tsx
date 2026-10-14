@@ -1,116 +1,26 @@
-import { useState } from 'react';
-import { Link, useLocation, useParams, useNavigate } from 'react-router-dom';
-import { OttiMark } from '../character/otti/OttiMark';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useI18n } from '../i18n/LocaleProvider';
-import { practiceJourneyCopy } from '../practice/journeyCopy';
 import { practiceMissionContractBySlug } from '../practice/missions/catalog';
 import { PracticeTutor } from '../practice/tutor/PracticeTutor';
 import type { PracticeCompletionState } from '../practice/tutor/types';
-import styles from './PracticeJourney.module.css';
 
 export function PracticeCompleteScreen() {
-  const navigate = useNavigate();
-  const { locale, number } = useI18n();
-  const copy = practiceJourneyCopy[locale].complete;
   const { missionId } = useParams();
+  const { state } = useLocation();
+  const navigate = useNavigate();
+  const { locale } = useI18n();
   const mission = practiceMissionContractBySlug(missionId);
-  const { state: navigationState } = useLocation();
-  const state = (navigationState ?? {}) as PracticeCompletionState;
-  const support = state.support ?? { intentHints: 0, usefulLanguageReveals: 0, fullHelpReveals: 0 };
-  // Only high-confidence Live tool observations appear. No separate Coach API call.
-  const corrections = state.recordedByOtti && Array.isArray(state.corrections) ? state.corrections : [];
-  const goals = mission?.beats.filter((beat) => beat.type === 'required') ?? [];
-  const allowedGoalIds = new Set(goals.map((goal) => goal.id));
-  const achievedGoalIds = state.recordedByOtti && Array.isArray(state.achievedGoalIds)
-    ? state.achievedGoalIds.filter((goal) => allowedGoalIds.has(goal)) : [];
-  const [copied, setCopied] = useState(false);
-
-  async function copyReport() {
-    if (!mission) return;
-    const report = [
-      'Practice: ' + mission.level + ' — ' + mission.titleEn,
-      'Source: Otti private Live observations (not a verbatim audio transcript)',
-      'Confident issues recorded: ' + corrections.length,
-      'Speaking opportunities observed (not proof of mastery):',
-      ...goals.map((goal) => (achievedGoalIds.includes(goal.id) ? '[observed] ' : '[not observed] ') + goal.learnerIntentEn),
-      ...corrections.flatMap((item, i) => [
-        `${i + 1}. Heard: ${item.originalEn}`,
-        `   Better: ${item.betterEn}`,
-        `   Why: ${locale === 'ar' ? item.feedbackAr : item.feedbackEn}`,
-      ]),
-      ...(corrections.length ? [] : ['No confident language issues were recorded. This does not mean the speech was error-free.']),
-      'Help opened: ' + support.intentHints,
-      'Notebook diagnostics: ' + JSON.stringify(state.diagnostics ?? 'unavailable'),
-    ].join('\n');
-    try {
-      await navigator.clipboard.writeText(report);
-      setCopied(true);
-    } catch { setCopied(false); }
-  }
-
-  if (!mission) return <section className={styles.root}><h1>{copy.missingTitle}</h1><Link to="/practice">{copy.backPractice}</Link></section>;
-  return (
-    <>
-      {state.recordedByOtti ? <PracticeTutor key={mission.slug} mission={mission} phase="review"
-        corrections={corrections} observedGoalIds={achievedGoalIds}
-        onClose={() => navigate(`/practice/${mission.level}/world/${mission.worldId}`)} /> : null}
-    <section className={styles.root + ' practice-complete'}>
-      <div className="practice-complete-mark"><OttiMark /></div>
-      <span className="practice-eyebrow">{locale === 'ar' ? 'Otti معاك بعد المحادثة' : 'Otti after your conversation'}</span>
-      <h1>{locale === 'ar' ? 'نراجع كلامك سوا' : 'Your speaking review'}</h1>
-      <p>{locale === 'ar' ? 'ناقش الملاحظات مع Otti واسأله وجرّب الجمل الصح. التقرير المكتوب موجود تحت.' :
-        'Discuss the saved notes with Otti, ask questions, and practise corrected phrases. Your written report is below.'}</p>
-      {state.recordedByOtti ? (
-        <>
-          {state.diagnostics ? <details className="practice-review-evidence-note">
-            <summary>{locale === 'ar' ? 'تفاصيل تسجيل الملاحظات' : 'Notebook diagnostics'}</summary>
-            <pre dir="ltr">{JSON.stringify(state.diagnostics, null, 2)}</pre>
-            {!state.diagnostics.collector.calls ? <p>{locale === 'ar' ? 'موصلناش استدعاءات تسجيل أخطاء من Otti. ده مش معناه إن الكلام من غير أخطاء.' :
-              'No issue tool calls reached the notebook. This does not mean the speech was error-free.'}</p> : null}
-          </details> : null}
-          <div className="practice-conversation-goals is-recap" aria-label={locale === 'ar' ? 'فرص الكلام اللي ظهرت' : 'Observed speaking opportunities'}>
-            {goals.map((goal) => <span key={goal.id} className={achievedGoalIds.includes(goal.id) ? 'is-observed' : ''}>
-              <span aria-hidden="true">{achievedGoalIds.includes(goal.id) ? '✓' : '○'}</span>{' '}
-              {locale === 'ar' ? goal.overviewAr : goal.learnerIntentEn}
-            </span>)}
-          </div>
-          <section className="practice-complete-corrections" aria-label={locale === 'ar' ? 'تقرير المحادثة' : 'Conversation report'}>
-            <header>
-              <small>{locale === 'ar' ? 'تقرير Otti' : 'Otti report'}</small>
-              <strong>{locale === 'ar' ? 'الملاحظات المسجلة' : 'Recorded improvements'}</strong>
-            </header>
-            {corrections.length ? (
-              <div className="practice-complete-correction-list">
-                {corrections.map((issue, index) => (
-                  <article key={issue.originalEn + index}>
-                    <div><small>{copy.youSaid}</small><span lang="en" dir="ltr">{issue.originalEn}</span></div>
-                    <div><small>{copy.betterEnglish}</small><strong lang="en" dir="ltr">{issue.betterEn}</strong></div>
-                    <p>{locale === 'ar' ? issue.feedbackAr : issue.feedbackEn}</p>
-                  </article>
-                ))}
-              </div>
-            ) : <p>{locale === 'ar'
-              ? 'Otti ما سجّلش أخطاء لغوية مؤكدة في المحاولة دي. ده مش معناه إن كل كلمة كانت صح.'
-              : 'Otti recorded no high-confidence issues in this attempt. This does not prove every word was correct.'}</p>}
-          </section>
-          <p className="practice-review-evidence-note">
-            {locale === 'ar'
-              ? 'الملاحظات جاية من سماع Otti أثناء الحوار، مش Transcript حرفي، ومش درجة أو تقييم نهائي للمستوى.'
-              : 'These are live listening observations, not a verbatim transcript or a proficiency score.'}
-          </p>
-          <p className="practice-review-evidence-note">
-            {locale === 'ar' ? `استخدمت المساعدة ${number(support.intentHints)} مرة.` : `Help used: ${number(support.intentHints)} times.`}
-          </p>
-          <button type="button" className="practice-complete-copy" onClick={() => void copyReport()}>
-            {copied ? copy.copiedConversation : (locale === 'ar' ? 'نسخ تقرير Otti' : 'Copy Otti report')}
-          </button>
-        </>
-      ) : <p className="practice-coach-status" role="status">{locale === 'ar' ? 'مفيش ملاحظات من جلسة Live محفوظة في الصفحة دي. ابدأ محادثة جديدة علشان تحصل على مراجعة.' : 'No Live session notes were passed to this page. Start a conversation for a review.'}</p>}
-      <div className="practice-complete-actions">
-        <Link className="practice-complete-primary" to={'/practice/mission/' + mission.slug}>{locale === 'ar' ? 'جرّب تاني' : 'Try again'}</Link>
-        <Link className="practice-complete-secondary" to={'/practice/' + mission.level + '/world/' + mission.worldId}>{copy.another}</Link>
-      </div>
-    </section>
-    </>
-  );
+  const review = (state ?? {}) as PracticeCompletionState;
+  if (!mission || !review.recordedByOtti) return <section className="tutor-missing">
+    <h1>{locale === 'ar' ? 'ابدأ محادثة مع Otti' : 'Start a conversation with Otti'}</h1>
+    <p>{locale === 'ar' ? 'مفيش جلسة محفوظة نراجعها هنا.' : 'There is no saved session to review here.'}</p>
+    <Link to={mission ? `/practice/mission/${mission.slug}` : '/practice'}>{locale === 'ar' ? 'نبدأ' : 'Start'}</Link>
+  </section>;
+  const allowed = new Set(mission.beats.filter((beat) => beat.type === 'required').map((beat) => beat.id));
+  const safeReview = { ...review,
+    corrections: Array.isArray(review.corrections) ? review.corrections : [],
+    achievedGoalIds: Array.isArray(review.achievedGoalIds) ? review.achievedGoalIds.filter((id) => allowed.has(id)) : [],
+  };
+  return <PracticeTutor key={mission.slug} mission={mission} phase="review" review={safeReview}
+    onClose={() => navigate(`/practice/${mission.level}/world/${mission.worldId}`)} />;
 }

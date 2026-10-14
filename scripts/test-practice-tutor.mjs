@@ -40,8 +40,8 @@ test('animated tutor runtime: interactive turns, pause, interruption, drain, ret
   t.mock.method(PcmPlaybackQueue.prototype, 'markTurnComplete', () => {});
   const collector = createSilentIssueCollector(practiceMissionContractBySlug('a2-order-with-preferences'));
   const turns = [];
-  const make = () => new TutorSession({ host: () => null, update() {}, turns, onTurn() {},
-    diagnostic() {}, tools: [collector.tool, collector.progressTool] });
+  const make = (extra = {}) => new TutorSession({ host: () => null, update() {}, turns, onTurn() {},
+    diagnostic() {}, tools: [collector.tool, collector.progressTool], ...extra });
   const session = make();
   await session.start('review instructions', 'explain one correction', 2400);
   assert.equal(connects[0].config.voiceName, 'Charon', 'use the same published-character normalization as Speaking');
@@ -62,6 +62,11 @@ test('animated tutor runtime: interactive turns, pause, interruption, drain, ret
   assert.equal(session.state.micOpen, false);
   session.togglePause();
   assert.equal(session.state.micOpen, true);
+  callbacks.onAudio('AAAA', 'audio/pcm');
+  callbacks.onTurnComplete();
+  await session.queue.drainEnqueues();
+  await Promise.resolve();
+  assert.equal(session.state.micOpen, true, 'already-drained audio must not strand the mic when turnComplete arrives late');
   session.update({ status: 'speaking' });
   session.interrupt();
   assert.equal(session.state.micOpen, true);
@@ -87,4 +92,14 @@ test('animated tutor runtime: interactive turns, pause, interruption, drain, ret
   await cancelled.close();
   await starting;
   assert.equal(connects.length, 2, 'cancel during initial await must not open a new socket');
+  const finalizing = make({ notesFinalized: collector.isFinalized });
+  await finalizing.start('roleplay', 'start', 1200);
+  collector.beginFinalReview();
+  const settling = finalizing.settle();
+  assert.match(texts.at(-1), /PRIVATE_FINISH_NOTES/);
+  collector.progressTool.handle({ goal_ids: [], final_review: true,
+    language_review: { status: 'no_clear_issue', issues: [], reason: 'No further clear issue.' } });
+  assert.equal(await settling, false);
+  assert.equal(finalizing.state.micOpen, false);
+  await finalizing.close();
 });

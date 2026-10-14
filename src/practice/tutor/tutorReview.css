@@ -1,0 +1,36 @@
+.tutor-review-notes {
+  border: 1px solid var(--color-border);
+  border-radius: 22px;
+  background: var(--color-surface-raised);
+  padding: 20px;
+  text-align: start;
+}
+.tutor-review-notes header small { color: var(--color-primary); font-size: 12px; }
+.tutor-review-notes h2 { margin: 4px 0 10px; font-size: 22px; }
+.tutor-review-notes header p { font-size: 13px; line-height: 1.7; color: var(--color-text-muted); }
+.tutor-note-list { display: grid; gap: 12px; max-height: 460px; overflow: auto; padding-inline-end: 4px; }
+.tutor-note-list article { border: 1px solid var(--color-border); border-radius: 14px; background: var(--color-surface); padding: 14px; }
+.tutor-note-list article > small { color: var(--color-text-muted); font-size: 11px; }
+.tutor-note-list article p { margin: 4px 0 12px; font-size: 13px; }
+.tutor-note-list article strong { display: block; color: var(--color-primary); font-size: 16px; }
+.tutor-note-list button, .tutor-session-details button {
+  min-height: 40px;
+  width: 100%;
+  padding: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface-raised);
+  color: var(--color-primary);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.tutor-empty-note { padding: 14px; background: var(--color-surface); border-radius: 14px; line-height: 1.8; font-size: 13px; }
+.tutor-session-details { font-size: 12px; color: var(--color-text-muted); }
+.tutor-review-notes footer { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 20px; border-top: 1px solid var(--color-border); padding-top: 14px; }
+.tutor-review-notes footer a { color: var(--color-primary); font-size: 12px; }
+.tutor-missing { padding: 32px; max-width: 600px; margin: 0 auto; }
+@media (max-width: 720px) {
+  .tutor-review-notes { padding: 16px; }
+  .tutor-note-list { max-height: none; }
+}

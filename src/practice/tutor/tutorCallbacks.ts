@@ -18,7 +18,7 @@ export function tutorCallbacks(session: TutorSession, diagnostic: (event: LiveDi
     },
     onInputTranscript: () => undefined,
     onOutputTranscript: (piece) => {
-      if (session.closed || session.suppressOutput || session.state.paused) return;
+      if (session.closed || session.finishing || session.suppressOutput || session.state.paused) return;
       session.serverTurnPending = true;
       session.setMic(false);
       session.queue?.pushTranscript(piece);
@@ -26,7 +26,7 @@ export function tutorCallbacks(session: TutorSession, diagnostic: (event: LiveDi
       session.update({ text: session.teacherDraft });
     },
     onAudio: (audio, mime) => {
-      if (session.closed || session.suppressOutput || session.state.paused) return;
+      if (session.closed || session.finishing || session.suppressOutput || session.state.paused) return;
       session.serverTurnPending = true;
       session.hasAudio = true;
       session.setMic(false);
@@ -39,7 +39,7 @@ export function tutorCallbacks(session: TutorSession, diagnostic: (event: LiveDi
       session.flushTeacher();
       session.queue?.interrupt();
       session.performer.interrupt();
-      session.suppressOutput = false;
+      session.suppressOutput = session.finishing;
       session.serverTurnPending = false;
       session.hasAudio = false;
       session.listen();
@@ -47,9 +47,13 @@ export function tutorCallbacks(session: TutorSession, diagnostic: (event: LiveDi
     onTurnComplete: () => {
       if (session.closed) return;
       session.serverTurnPending = false;
-      session.suppressOutput = false;
+      session.suppressOutput = session.finishing;
       session.flushTeacher();
-      session.queue?.markTurnComplete();
+      const queue = session.queue;
+      queue?.markTurnComplete();
+      // Audio can drain via starvation before the server sends turnComplete.
+      // Recheck after queued enqueues; do not wait for a playback callback already fired.
+      void queue?.drainEnqueues().then(() => { if (!queue.isPlaying) session.listen(); });
       if (!session.hasAudio) session.listen();
       session.hasAudio = false;
     },

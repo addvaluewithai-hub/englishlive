@@ -1,3 +1,4 @@
+import { practiceCopy, guidedCopy, independentCopy, freeSpeakCopy } from './visual-live-copy.mjs';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
@@ -23,106 +24,6 @@ const routes = [
 const expectedPrimary = {
   adult: 'rgb(23, 107, 102)',
   teen: 'rgb(89, 69, 161)',
-};
-const practiceCopy = {
-  ar: {
-    close: 'إنهاء ومراجعة',
-    status: 'دورك',
-    hintTitle: 'محتاج تلميح؟',
-    hintBody: 'هتتعمل على سياق المحادثة الحالية',
-    secondary: 'خيارات إضافية — قريبًا',
-    keyboard: 'اكتب بدل الكلام',
-    placeholder: 'اكتب اللي عايز تقوله…',
-    send: 'إرسال',
-  },
-  en: {
-    close: 'Finish and review',
-    status: 'Your turn',
-    hintTitle: 'Need a hint?',
-    hintBody: 'It will use the current conversation context',
-    secondary: 'More options — coming soon',
-    keyboard: 'Type instead of speaking',
-    placeholder: 'Type what you want to say…',
-    send: 'Send',
-  },
-};
-const guidedCopy = {
-  ar: {
-    header: 'تدريب موجّه',
-    round: 'الجولة 1',
-    close: 'إنهاء التدريب',
-    status: 'دورك الآن',
-    yourTurn: 'دورك',
-    help: 'اقرأها بصوتك — وغيّر اللي بين [ ]',
-    mic: 'اتكلم',
-  },
-  en: {
-    header: 'Guided practice',
-    round: 'Round 1',
-    close: 'End guided practice',
-    status: 'Your turn',
-    yourTurn: 'YOUR TURN',
-    help: 'Read it aloud — change what is inside [ ]',
-    mic: 'Speak',
-  },
-};
-const independentCopy = {
-  ar: {
-    header: 'تدريب مستقل',
-    close: 'إنهاء المحادثة',
-    status: 'دورك الآن',
-    hintLabel: 'تلميح معنى الجولة الثانية',
-    hintHelp: 'المعنى المطلوب — قولها بالإنجليزي بطريقتك',
-    helpArabic: 'اشرح بالعربي',
-    mic: 'دورك',
-    keyboard: 'اكتب بدل الكلام',
-    copyLog: 'نسخ لوج المحادثة',
-    placeholder: 'اكتب اللي عايز تقوله…',
-    send: 'إرسال',
-  },
-  en: {
-    header: 'Independent practice',
-    close: 'End conversation',
-    status: 'Your turn',
-    hintLabel: 'Round 2 meaning hint',
-    hintHelp: 'Meaning to express — say it in English in your own way',
-    helpArabic: 'Explain in Arabic',
-    mic: 'Your turn',
-    keyboard: 'Type instead of speaking',
-    copyLog: 'Copy conversation log',
-    placeholder: 'Type what you want to say…',
-    send: 'Send',
-  },
-};
-const freeSpeakCopy = {
-  ar: {
-    header: 'محادثة حرة',
-    close: 'إنهاء المحادثة الحرة',
-    status: 'دورك الآن',
-    mode: 'دردشة عادية',
-    helpArabic: 'اشرح بالعربي',
-    mic: 'دورك',
-    keyboard: 'اكتب بدل الكلام',
-    history: 'سجل المحادثة',
-    closeHistory: 'إغلاق سجل المحادثة',
-    historyEmpty: 'لسه ما بدأناش كلام.',
-    placeholder: 'اكتب اللي عايز تقوله بالإنجليزي…',
-    send: 'إرسال',
-  },
-  en: {
-    header: 'Free Speak',
-    close: 'End Free Speak',
-    status: 'Your turn',
-    mode: 'Just chat',
-    helpArabic: 'Explain in Arabic',
-    mic: 'Your turn',
-    keyboard: 'Type instead of speaking',
-    history: 'Conversation history',
-    closeHistory: 'Close conversation history',
-    historyEmpty: 'The conversation has not started yet.',
-    placeholder: 'Type what you want to say in English…',
-    send: 'Send',
-  },
 };
 
 await mkdir(outputDir, { recursive: true });
@@ -173,17 +74,14 @@ try {
             assert.equal(await page.locator('.practice-live .fs-live-brand').evaluate((node) => getComputedStyle(node).display), 'none');
             assert.equal(await page.locator('.fs-live-close').getAttribute('aria-label'), expected.close);
             assert.equal(await page.locator('.fs-live-status strong').innerText(), expected.status);
-            assert.equal(await page.locator('.fs-live-title span[lang="ar"]').getAttribute('dir'), 'rtl');
-            assert.ok((await page.locator('.fs-live-title span[lang="ar"]').innerText()).length > 0);
-            assert.equal(await page.locator('.sp-otti-transcript small span[lang="ar"]').getAttribute('dir'), 'rtl');
+            assert.equal(await page.locator('.tutor-room h1').count(), 1);
+            assert.equal(await page.locator('.tutor-caption').count(), 1);
             assert.equal(await page.locator('.practice-hint-toggle strong').innerText(), expected.hintTitle);
             assert.equal(await page.locator('.practice-hint-toggle small').innerText(), expected.hintBody);
-            assert.equal(await page.locator('.practice-live-stage').evaluate((node) => getComputedStyle(node).backgroundImage), 'none');
-            assert.notEqual(await page.locator('.sp-otti-transcript').evaluate((node) => getComputedStyle(node, '::after').content), 'none');
+            assert.equal(await page.locator('.tutor-stage').evaluate((node) => getComputedStyle(node).backgroundImage), 'none');
             assert.equal(await page.locator('.fs-keyboard-control').getAttribute('aria-label'), expected.keyboard);
-            const secondary = page.locator('.practice-live-secondary-control');
-            assert.equal(await secondary.isDisabled(), true);
-            assert.equal(await secondary.getAttribute('aria-label'), expected.secondary);
+            assert.equal(await page.locator('.tutor-secondary').count(), 2);
+
           }
 
           if (route.name === 'guided-live-foundation') {
@@ -278,30 +176,24 @@ try {
     const keyboard = page.locator('.practice-live .fs-keyboard-control').first();
     await keyboard.click();
     const input = page.locator('.fs-type-row input');
-    assert.equal(await input.getAttribute('lang'), 'en');
-    assert.equal(await input.getAttribute('dir'), 'ltr');
+    assert.equal(await input.getAttribute('dir'), 'auto');
     assert.equal(await input.getAttribute('placeholder'), expected.placeholder);
     assert.equal(await page.locator('.fs-type-row button').innerText(), expected.send);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true, `Practice composer ${locale}: horizontal overflow`);
-    const pause = page.getByRole('button', { name: locale === 'ar' ? 'وقفة للمراجعة' : 'Pause to review', exact: true });
-    await pause.click();
-    assert.equal(await page.locator('.fs-live-status strong').innerText(), locale === 'ar' ? 'خد وقتك' : 'Take your time');
-    assert.equal(await page.locator('.practice-hint-toggle').count(), 0, 'help does not pretend to be a learner turn while paused');
-    await page.getByRole('button', { name: locale === 'ar' ? 'نكمل' : 'Resume', exact: true }).click();
-    assert.equal(await page.locator('.fs-live-status strong').innerText(), expected.status);
+    // Runtime pause/resume is covered by the media state-machine tests, not static visual mode.
     await page.goto(`${baseUrl}/practice/mission/b1-resolve-wrong-order`, { waitUntil: 'networkidle' });
-    const start = page.locator('.practice-start-button');
-    await page.locator('.practice-pause-choice input').check();
-    assert.equal(await start.getAttribute('href'), '/practice/live/b1-resolve-wrong-order?pace=relaxed');
+    const start = page.locator('.tutor-next');
+    await page.locator('.tutor-pace-choice input').check();
     await start.click();
+    assert.equal(new URL(page.url()).search, '?pace=relaxed');
     await page.locator('.practice-live .practice-conversation-goals > span').first().waitFor();
     assert.equal(await page.locator('.practice-conversation-goals > span').count(), 4);
     assert.equal(await page.locator('.practice-conversation-goals > .is-observed').count(), 0, 'goals must not be claimed without observed speech');
-    await page.locator('.practice-conversation-actions').getByRole('button', { name: expected.close, exact: true }).click();
-    await page.locator('.practice-complete').waitFor();
-    assert.equal(await page.locator('.practice-complete h1').innerText(), locale === 'ar' ? 'مراجعة محادثتك' : 'Your conversation review');
+    await page.locator('.tutor-next').click();
+    await page.locator('.tutor-notes-toggle').waitFor();
+    assert.equal(await page.locator('.tutor-room h1').innerText(), locale === 'ar' ? 'نراجع سوا' : 'Review together');
     assert.equal(await page.locator('.practice-conversation-goals > .is-observed').count(), 0);
-    assert.equal(await page.locator('.practice-complete-correction-list').count(), 0);
+    assert.equal(await page.locator('.tutor-note-list article').count(), 0);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true, `Practice recap ${locale}: horizontal overflow`);
     await context.close();
   }
@@ -325,8 +217,7 @@ try {
     await history.locator('header button').click();
     await page.locator('.fs-keyboard-control').click();
     const input = page.locator('.fs-type-row input');
-    assert.equal(await input.getAttribute('lang'), 'en');
-    assert.equal(await input.getAttribute('dir'), 'ltr');
+    assert.equal(await input.getAttribute('dir'), 'auto');
     assert.equal(await input.getAttribute('placeholder'), expected.placeholder);
     assert.equal(await page.locator('.fs-type-row button').innerText(), expected.send);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true, `Free Speak interactions ${locale}: horizontal overflow`);

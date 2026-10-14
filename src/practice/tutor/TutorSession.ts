@@ -36,6 +36,7 @@ export class TutorSession {
     turns: ConversationTurn[];
     onTurn: () => void;
     diagnostic: (event: LiveDiagnostic) => void;
+    notesFinalized?: () => boolean;
   }) {
     this.performer = new CharacterPerformanceController(options.host);
     this.turns = options.turns;
@@ -67,6 +68,7 @@ export class TutorSession {
   async start(instruction: string, opening: string, silenceDurationMs: number) {
     this.update({ status: 'connecting', error: null });
     this.performer.thinking();
+    this.armWatchdog();
     this.queue = new PcmPlaybackQueue({
       onMouthPose: (pose) => { if (!this.closed) this.performer.setMouth(pose); },
       onSpeechStart: () => {
@@ -75,7 +77,7 @@ export class TutorSession {
         this.update({ status: 'speaking', waiting: false });
         this.performer.speechStart();
       },
-      onSpeechEnd: () => { if (!this.closed) this.performer.speechEnd(); },
+      onSpeechEnd: () => { if (!this.closed) { this.performer.speechEnd(); this.listen(); } },
       onTurnComplete: () => this.listen(),
     });
     try {
@@ -190,15 +192,22 @@ export class TutorSession {
   /** Allow the final response/tools to arrive before freezing the roleplay notebook. */
   async settle() {
     this.finishing = true;
+    this.clearWatchdog();
     this.setMic(false);
+    this.suppressOutput = true;
+    this.queue?.interrupt();
     this.live?.endAudioStream();
-    const deadline = Date.now() + 5000;
-    while (!this.closed && this.serverTurnPending && Date.now() < deadline) {
+    const needsFinalReview = Boolean(this.options.notesFinalized && this.live?.connected && !this.closed);
+    if (needsFinalReview) {
+      this.live?.sendText('PRIVATE_FINISH_NOTES: the learner ended roleplay. No more spoken roleplay. Silently audit the ACTUAL learner English heard in this session, including minor genuine errors not yet saved. Call record_practice_progress with language_review, goal_ids and final_review:true. Preserve exact originals; do not invent errors or use prompt examples as evidence. If no clear issues or uncertain, state that honestly in the tool.');
+    }
+    const deadline = Date.now() + 8000;
+    while (!this.closed && needsFinalReview && !this.options.notesFinalized?.() && Date.now() < deadline) {
       await new Promise((resolve) => setTimeout(resolve, 50));
     }
     await this.live?.flushPendingMessages();
     this.flushTeacher();
-    return this.serverTurnPending;
+    return needsFinalReview && !this.options.notesFinalized?.();
   }
 
   async close() {

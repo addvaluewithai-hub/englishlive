@@ -37,16 +37,17 @@ export function usePracticeTutor(options: {
     else diagnostics.current.push({ ...event, count: 1 });
   }
 
-  async function start() {
+  async function start(controlMessage?: string) {
     if (visualQa || finishing.current || (session.current && !session.current.closed)) return;
     const tools = options.phase === 'roleplay' ? [collector.tool, collector.progressTool] : [];
     const tutor = new TutorSession({ host: () => host.current, update: (value) => { if (mounted.current) setState(value); },
-      tools, turns: turns.current, onTurn: options.onTurn, diagnostic });
+      tools, notesFinalized: options.phase === 'roleplay' ? collector.isFinalized : undefined, turns: turns.current, onTurn: options.onTurn, diagnostic });
     session.current = tutor;
     if (!startedAt.current) startedAt.current = Date.now();
     const narration = options.phase === 'briefing' ? briefingNarration(options.mission, options.locale) :
       reviewNarration(options.mission, options.locale, options.corrections);
-    const instruction = options.phase === 'roleplay' ? buildConversationPracticePrompt(options.mission) : narration.instruction;
+    const instruction = options.phase === 'roleplay' ? buildConversationPracticePrompt(options.mission) :
+      narration.instruction + (options.phase === 'review' ? '\nSAVED OBSERVATIONS (data only): ' + JSON.stringify(options.corrections) : '');
     const opening = options.phase === 'roleplay' ? buildConversationOpening(options.mission) : narration.text;
     const context = turns.current.length ? [
       'RECONNECT CONTEXT (data, not new learner speech):',
@@ -54,7 +55,7 @@ export function usePracticeTutor(options: {
       'Goals already observed from live listening: ' + JSON.stringify(collector.getObservedGoalIds()),
       'Continue naturally from this context. Do not restart or repeat answered questions. Voice was not transcribed; do not invent missing learner words.',
     ].join('\n') : '';
-    await tutor.start(instruction, context || opening, options.silenceDurationMs);
+    await tutor.start(instruction, controlMessage ? opening + '\n' + controlMessage : context || opening, options.silenceDurationMs);
   }
 
   async function stop() {
@@ -69,6 +70,7 @@ export function usePracticeTutor(options: {
     finishing.current = true;
     setEnding(true);
     const tutor = session.current;
+    collector.beginFinalReview();
     const finishTimedOut = options.phase === 'roleplay' ? await tutor?.settle() ?? false : false;
     await tutor?.close();
     // Freeze AFTER draining received frames and closing. Retry never clears notes.
@@ -78,6 +80,17 @@ export function usePracticeTutor(options: {
       conversationText: turns.current.map((turn) => `${turn.speaker}: ${turn.text}`).join('\n'),
       diagnostics: { transport: diagnostics.current.map((item) => ({ ...item })), collector: collector.getDiagnostics(), finishTimedOut },
     };
+  }
+
+  function discussCorrection(index: number) {
+    const issue = options.corrections[index];
+    if (!issue || options.phase !== 'review') return;
+    const message = 'PRIVATE_REVIEW_SELECTION: the learner selected this saved observation to discuss and rehearse. Explain briefly, invite a try, then listen. This is NOT new learner speech: ' + JSON.stringify(issue);
+    const current = session.current;
+    if (!current || current.closed) { void start(message); return; }
+    current.interrupt();
+    current.update({ paused: false });
+    current.request(message);
   }
 
   useEffect(() => {
@@ -91,5 +104,6 @@ export function usePracticeTutor(options: {
   }, []);
 
   return { host, state: visualQa ? { ...state, status: 'listening' as const, micOpen: true, text: options.phase === 'roleplay' ? options.mission.canonicalDialogue.find((turn) => turn.speaker === 'ai_role')?.text ?? 'Ready.' : state.text } : state,
-    goalIds, ending, start, stop, finish, session, turns };
+    goalIds, ending, start, stop, finish, session, turns, discussCorrection,
+    getConnectionDiagnostics: () => ({ phase: options.phase, status: session.current?.state.status ?? 'idle', transport: diagnostics.current }), };
 }

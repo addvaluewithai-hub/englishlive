@@ -23,7 +23,8 @@ export type PracticeCompletionState = {
   recordedByOtti?: boolean;
   diagnostics?: {
     transport: LiveDiagnostic[];
-    collector: { calls: number; saved: number; rejected: number; reasons: Record<string, number> };
+    collector: { calls: number; saved: number; rejected: number; reasons: Record<string, number>;
+      languageReviews?: { checks: number; missing: number; noClearIssue: number; uncertain: number; finalized: boolean } };
     finishTimedOut: boolean;
   };
 };

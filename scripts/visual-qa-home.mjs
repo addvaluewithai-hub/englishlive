@@ -123,12 +123,12 @@ try {
         boundary = await assertMigratedBoundary(page, locale, experience);
         assert.equal(await page.locator('[data-englotti-live-ui]').count(), 1);
         assert.equal(await page.locator('.practice-live .fs-live-character-host').count(), 1);
-        assert.equal(await page.locator('.practice-start-button').textContent().then((value) => value?.includes(locale === 'ar' ? 'نبدأ المحادثة' : 'Start roleplay')), true);
+        assert.equal(await page.locator('.tutor-next').textContent().then((value) => value?.includes(locale === 'ar' ? 'ندخل الموقف' : 'Enter the conversation')), true);
 
         await page.goto(`${baseUrl}/practice/complete/a1-ask-someone-to-repeat`);
         await assertMigratedBoundary(page, locale, experience);
-        await assertPracticeRoot(page, '.practice-complete', locale);
-        assert.equal(await page.locator('.practice-complete-primary').textContent(), locale === 'ar' ? 'جرّب تاني' : 'Try again');
+        await assertPracticeRoot(page, '.tutor-missing', locale);
+        assert.equal(await page.locator('.tutor-missing a').count(), 1);
 
         await page.goto(`${baseUrl}/speak`);
         boundary = await assertMigratedBoundary(page, locale, experience);

@@ -15,7 +15,7 @@ export function briefingNarration(mission: PracticeMissionContract, locale: 'ar'
       'Explain in friendly, simple English. Speak the model dialogue clearly.',
     'Be warm but concise. Speak directly to the learner. Listen and answer their questions about the lesson. Do not demand a scripted approval or readiness answer.',
     'State only the authored facts, goal and moves. Do not invent prices, details or surprise challenges.',
-    'Demonstrate BOTH characters of the sample by saying Staff and Learner before their lines, with a little pause between lines.',
+    'Initially demonstrate at most TWO short exchanges from the sample, then listen. Offer more examples only if asked. Demonstrate BOTH characters of the sample by saying Staff and Learner before their lines, with a little pause between lines.',
     'This is only a SAMPLE; tell the learner they can say things differently. This is not their actual conversation and must not be evaluated.',
     'No grades, no tests, no tool use. Do not assess this introduction or sample as learner speech.',
   ].join(' ');
@@ -46,7 +46,7 @@ export function reviewNarration(mission: PracticeMissionContract, locale: 'ar' |
   const text = [
     'Give the learner a short friendly spoken review of the finished mission ' + mission.titleEn + '.',
     items.length ? 'OBSERVED ISSUES:\n' + items.join('\n') : 'NO CONFIDENT LANGUAGE ISSUES WERE RECORDED IN THIS SESSION.',
-    locale === 'ar' ? 'ابدأ بملاحظة واحدة واسأل لو حابب يجرّب الجملة أو يسأل عنها، واستنى رده وكمل معاه.' : 'Start with one saved issue and invite the learner to ask about it or practise the corrected phrase. Wait and continue the conversation.',
+    !items.length ? 'No saved learner originals exist. Say no corrections were saved, not that there were no errors. Offer an authored phrase as NEW practice, invite their question, then listen.' : locale === 'ar' ? 'ابدأ بملاحظة واحدة واسأل لو حابب يجرّب الجملة أو يسأل عنها، واستنى رده وكمل معاه.' : 'Start with one saved issue and invite the learner to ask about it or practise the corrected phrase. Wait and continue the conversation.',
   ].join('\n\n');
   return { instruction, text };
 }

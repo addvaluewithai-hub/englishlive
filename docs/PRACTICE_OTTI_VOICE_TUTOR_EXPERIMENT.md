@@ -24,11 +24,48 @@ stop/reconnect and cancellation share one runtime. The mic opens after audible p
 finishes. A failed automatic start exposes the same Talk with Otti retry control.
 Arabic tutoring uses friendly Egyptian Arabic with English examples.
 
-## Notebook reliability and the reported zero-note session
+## Follow-up after the user microphone test
 
-The earlier user test reported many mistakes but no saved observations. Its original
-provider trace and authenticated microphone reproduction are unavailable here, so the
-original root cause and model detection quality are not verified.
+The user provided a real session diagnostic: setup accepted, three successful
+`record_practice_progress` calls, zero `record_language_issue` calls, zero collector
+rejections, and finishTimedOut=true. This confirms the provider dispatched progress
+calls while the separate language-issue path was never invoked. It does NOT establish
+why the model omitted detecting/recording errors; no original microphone audio exists.
+
+The follow-up changes the observation contract, not just the prompt wording:
+
+- `record_practice_progress` now requires `language_review` alongside goal IDs on
+  every actual learner turn. It can save multiple precise errors in the same call,
+  even with zero new goals. The standalone issue tool remains compatible.
+- The review distinguishes explicit `no_clear_issue`, uncertain words, and missing
+  language reviews. Communicative success is never evidence of correct grammar.
+- Finishing sends a private event in the SAME roleplay connection asking for a final
+  actual-heard-language audit. A structurally valid `final_review:true` acknowledgement
+  is awaited for at most eight seconds. Finalization audio is suppressed, the mic stays
+  closed, and received tool messages are drained before the notebook is frozen.
+- Malformed or missing final reviews cannot count as an acknowledged finalization.
+  Timeout and missing-language-review counts remain visible in copied diagnostics.
+- Fixed the playback starvation case: audio may drain before server turnComplete.
+  The runtime now checks drained playback when that late signal arrives, so it does
+  not wait forever for an audio-completion callback that already happened.
+- The lesson room now has a phase heading, compact animated conversation area and
+  working microphone actions. Removed the inert more button and detached report.
+  Review notes sit beside Otti on desktop and expand in the same lesson on mobile.
+  Each note can be selected for interactive discussion/rehearsal. Raw JSON is absent
+  from the normal learner UI; a details action copies original and review diagnostics.
+
+Validation: build/check passed; 24 practice tests and 8 UI tests passed. Tests cover
+batched language+goal observations, explicit/missing/uncertain reviews, late final
+notes, acknowledgement validity, and already-drained playback. Existing visual QA
+selectors were updated to the new structure but browser tests were NOT run at the
+user's request. Actual model detection, final acknowledgement reliability, audio
+fluency and final UI appearance require another user test; they are not proven fixed.
+
+## Notebook reliability and the original zero-note report
+
+The earlier report lacked a trace. The subsequent trace above narrows the failure
+to absent language recording calls, not collector rejection. Detection quality and
+the model reason for omitting those calls remain unverified.
 
 Concrete fixes:
 
@@ -38,7 +75,7 @@ Concrete fixes:
   minor errors, while abstaining when exact words are uncertain.
 - Own the notebook above the connection, so stop/reconnect cannot erase it. Reconnect
   includes prior teacher/typed context and observed goals without inventing voice text.
-- Finish waits up to five seconds for an outstanding response, drains received frames,
+- Finish waits up to eight seconds for explicit notebook finalization, drains received frames,
   closes the connection, then snapshots notes. A timeout is reported in diagnostics;
   this cannot guarantee receipt of future provider frames.
 - Review exposes metadata-only notebook diagnostics and includes them in Copy Otti
@@ -71,7 +108,7 @@ not new app database writes. Zero notes never proves error-free speech.
 ## Validation
 
 - `npm run check`: passed (existing asset/chunk-size warnings).
-- `npm run test:practice`: 20 tests passed, including token setup, mixed audio/tool
+- `npm run test:practice`: 24 tests passed, including token setup, mixed audio/tool
   frames, notebook limits/rejections, interactive runtime, playback/listening,
   interruption, pause/resume, cancellation, draining and retry-note retention.
 - `npm run test:ui`: 8 tests passed.
