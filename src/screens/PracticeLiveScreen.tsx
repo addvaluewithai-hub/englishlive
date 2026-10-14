@@ -111,7 +111,7 @@ export function PracticeLiveScreen() {
     if (speaker === 'learner') {
       firstReplyPending.current = true;
       replyHasAudio.current = false;
-      void runtime.reviewTurn([...conversationLogRef.current]);
+      void runtime.reviewTurn(conversationLogRef.current.filter((turn) => turn.text.trim()));
     }
   }
 
@@ -145,7 +145,7 @@ export function PracticeLiveScreen() {
       if (generation !== transcriptionGeneration.current) return;
       turn.text = text;
       setLearnerDraft(text);
-      setTranscriptionError(false);
+      // A prior failed segment must remain visible until the next session.
       runtime.invalidateHint();
       // Review only the conversation prefix ending at THIS learner turn.
       // Later Otti speech or unresolved future audio cannot bias the coach.
