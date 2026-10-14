@@ -28,8 +28,8 @@ const ar = {
     idleBriefing: ['Otti جاهز يشرحلك', 'دوس «ابدأ الدرس» وOtti هيقولك هنتعلم إيه.'],
     idle: ['Otti معاك', 'دوس على الميكروفون عشان نكمل.'],
     connecting: ['بنوصل مع Otti…', 'ثانية واحدة.'],
-    speaking: ['Otti بيتكلم', 'اسمع، ولو عايز تتكلم دوس «قاطع».'],
-    waiting: ['Otti بيفكّر…', 'هيرد عليك حالًا.'],
+    speaking: ['Otti بيتكلم', 'لو عايز تقاطعه، اضغط واستمر على الميكروفون.'],
+    waiting: ['Otti بيفكّر…', 'استنى رده، أو اضغط واستمر لو عايز تضيف حاجة.'],
     listening: ['جاهز أسمعك', 'اضغط واستمر عشان تتكلم، وسيب الزر عشان Otti يرد.'],
     holding: ['بسمعك دلوقتي', 'اتكلم براحتك. أول ما تسيب الزر Otti هيرد.'],
     paused: ['خد وقتك', 'دوس «نكمل» لما تكون جاهز.'],
@@ -48,7 +48,7 @@ const ar = {
   copy: 'نسخ التفاصيل',
   copied: 'تم النسخ ✓',
   close: 'قفل',
-  goalsLabel: 'فرص الكلام',
+  goalsLabel: 'الحاجات اللي اتدرّبت عليها',
   goalsNote: 'ملاحظات بس، مش شروط.',
 };
 
@@ -80,8 +80,8 @@ const en: typeof ar = {
     idleBriefing: ['Otti is ready', 'Press Start lesson and Otti will tell you what we will learn.'],
     idle: ['Otti is here', 'Press the microphone to continue.'],
     connecting: ['Connecting with Otti…', 'One moment.'],
-    speaking: ['Otti is speaking', 'Listen, or press Interrupt to talk.'],
-    waiting: ['Otti is thinking…', 'A reply is coming.'],
+    speaking: ['Otti is speaking', 'Press and hold the mic to interrupt and speak.'],
+    waiting: ['Otti is thinking…', 'Wait for the reply, or hold the mic to add something.'],
     listening: ['Ready to listen', 'Press and hold to speak. Release to hear Otti.'],
     holding: ['Listening to you', 'Keep talking. Release the button when you finish.'],
     paused: ['Take your time', 'Press Resume when ready.'],
@@ -100,7 +100,7 @@ const en: typeof ar = {
   copy: 'Copy details',
   copied: 'Copied ✓',
   close: 'Close',
-  goalsLabel: 'Speaking opportunities',
+  goalsLabel: 'Things you practised',
   goalsNote: 'Observations only, not requirements.',
 };
 
