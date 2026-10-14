@@ -52,7 +52,7 @@ export function PracticeCompleteScreen() {
     improvements: Array.isArray(review.improvements) ? review.improvements : [],
     achievedGoalIds: Array.isArray(review.achievedGoalIds) ? review.achievedGoalIds.filter((id) => allowed.has(id)) : [],
   };
-  const allNotes = [...safeReview.corrections, ...safeReview.improvements];
+  const allNotes = [...safeReview.corrections, ...safeReview.improvements.map((note) => ({ ...note, noteType: 'improvement' as const }))];
   if (selected !== null) return <PracticeTutor key={mission.slug} mission={mission} phase="review"
     review={safeReview} initialReviewNote={allNotes[selected]}
     onClose={() => setSelected(null)} />;
