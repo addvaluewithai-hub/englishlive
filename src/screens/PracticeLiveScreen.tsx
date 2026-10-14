@@ -12,7 +12,6 @@ import { loadPublishedCharacter } from '../content/client';
 import { useI18n } from '../i18n/LocaleProvider';
 import { GeminiLiveTransport } from '../live/GeminiLiveTransport';
 import type { LiveStatus } from '../live/types';
-import { PracticeFeedbackCard } from '../practice/PracticeFeedbackCard';
 import { PracticeHintCard } from '../practice/PracticeHintCard';
 import { practiceMissionContractBySlug } from '../practice/missions/catalog';
 import { useConversationPracticeRuntime } from '../practice/conversationRuntime';
@@ -20,6 +19,7 @@ import type { ConversationTurn } from '../practice/conversationTypes';
 import { buildConversationOpening } from '../practice/conversationPrompt';
 import { PracticeTurnAudioBuffer } from '../practice/turnAudioBuffer';
 import { transcribePracticeTurn } from '../practice/transcribeClient';
+import { transcribeRecordedTurns, MAX_SESSION_PCM_BYTES, MAX_SESSION_SEGMENTS, type RecordedPracticeTurn } from '../practice/finalTranscript';
 import { LiveConversationHeader, LiveConversationStatus } from '../ui/product/LiveConversationChrome';
 
 type PracticeConversationTurn = ConversationTurn;
@@ -78,11 +78,12 @@ export function PracticeLiveScreen() {
   const learnerTurnLoggedRef = useRef(false);
   const turnAudio = useRef(new PracticeTurnAudioBuffer());
   const micLevelRef = useRef(0);
-  const transcriptionGeneration = useRef(0);
-  const transcriptions = useRef(new Set<Promise<void>>());
+  const recordedTurns = useRef<RecordedPracticeTurn[]>([]);
+  const recordedBytes = useRef(0);
+  const incompleteAudio = useRef(0);
   const [speechDetected, setSpeechDetected] = useState(false);
-  const [transcribing, setTranscribing] = useState(0);
-  const [transcriptionError, setTranscriptionError] = useState(false);
+  const [captureWarning, setCaptureWarning] = useState(false);
+  const [finalProgress, setFinalProgress] = useState<{ done: number; total: number } | null>(null);
   const copyResetTimerRef = useRef<number | null>(null);
 
   const [status, setStatus] = useState<LiveStatus>('idle');
@@ -111,53 +112,41 @@ export function PracticeLiveScreen() {
     if (speaker === 'learner') {
       firstReplyPending.current = true;
       replyHasAudio.current = false;
-      void runtime.reviewTurn(conversationLogRef.current.filter((turn) => turn.text.trim()));
+      // Language feedback is produced once from the complete transcript in the final recap.
     }
   }
 
   /**
-   * Close the learner's audio BEFORE Otti responds, preserving turn order.
-   * Reserve a blank slot; never send pending/failed audio as fabricated text
-   * to the coach. The independently transcribed words fill the slot later.
+   * Keep the complete mic audio for this learner turn without asking a model
+   * for words during the conversation. Slot it before Otti's answer; fill it
+   * only on Finish & Review. Overflow is visible and blocks full evaluation.
    */
   function flushCapturedSpeech() {
+    const pcmBytes = turnAudio.current.sizeBytes;
     const { audioBase64, overflow } = turnAudio.current.takeWavBase64();
+    setSpeechDetected(false);
     if (overflow) {
-      setTranscriptionError(true);
-      setSpeechDetected(false);
+      incompleteAudio.current++;
+      setCaptureWarning(true);
       return;
     }
     if (!audioBase64) return;
+    if (recordedTurns.current.length >= MAX_SESSION_SEGMENTS
+      || recordedBytes.current + pcmBytes > MAX_SESSION_PCM_BYTES) {
+      incompleteAudio.current++;
+      setCaptureWarning(true);
+      return;
+    }
     const turn: PracticeConversationTurn = {
       id: `turn-${conversationLogRef.current.length + 1}`, speaker: 'learner', text: '',
     };
     conversationLogRef.current.push(turn);
-    const generation = transcriptionGeneration.current;
-    const position = conversationLogRef.current.length;
+    recordedTurns.current.push({ turn, audioBase64, pcmBytes });
+    recordedBytes.current += pcmBytes;
     learnerTurnLoggedRef.current = true;
     firstReplyPending.current = true;
     replyHasAudio.current = false;
-    setSpeechDetected(false);
-    setTranscribing((n) => n + 1);
-    // Audio is only held by this pending request. No server storage is requested.
-    let task: Promise<void>;
-    task = transcribePracticeTurn(audioBase64).then((text) => {
-      if (generation !== transcriptionGeneration.current) return;
-      turn.text = text;
-      setLearnerDraft(text);
-      // A prior failed segment must remain visible until the next session.
-      runtime.invalidateHint();
-      // Review only the conversation prefix ending at THIS learner turn.
-      // Later Otti speech or unresolved future audio cannot bias the coach.
-      const prefix = conversationLogRef.current.slice(0, position).filter((item) => item.text.trim());
-      void runtime.reviewTurn(prefix);
-    }).catch(() => {
-      if (generation === transcriptionGeneration.current) setTranscriptionError(true);
-    }).finally(() => {
-      transcriptions.current.delete(task);
-      if (generation === transcriptionGeneration.current) setTranscribing((n) => Math.max(0, n - 1));
-    });
-    transcriptions.current.add(task);
+    runtime.invalidateHint();
   }
 
   function flushTeacherTurn() {
@@ -192,6 +181,7 @@ export function PracticeLiveScreen() {
       ] : []),
       '',
       `Voice: no tools | pause tolerance: ${silenceDurationMs}ms`,
+      ...(incompleteAudio.current ? [`Audio segments not captured: ${incompleteAudio.current}. Review is incomplete.`] : []),
       ...replyTimings.current.map((sample) => `Reply ${sample.turn}: ${sample.delayMs}ms after last detected learner speech`),
     ].join('\n');
   }
@@ -268,14 +258,23 @@ export function PracticeLiveScreen() {
     flushTeacherTurn();
     const support = runtime.getSupportSummary();
     await stopTransport();
-    // A bounded 24s request may still be running after voice stops.
-    // Resolve it before building the final transcript for the recap.
-    await Promise.allSettled([...transcriptions.current]);
+    const recordings = recordedTurns.current.splice(0);
+    recordedBytes.current = 0;
+    let failed = 0;
+    if (completed && recordings.length) {
+      setFinalProgress({ done: 0, total: recordings.length });
+      const report = await transcribeRecordedTurns(recordings, transcribePracticeTurn, (done, total) => {
+        setFinalProgress({ done, total });
+      });
+      failed = report.failed;
+    }
+    setFinalProgress(null);
+    const missingAudioCount = incompleteAudio.current + failed;
     const corrections = runtime.getCorrectionSummary();
     if (completed) {
       navigate(`/practice/complete/${mission.slug}`, {
         replace: true,
-        state: { support, corrections, durationSeconds: durationSeconds(), conversationText: conversationText(), transcript: conversationLogRef.current.filter((turn) => turn.text.trim()), achievedGoalIds: runtime.achievedGoalIds },
+        state: { support, corrections, durationSeconds: durationSeconds(), conversationText: conversationText(), transcript: conversationLogRef.current.filter((turn) => turn.text.trim()), missingAudioCount, achievedGoalIds: runtime.achievedGoalIds },
       });
     } else {
       navigate(`/practice/mission/${mission.slug}`, { replace: true });
@@ -292,12 +291,13 @@ export function PracticeLiveScreen() {
     learnerDraftRef.current = '';
     learnerTurnLoggedRef.current = false;
     conversationLogRef.current = [];
-    transcriptionGeneration.current++;
     turnAudio.current.clear();
-    transcriptions.current.clear();
+    recordedTurns.current = [];
+    recordedBytes.current = 0;
+    incompleteAudio.current = 0;
     setSpeechDetected(false);
-    setTranscribing(0);
-    setTranscriptionError(false);
+    setCaptureWarning(false);
+    setFinalProgress(null);
     setTeacherText('');
     setLearnerDraft('');
     setConversationCopied(false);
@@ -410,20 +410,18 @@ export function PracticeLiveScreen() {
       startedAtMs.current = Date.now();
       setElapsedSeconds(0);
       await mic.start((chunk) => {
-        // Feed EXACT same mic PCM into both Otti and the bounded local recorder.
+        // All raw mic frames are copied, even quiet speech; no amplitude threshold.
         live.sendAudio(chunk);
-        turnAudio.current.push(chunk, micLevelRef.current);
+        turnAudio.current.push(chunk);
+        if (turnAudio.current.hasAudio) setSpeechDetected(true);
+        if (turnAudio.current.overflowed) setCaptureWarning(true);
       }, (level) => {
         micLevelRef.current = level;
         setMicLevel(level);
         if (level > 0.045) {
           lastSpeechAt.current = performance.now();
-          if (!turnAudio.current.hasSpeech) {
-            setSpeechDetected(true);
-            // Live input transcripts used to arm the missing-reply watchdog.
-            // With those disabled, arm it at the first real mic activity.
-            armReplyTimeout();
-          }
+          // No Live input transcripts: retain the watchdog on detected voice.
+          armReplyTimeout();
         }
       });
       if (session !== sessionGeneration.current) { await mic.stop(); return; }
@@ -500,13 +498,13 @@ export function PracticeLiveScreen() {
   }
 
   function requestContextualHint() {
-    // Wait for the actual spoken words before asking for contextual help.
-    if (visualQa || !transport.current?.connected || paused || waitingForReply || transcribing > 0) return;
+    // While speaking is not transcribed, hints use authored facts and Otti's latest reply.
+    if (visualQa || !transport.current?.connected || paused || waitingForReply) return;
     void runtime.requestHint(conversationLogRef.current.filter((turn) => turn.text.trim()));
   }
 
   function finishSpeaking() {
-    if (!transport.current?.connected || pausedRef.current || !turnAudio.current.hasSpeech) return;
+    if (!transport.current?.connected || pausedRef.current || !turnAudio.current.hasAudio) return;
     setLearnerMicEnabled(false);
     flushCapturedSpeech();
     transport.current.endAudioStream();
@@ -666,7 +664,6 @@ export function PracticeLiveScreen() {
             : (locale === 'ar' ? 'نسخ الحوار' : 'Copy conversation')}
         </button>
 
-        <PracticeFeedbackCard runtime={runtime} />
 
         <PracticeHintCard runtime={runtime} learnerTurn={learnerTurn && !paused} onRequestHint={requestContextualHint} />
 
@@ -721,8 +718,7 @@ export function PracticeLiveScreen() {
         </div>
 
         <div className="fs-mic-meter" aria-hidden="true"><span style={{ width: `${Math.max(learnerTurn ? 3 : 0, micLevel * 100)}%` }} /></div>
-        {transcribing > 0 ? <p className="practice-coach-status" role="status">{locale === 'ar' ? 'بنكتب كلامك من التسجيل الصوتي…' : 'Transcribing your voice…'}</p> : null}
-        {transcriptionError ? <p className="practice-coach-status" role="alert">{locale === 'ar' ? 'تعذر تفريغ جزء من كلامك. مش هنعمل تصحيح من نص مش موجود.' : 'Some speech could not be transcribed. No correction will be invented.'}</p> : null}
+        {captureWarning ? <p className="practice-coach-status" role="alert">{locale === 'ar' ? 'بعض الصوت تجاوز حدود التسجيل. المراجعة النهائية هتوضح إن التسجيل مش كامل.' : 'Some audio exceeded capture limits. The final review will be marked incomplete.'}</p> : null}
         {runtime.coachError ? <p className="practice-coach-status">{locale === 'ar' ? 'الملاحظات مش متاحة حاليًا. كمل كلامك، ونحاول تاني في المراجعة.' : 'Feedback is unavailable for now. Keep talking; we will retry at review.'}</p> : null}
         {error ? <p className="fs-live-error" role="alert">{error}</p> : null}
       </div>
@@ -731,7 +727,7 @@ export function PracticeLiveScreen() {
         <div className="fs-ending-overlay" aria-live="polite">
           <div>
             <OttiMark />
-            <strong>{t('practice.ending')}</strong>
+            <strong>{finalProgress ? (locale === 'ar' ? `بنفرّغ التسجيلات: ${finalProgress.done} من ${finalProgress.total}` : `Transcribing recordings: ${finalProgress.done} of ${finalProgress.total}`) : t('practice.ending')}</strong>
             <span><i /><i /><i /></span>
           </div>
         </div>
