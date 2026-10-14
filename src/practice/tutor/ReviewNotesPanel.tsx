@@ -40,7 +40,8 @@ export function ReviewNotesPanel({ mission, review, ar, copy, open, onClose, onP
         {issues.map((issue, index) => <li key={`${issue.originalEn}-${issue.betterEn}`}>
           <p className="tutor-note-heard"><small>{copy.heard}</small><span lang="en" dir="ltr">{issue.originalEn}</span></p>
           <p className="tutor-note-better"><small>{copy.better}</small><strong lang="en" dir="ltr">{issue.betterEn}</strong></p>
-          {(ar ? issue.feedbackAr : issue.feedbackEn) ? <p className="tutor-note-why">{ar ? issue.feedbackAr : issue.feedbackEn}</p> : null}
+          {(ar ? issue.feedbackAr : issue.feedbackEn) ? <p className="tutor-note-why">{ar ? issue.feedbackAr : issue.feedbackEn}</p>
+            : <p className="tutor-note-why">{ar ? 'اسأل Otti ليه دي غلط؛ الملاحظة دي مفيهاش تفسير محفوظ.' : 'Ask Otti why: no explanation was saved for this note.'}</p>}
           <button type="button" disabled={practiseDisabled} onClick={() => onPractise(index)}>{copy.practise}</button>
         </li>)}
       </ol> : <p className="tutor-empty-note">{notesIncomplete(review) ? copy.emptyIncomplete : copy.emptyComplete}</p>}
