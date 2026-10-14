@@ -38,7 +38,7 @@ export function PracticeTutor({ mission, phase, review, onFinish, onClose, initi
   const [debugCopied, setDebugCopied] = useState(false);
   const showDebugTrace = phase === 'roleplay' && new URLSearchParams(window.location.search).get('debug') === '1';
   const tutor = usePracticeTutor({
-    mission, phase, locale: ar ? 'ar' : 'en', corrections: [...(review?.corrections ?? []), ...(review?.improvements ?? [])],
+    mission, phase, locale: ar ? 'ar' : 'en', corrections: [...(review?.corrections ?? []), ...(review?.improvements ?? []).map((note) => ({ ...note, noteType: 'improvement' as const }))],
     initialReviewIssue: initialReviewNote,
     notesIncomplete: review ? notesIncomplete(review) : false,
     silenceDurationMs: relaxed ? 2400 : 1200, onTurn: runtime.invalidateHint,
