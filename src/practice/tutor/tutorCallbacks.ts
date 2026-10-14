@@ -26,6 +26,7 @@ export function tutorCallbacks(session: TutorSession): LiveCallbacks {
     onOutputTranscript: (piece) => {
       if (silenced()) return;
       session.noteServerActivity();
+      session.awaitingExampleFollowup = false;
       session.serverTurnPending = true;
       session.setMic(false);
       session.queue?.pushTranscript(piece);
@@ -36,13 +37,14 @@ export function tutorCallbacks(session: TutorSession): LiveCallbacks {
       if (silenced()) return;
       session.noteServerActivity();
       session.serverTurnPending = true;
+      session.awaitingExampleFollowup = false;
       session.hasAudio = true;
       session.setMic(false);
       void session.queue?.enqueue(audio, Number(mime.match(/rate=(\d+)/i)?.[1] ?? 24000))
         .catch(() => session.fail('Could not play Otti audio. Reconnect to continue.'));
     },
     onInterrupted: () => {
-      if (session.closed) return;
+      if (session.closed || session.exampleAudioPlaying) return;
       session.flushTeacher();
       session.queue?.interrupt();
       session.performer.interrupt();
@@ -56,6 +58,8 @@ export function tutorCallbacks(session: TutorSession): LiveCallbacks {
       session.noteServerActivity();
       session.options.diagnostic({ event: 'provider_generation_complete' });
       session.generationDone = true;
+      if (session.exampleAudioPlaying) return;
+      session.awaitingExampleFollowup = false;
       // Text-only or tool-only generations have nothing to play: hand the turn back now.
       if (!session.hasAudio && !session.queue?.isPlaying) { session.serverTurnPending = false; session.flushTeacher(); session.listen(); }
     },
@@ -63,6 +67,8 @@ export function tutorCallbacks(session: TutorSession): LiveCallbacks {
       if (session.closed) return;
       session.noteServerActivity();
       session.options.diagnostic({ event: 'provider_turn_complete' });
+      if (session.exampleAudioPlaying) return;
+      session.awaitingExampleFollowup = false;
       session.serverTurnPending = false;
       session.suppressOutput = session.finishing;
       session.flushTeacher();
