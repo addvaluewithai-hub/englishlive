@@ -1,7 +1,7 @@
 export const practiceCopy = {
   ar: {
     close: 'إنهاء ومراجعة',
-    status: 'دورك',
+    status: 'جاهز أسمعك',
     hintTitle: 'محتاج تلميح؟',
     hintBody: 'هتتعمل على سياق المحادثة الحالية',
     secondary: 'خيارات إضافية — قريبًا',
@@ -11,7 +11,7 @@ export const practiceCopy = {
   },
   en: {
     close: 'Finish and review',
-    status: 'Your turn',
+    status: 'Ready to listen',
     hintTitle: 'Need a hint?',
     hintBody: 'It will use the current conversation context',
     secondary: 'More options — coming soon',

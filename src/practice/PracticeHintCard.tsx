@@ -73,7 +73,7 @@ export function PracticeHintCard({
         {supportLevel < 2 && hintBundle.usefulLanguageEn.length ? (
           <button type="button" onClick={() => runtime.revealSupport(2)}>{t('practice.hint.usefulWords')}</button>
         ) : null}
-        {supportLevel < 3 ? (
+        {supportLevel >= 2 && supportLevel < 3 ? (
           <button type="button" onClick={() => runtime.revealSupport(3)}>{t('practice.hint.sayIt')}</button>
         ) : null}
       </footer>

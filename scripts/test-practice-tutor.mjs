@@ -33,10 +33,16 @@ before(async () => {
     async connect(instruction, config) { connects.push({ instruction, config }); this.callbacks.onStatus('listening'); },
     sendText(text) { texts.push(text); },
     endAudioStream() {},
+    startUserActivity() { texts.push('activityStart'); },
+    endUserActivity() { texts.push('activityEnd'); },
     async flushPendingMessages() {},
     close() { this.closedForTest = true; counts.close++; },
   });
-  Object.assign(proto('MicrophonePcmStream'), { async start() {}, async stop() { counts.stop++; }, setEnabled() {} });
+  Object.assign(proto('MicrophonePcmStream'), {
+    async start(onChunk) { this.chunkForTest = onChunk; },
+    async stop() { counts.stop++; },
+    setEnabled(enabled) { this.enabledForTest = enabled; },
+  });
   Object.assign(proto('PcmPlaybackQueue'), {
     async unlock() {}, async close() {}, interrupt() {}, async enqueue() {}, markTurnComplete() {}, pushTranscript() {},
   });
@@ -220,4 +226,73 @@ test('Gemini response parser checks actual WAV bytes and rejects absent data', (
   assert.throws(() => mod.extractLessonWav({ steps: [{ type: 'model_output', content: [
     { type: 'audio', data: Buffer.from('not audio').toString('base64') },
   ] }] }), /not WAV/);
+});
+
+test('Practice manual VAD disables provider auto turn detection without affecting other modes', () => {
+  const base = mod.buildLiveSetup('gemini-3.8-live', 'prompt', {}, [], null);
+  const manual = mod.buildLiveSetup('gemini-3.8-live', 'prompt',
+    { manualActivityDetection: true, disableInputTranscription: true }, [], null);
+  assert.equal(base.realtimeInputConfig.automaticActivityDetection.disabled, false);
+  assert.deepEqual(manual.realtimeInputConfig.automaticActivityDetection, { disabled: true });
+  assert.equal(manual.inputAudioTranscription, undefined);
+});
+
+test('hold to speak buffers first phonemes and closes each manual activity only on release', async () => {
+  const { session, events } = make([], { pushToTalk: true });
+  await session.start('roleplay', 'opening', 1200);
+  assert.equal(connects.at(-1).config.manualActivityDetection, true);
+  session.live.callbacks.onGenerationComplete();
+  assert.equal(session.state.micOpen, false, 'learner microphone remains closed after Otti');
+  const before = texts.length;
+  assert.equal(session.beginHold(), true);
+  assert.equal(session.state.holding, true);
+  assert.equal(session.mic.enabledForTest, true);
+  session.mic.chunkForTest('AAA');
+  assert.deepEqual(texts.slice(before).filter((item) => item === 'activityStart'), [],
+    'short accidental presses never reach Live');
+  assert.equal(session.endHold(), false);
+  assert.equal(session.state.micOpen, false);
+  assert.deepEqual(texts.slice(before).filter((item) => item === 'activityEnd'), []);
+
+  assert.equal(session.beginHold(), true);
+  session.mic.chunkForTest('PREBUFFER');
+  session.holdBeganAt = Date.now() - 160;
+  session.mic.chunkForTest('SECOND');
+  assert.deepEqual(texts.slice(before).filter((item) => item === 'activityStart'), ['activityStart']);
+  assert.equal(session.audioFramesSent, 2, 'the initial buffered phoneme was not lost');
+  assert.equal(session.endHold(), true);
+  assert.deepEqual(texts.slice(before).filter((item) => item === 'activityEnd'), ['activityEnd']);
+  assert.equal(session.state.waiting, true);
+  assert.equal(session.mic.enabledForTest, false);
+  assert.ok(events.includes('hold_started') && events.includes('hold_released'));
+  await session.close();
+});
+
+test('holding locally interrupts Otti, ignores late server audio and never reopens microphone', async () => {
+  const { session } = make([], { pushToTalk: true });
+  await session.start('roleplay', 'opening', 1200);
+  const callbacks = session.live.callbacks;
+  callbacks.onAudio('AAAA', 'audio/pcm;rate=24000');
+  session.queue.callbacks.onSpeechStart();
+  assert.equal(session.state.status, 'speaking');
+  assert.equal(session.beginHold(), true);
+  assert.equal(session.state.status, 'listening');
+  callbacks.onAudio('BBBB', 'audio/pcm;rate=24000');
+  callbacks.onOutputTranscript('stale words');
+  callbacks.onInterrupted();
+  callbacks.onGenerationComplete();
+  callbacks.onTurnComplete();
+  assert.equal(session.state.holding, true);
+  assert.equal(session.state.micOpen, true);
+  assert.equal(session.teacherDraft.includes('stale words'), false);
+  session.holdBeganAt = Date.now() - 180;
+  session.mic.chunkForTest('PCM');
+  assert.equal(session.endHold(), true);
+  assert.equal(session.state.micOpen, false);
+  callbacks.onInterrupted();
+  assert.equal(session.state.waiting, true, 'late interruption ACK cannot release the new learner turn');
+  callbacks.onOutputTranscript('Now my actual reply');
+  callbacks.onGenerationComplete();
+  assert.ok(session.state.text.includes('Now my actual reply'));
+  await session.close();
 });

@@ -29,7 +29,7 @@ export function useConversationPracticeRuntime(slug?: string) {
   const pending = useRef<ConversationTurn[] | null>(null);
   const reviewedIds = useRef(new Set<string>());
   // Hint layers belong to the current dialogue, not a changing progress gate.
-  const activeBeat = goals[0] ?? null;
+  const activeBeat = goals.find((beat) => !achievedGoalIds.includes(beat.id)) ?? goals.at(-1) ?? null;
 
   function invalidateHint() {
     contextVersion.current++;

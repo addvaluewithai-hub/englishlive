@@ -53,7 +53,7 @@ export function buildLiveSetup(model: string, instruction: string, config: LiveS
     },
     realtimeInputConfig: {
       activityHandling: 'START_OF_ACTIVITY_INTERRUPTS',
-      automaticActivityDetection: {
+      automaticActivityDetection: config.manualActivityDetection ? { disabled: true } : {
         disabled: false,
         startOfSpeechSensitivity: 'START_SENSITIVITY_HIGH',
         endOfSpeechSensitivity: 'END_SENSITIVITY_LOW',

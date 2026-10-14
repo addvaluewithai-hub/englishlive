@@ -51,6 +51,7 @@ export function usePracticeTutor(options: {
     const tutor = new TutorSession({
       host: () => host.current, update: (value) => { if (mounted.current) setState(value); },
       tools: options.phase === 'roleplay' ? collector.tools : [], turns: turns.current, onTurn: options.onTurn, diagnostic,
+      pushToTalk: options.phase !== 'briefing',
     });
     session.current = tutor;
     if (!startedAt.current) startedAt.current = Date.now();
@@ -108,7 +109,7 @@ export function usePracticeTutor(options: {
     };
   }, []);
 
-  const qaState = { ...state, status: 'listening' as const, micOpen: options.phase !== 'briefing',
+  const qaState = { ...state, status: 'listening' as const, micOpen: false,
     text: options.phase === 'briefing' ? '' : options.phase === 'roleplay'
       ? options.mission.canonicalDialogue.find((turn) => turn.speaker === 'ai_role')?.text ?? 'Ready.'
       : 'Let us look at your first note together. Want to try the better sentence?' };

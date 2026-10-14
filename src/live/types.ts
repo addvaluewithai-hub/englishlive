@@ -13,13 +13,16 @@ export interface LiveSessionConfig {
   silenceDurationMs?: number;
   /** When true, do not request unreliable Live input text in this session. */
   disableInputTranscription?: boolean;
+  /** Client controls explicit ActivityStart/ActivityEnd for press-and-hold sessions. */
+  manualActivityDetection?: boolean;
 }
 
 export type LiveDiagnostic = {
   event: 'setup_sent' | 'setup_accepted' | 'tool_call' | 'tool_result' | 'unknown_tool' | 'tool_error' | 'server_error'
     | 'missing_turn_complete' | 'finish_requested' | 'finish_reminder' | 'finish_received' | 'finish_missing'
     | 'mic_open' | 'audio_submitted' | 'text_submitted' | 'provider_turn_complete' | 'provider_generation_complete'
-    | 'socket_closed' | 'session_closed' | 'tool_response_sent' | 'tool_response_dropped' | 'duplicate_tool_call';
+    | 'socket_closed' | 'session_closed' | 'tool_response_sent' | 'tool_response_dropped' | 'duplicate_tool_call'
+    | 'hold_started' | 'hold_cancelled' | 'hold_released' | 'hold_audio_ignored';
   model?: string; apiVersion?: string; tools?: string[]; name?: string; saved?: boolean; ms?: number;
   issues?: number; goals?: number; frames?: number;
 };
@@ -47,6 +50,8 @@ export interface LiveTransport {
   connect(systemInstruction: string, config?: LiveSessionConfig): Promise<void>;
   sendAudio(base64Pcm16: string): void;
   endAudioStream(): void;
+  startUserActivity(): void;
+  endUserActivity(): void;
   sendText(text: string): void;
   close(): void;
 }

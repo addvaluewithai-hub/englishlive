@@ -42,6 +42,7 @@ export class GeminiLiveTransport implements LiveTransport {
       voiceName: config.voiceName?.trim() || undefined,
       silenceDurationMs: config.silenceDurationMs === undefined ? undefined : Math.max(500, Math.min(5000, config.silenceDurationMs)),
       disableInputTranscription: config.disableInputTranscription === true,
+      manualActivityDetection: config.manualActivityDetection === true,
     };
     this.callbacks.onStatus('connecting');
     const issued = await this.tokenProvider();
@@ -55,6 +56,14 @@ export class GeminiLiveTransport implements LiveTransport {
   sendAudio(base64Pcm16: string) {
     if (!this.connected) return;
     this.send({ realtimeInput: { audio: { data: base64Pcm16, mimeType: 'audio/pcm;rate=16000' } } });
+  }
+
+  startUserActivity() {
+    if (this.connected) this.send({ realtimeInput: { activityStart: {} } });
+  }
+
+  endUserActivity() {
+    if (this.connected) this.send({ realtimeInput: { activityEnd: {} } });
   }
 
   endAudioStream() {

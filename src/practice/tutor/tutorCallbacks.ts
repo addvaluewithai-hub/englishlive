@@ -8,7 +8,7 @@ function append(previous: string, piece: string) {
 
 /** Bridge Live provider events into the tutor turn-taking state machine. */
 export function tutorCallbacks(session: TutorSession): LiveCallbacks {
-  const silenced = () => session.closed || session.finishing || session.suppressOutput || session.state.paused;
+  const silenced = () => session.closed || session.finishing || session.suppressOutput || session.holding || session.state.paused;
   return {
     onDiagnostic: (event) => {
       if (session.closed) return;
@@ -17,6 +17,7 @@ export function tutorCallbacks(session: TutorSession): LiveCallbacks {
     },
     onStatus: (status) => {
       if (status === 'connecting' || status === 'reconnecting') {
+        if (session.holding) session.endHold(true);
         session.setMic(false);
         session.update({ status });
         session.performer.thinking();
@@ -42,20 +43,24 @@ export function tutorCallbacks(session: TutorSession): LiveCallbacks {
         .catch(() => session.fail('Could not play Otti audio. Reconnect to continue.'));
     },
     onInterrupted: () => {
-      if (session.closed) return;
+      if (session.closed || session.holding) return;
+      const awaitingManualReply = session.options.pushToTalk && session.state.waiting;
       session.flushTeacher();
       session.queue?.interrupt();
       session.performer.interrupt();
       session.suppressOutput = session.finishing;
-      session.serverTurnPending = false;
+      // Gemini can acknowledge the barge-in AFTER the learner releases.
+      // That old interrupt must not mark the new learner turn as complete.
+      session.serverTurnPending = !!awaitingManualReply;
       session.hasAudio = false;
-      session.listen();
+      if (!awaitingManualReply) session.listen();
     },
     onGenerationComplete: () => {
       if (session.closed) return;
       session.noteServerActivity();
       session.options.diagnostic({ event: 'provider_generation_complete' });
       session.generationDone = true;
+      if (session.holding) return;
       // Text-only or tool-only generations have nothing to play: hand the turn back now.
       if (!session.hasAudio && !session.queue?.isPlaying) { session.serverTurnPending = false; session.flushTeacher(); session.listen(); }
     },
@@ -63,6 +68,7 @@ export function tutorCallbacks(session: TutorSession): LiveCallbacks {
       if (session.closed) return;
       session.noteServerActivity();
       session.options.diagnostic({ event: 'provider_turn_complete' });
+      if (session.holding) return;
       session.serverTurnPending = false;
       session.suppressOutput = session.finishing;
       session.flushTeacher();

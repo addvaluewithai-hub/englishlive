@@ -8,13 +8,14 @@ export type TutorState = {
   status: LiveStatus;
   text: string;
   micOpen: boolean;
+  holding: boolean;
   level: number;
   paused: boolean;
   waiting: boolean;
   error: string | null;
 };
 export const idleTutorState: TutorState = {
-  status: 'idle', text: '', micOpen: false, level: 0, paused: false, waiting: false, error: null,
+  status: 'idle', text: '', micOpen: false, holding: false, level: 0, paused: false, waiting: false, error: null,
 };
 export type CountedDiagnostic = LiveDiagnostic & { count: number };
 export type TimedDiagnostic = LiveDiagnostic & { elapsedMs: number };
