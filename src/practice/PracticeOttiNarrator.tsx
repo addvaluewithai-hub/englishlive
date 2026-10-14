@@ -66,7 +66,15 @@ export function PracticeOttiNarrator({ instruction, message, purpose } : {
         onAudio: (data, mimeType) => { if (current === version.current) void queue.enqueue(data, pcmSampleRate(mimeType)); },
         onInterrupted: () => { if (current === version.current) queue.interrupt(); },
         onTurnComplete: () => { if (current === version.current) queue.markTurnComplete(); },
-        onError: () => { if (current === version.current) { setError(locale === 'ar' ? 'صوت Otti مش متاح حاليًا. تقدر تكمل من غيره.' : 'Otti voice is unavailable. You can continue.'); setState('error'); } },
+        onError: () => {
+          if (current !== version.current) return;
+          transport.current?.close();
+          transport.current = null;
+          if (playback.current === queue) playback.current = null;
+          void queue.close();
+          setError(locale === 'ar' ? 'صوت Otti مش متاح حاليًا. تقدر تكمل من غيره.' : 'Otti voice is unavailable. You can continue.');
+          setState('error');
+        },
       });
       transport.current = live;
       const character = await loadPublishedCharacter(getCharacterDefinition('otti'));
