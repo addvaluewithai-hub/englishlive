@@ -58,7 +58,8 @@ export function tutorCallbacks(session: TutorSession): LiveCallbacks {
       session.noteServerActivity();
       session.options.diagnostic({ event: 'provider_generation_complete' });
       session.generationDone = true;
-      if (session.exampleAudioPlaying) return;
+      // A generationComplete from the tool request is NOT the post-clip speech.
+      if (session.exampleAudioPlaying || (session.awaitingExampleFollowup && !session.hasAudio)) return;
       session.awaitingExampleFollowup = false;
       // Text-only or tool-only generations have nothing to play: hand the turn back now.
       if (!session.hasAudio && !session.queue?.isPlaying) { session.serverTurnPending = false; session.flushTeacher(); session.listen(); }
@@ -67,7 +68,8 @@ export function tutorCallbacks(session: TutorSession): LiveCallbacks {
       if (session.closed) return;
       session.noteServerActivity();
       session.options.diagnostic({ event: 'provider_turn_complete' });
-      if (session.exampleAudioPlaying) return;
+      // The initial tool-call turn may complete before Otti resumes narration.
+      if (session.exampleAudioPlaying || (session.awaitingExampleFollowup && !session.hasAudio)) return;
       session.awaitingExampleFollowup = false;
       session.serverTurnPending = false;
       session.suppressOutput = session.finishing;
