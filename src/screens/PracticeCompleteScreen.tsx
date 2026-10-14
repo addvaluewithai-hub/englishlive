@@ -12,6 +12,8 @@ import styles from './PracticeJourney.module.css';
 type CompletionState = {
   support?: PracticeSupportSummary; corrections?: PracticeCorrectionRecord[];
   durationSeconds?: number; conversationText?: string; transcript?: ConversationTurn[]; achievedGoalIds?: string[];
+  /** Count of microphone segments not captured or not transcribed in full. */
+  missingAudioCount?: number;
 };
 
 export function PracticeCompleteScreen() {
@@ -23,8 +25,8 @@ export function PracticeCompleteScreen() {
   const state = (location.state ?? {}) as CompletionState;
   const support = state.support ?? { intentHints: 0, usefulLanguageReveals: 0, fullHelpReveals: 0 };
   const [corrections, setCorrections] = useState(state.corrections ?? []);
-  const [achieved, setAchieved] = useState(state.achievedGoalIds ?? []);
-  const [reviewing, setReviewing] = useState(Boolean(state.transcript?.some((turn) => turn.speaker === 'learner')));
+  const [achieved, setAchieved] = useState(state.missingAudioCount ? [] : (state.achievedGoalIds ?? []));
+  const [reviewing, setReviewing] = useState(!state.missingAudioCount && Boolean(state.transcript?.some((turn) => turn.speaker === 'learner')));
   const [reviewError, setReviewError] = useState(false);
   const [nextFocus, setNextFocus] = useState({ ar: '', en: '' });
   const [copied, setCopied] = useState(false);
@@ -32,7 +34,8 @@ export function PracticeCompleteScreen() {
 
   useEffect(() => {
     const transcript = state.transcript;
-    if (!mission || !transcript?.some((turn) => turn.speaker === 'learner')) return;
+    // Never award completed goals or grammar corrections from an incomplete mic recording.
+    if (state.missingAudioCount || !mission || !transcript?.some((turn) => turn.speaker === 'learner')) return;
     const abort = new AbortController();
     setReviewing(true);
     setReviewError(false);
@@ -56,7 +59,7 @@ export function PracticeCompleteScreen() {
         state.conversationText, '', '--- Review ---',
         ...corrections.map((item) => 'You said: ' + item.originalEn + '\nBetter: ' + item.betterEn),
         'Observed goals: ' + (achieved.join(', ') || 'No goals confirmed by coach yet'),
-        'Review: ' + (reviewing ? 'pending' : reviewError ? 'unavailable' : 'finished'),
+        'Review: ' + (state.missingAudioCount ? `incomplete audio (${state.missingAudioCount} segments missing)` : reviewing ? 'pending' : reviewError ? 'unavailable' : 'finished'),
       ].join('\n'));
       setCopied(true);
     } catch { setCopied(false); }
@@ -77,9 +80,10 @@ export function PracticeCompleteScreen() {
         </span>)}
       </div>
       <small className="practice-review-evidence-note">{locale === 'ar' ? 'العلامات ملاحظات عن المحادثة دي، مش درجة أو إثبات إتقان.' : 'These observations describe this conversation, not a score or proof of mastery.'}</small>
+      {state.missingAudioCount ? <p className="practice-coach-status" role="alert">{locale === 'ar' ? `في ${number(state.missingAudioCount)} مقطع صوتي ما اتسجلش أو ما اتفرغش بالكامل. علشان مانقيّمش محادثة ناقصة، مش هنعرض تصحيح أو أهداف مُنجزة للمحاولة دي. جرب مرة تانية.` : `${state.missingAudioCount} voice segment(s) were not captured or transcribed. No language corrections or goal assessment will be generated from an incomplete conversation. Please try again.`}</p> : null}
       {reviewing ? <p className="practice-coach-status" role="status">{locale === 'ar' ? 'بنراجع باقي كلامك… تقدر تشوف الملاحظات اللي جاهزة.' : 'Reviewing the rest of your conversation… Available notes are below.'}</p> : null}
       {reviewError ? <p className="practice-coach-status" role="alert">{locale === 'ar' ? 'المراجعة الكاملة ما وصلتش. الملاحظات المتاحة محفوظة هنا.' : 'The full review is unavailable. Your existing notes are still here.'} <button type="button" onClick={() => setReviewAttempt((value) => value + 1)}>{locale === 'ar' ? 'حاول تاني' : 'Retry review'}</button></p> : null}
-      {corrections.length ? (
+      {!state.missingAudioCount && corrections.length ? (
         <section className="practice-complete-corrections">
           <header><small>{copy.correctionsEyebrow}</small><strong>{copy.correctionsTitle}</strong></header>
           <div className="practice-complete-correction-list">
@@ -90,7 +94,7 @@ export function PracticeCompleteScreen() {
             </article>)}
           </div>
         </section>
-      ) : !reviewing && !reviewError ? <section className="practice-complete-corrections is-empty"><strong>{state.transcript?.some((turn) => turn.speaker === 'learner') ? (locale === 'ar' ? 'مفيش تصحيح واضح محتاجين نضيفه من المحادثة دي.' : 'No clear correction to add from this conversation.') : (locale === 'ar' ? 'لسه مفيش كلام كفاية للمراجعة. جرّب الموقف وارجع هنا.' : 'There is not enough speech to review yet. Try the conversation first.')}</strong></section> : null}
+      ) : !state.missingAudioCount && !reviewing && !reviewError ? <section className="practice-complete-corrections is-empty"><strong>{state.transcript?.some((turn) => turn.speaker === 'learner') ? (locale === 'ar' ? 'مفيش تصحيح واضح محتاجين نضيفه من المحادثة دي.' : 'No clear correction to add from this conversation.') : (locale === 'ar' ? 'لسه مفيش كلام كفاية للمراجعة. جرّب الموقف وارجع هنا.' : 'There is not enough speech to review yet. Try the conversation first.')}</strong></section> : null}
       {(locale === 'ar' ? nextFocus.ar : nextFocus.en) ? <section className="practice-complete-note"><strong>{locale === 'ar' ? 'جرّب المرة الجاية' : 'Try next time'}</strong><p>{locale === 'ar' ? nextFocus.ar : nextFocus.en}</p></section> : null}
       <p className="practice-review-evidence-note">{locale === 'ar' ? 'فتحت مساعدة ' + number(support.intentHints) + ' مرة. المساعدة جزء من التعلّم.' : 'You opened help ' + number(support.intentHints) + ' times. Help is part of learning.'}</p>
       {state.conversationText ? <button type="button" className="practice-complete-copy" onClick={() => void copyConversation()}>{copied ? copy.copiedConversation : copy.copyConversation}</button> : null}
