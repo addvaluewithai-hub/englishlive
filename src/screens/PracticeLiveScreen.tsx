@@ -88,6 +88,7 @@ export function PracticeLiveScreen() {
   const [ending, setEnding] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [conversationCopied, setConversationCopied] = useState(false);
+  const [observedGoalIds, setObservedGoalIds] = useState<string[]>([]);
 
   function durationSeconds() {
     return startedAtMs.current ? Math.max(0, Math.round((Date.now() - startedAtMs.current) / 1_000)) : 0;
@@ -132,12 +133,15 @@ export function PracticeLiveScreen() {
       turns.push({ id: 'pending-otti', speaker: 'otti', text: pendingTeacher });
     }
     const observedIssues = issueCollector.current?.getIssues() ?? [];
+    const observedGoals = issueCollector.current?.getObservedGoalIds() ?? [];
     return [
       `Practice: ${mission.level} — ${mission.titleEn}`,
       '',
       ...turns.map((turn) => `${turn.speaker === 'otti' ? 'Otti' : 'Learner'}: ${turn.text}`),
       '',
       'Learner voice is not transcribed. Only typed learner lines are verbatim.',
+      '--- Observed communication goals (NOT mastery) ---',
+      ...(observedGoals.length ? observedGoals : ['No confident goals observed']),
       '--- Privately noted by Otti during Live ---',
       ...observedIssues.map((issue) => `Heard: ${issue.originalEn} | Better: ${issue.betterEn} | Why: ${issue.feedbackEn}`),
       '',
@@ -218,11 +222,12 @@ export function PracticeLiveScreen() {
     flushTeacherTurn();
     const support = runtime.getSupportSummary();
     const corrections = issueCollector.current?.getIssues() ?? [];
+    const achievedGoalIds = issueCollector.current?.getObservedGoalIds() ?? [];
     await stopTransport();
     if (completed) {
       navigate(`/practice/complete/${mission.slug}`, {
         replace: true,
-        state: { support, corrections, durationSeconds: durationSeconds(), conversationText: conversationText(), recordedByOtti: true },
+        state: { support, corrections, achievedGoalIds, durationSeconds: durationSeconds(), conversationText: conversationText(), recordedByOtti: true },
       });
     } else {
       navigate(`/practice/mission/${mission.slug}`, { replace: true });
@@ -247,7 +252,8 @@ export function PracticeLiveScreen() {
     setWaitingForReply(false);
     replyTimings.current = [];
     runtime.reset();
-    issueCollector.current = createSilentIssueCollector(mission);
+    setObservedGoalIds([]);
+    issueCollector.current = createSilentIssueCollector(mission, (ids) => setObservedGoalIds(ids));
     repeatAfterPause.current = false;
     firstReplyPending.current = false;
     replyHasAudio.current = false;
@@ -335,7 +341,7 @@ export function PracticeLiveScreen() {
           teacherDraftRef.current = '';
         },
         onError: (message) => setError(message),
-      }, issueCollector.current ? [issueCollector.current.tool] : []);
+      }, issueCollector.current ? [issueCollector.current.tool, issueCollector.current.progressTool] : []);
       transport.current = live;
 
       const mic = new MicrophonePcmStream();
@@ -562,6 +568,15 @@ export function PracticeLiveScreen() {
       </div>
 
       <div className="fs-live-controls practice-live-controls">
+        <div className="practice-conversation-goals" aria-label={locale === 'ar' ? 'فرص الكلام' : 'Speaking opportunities'}>
+          {runtime.goals.map((goal) => <span key={goal.id} className={observedGoalIds.includes(goal.id) ? 'is-observed' : ''}>
+            <span aria-hidden="true">{observedGoalIds.includes(goal.id) ? '✓' : '○'}</span>{' '}
+            {locale === 'ar' ? goal.overviewAr : goal.learnerIntentEn}
+          </span>)}
+        </div>
+        <p className="practice-review-evidence-note">{locale === 'ar'
+          ? 'العلامات دي ملاحظات من Otti على الخطوات اللي ظهرت أثناء الحوار، مش شروط توقف الكلام ولا إثبات إتقان.'
+          : 'Otti notes these opportunities as they appear. They do not gate the conversation or prove mastery.'}</p>
         <div className="practice-conversation-actions">
           <button type="button" onClick={togglePause} disabled={connecting || ending || waitingForReply}>
             {paused ? (locale === 'ar' ? 'نكمل' : 'Resume') : (locale === 'ar' ? 'وقفة للمراجعة' : 'Pause to review')}
