@@ -115,3 +115,13 @@
   overflow-wrap: anywhere;
 }
 .tutor-live-debug { align-self: center; margin: 6px; padding-inline: 16px; }
+
+/* Session 3: an optional expression is never visually struck through as wrong. */
+.tutor-note-kind { font-size: 11px; font-weight: 850; color: #9e4a62; }
+.tutor-note-list li.is-improvement { border-color: #c9e1ea; }
+.tutor-note-list li.is-improvement .tutor-note-kind { color: #256e83; }
+.tutor-note-list li.is-improvement .tutor-note-heard span {
+  text-decoration: none; color: var(--color-text);
+}
+.tutor-note-why { font-size: 13px; line-height: 1.7; color: var(--color-text); }
+.tutor-note-why b { color: var(--color-primary); }
