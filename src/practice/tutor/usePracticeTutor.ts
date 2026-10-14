@@ -7,6 +7,7 @@ import type { PracticeMissionContract } from '../types';
 import type { PracticeCorrectionRecord } from '../runtime';
 import { finishRoleplay, type FinalReviewOutcome } from './finishRoleplay';
 import { phaseScript } from './phaseScript';
+import { briefingAudioTool } from './briefingAudioTool';
 import { TutorSession } from './TutorSession';
 import { idleTutorState, type CountedDiagnostic, type TimedDiagnostic, type PracticeCompletionState, type TutorPhase } from './types';
 
@@ -53,6 +54,7 @@ export function usePracticeTutor(options: {
       tools: options.phase === 'roleplay' ? collector.tools : [], turns: turns.current, onTurn: options.onTurn, diagnostic,
     });
     session.current = tutor;
+    if (options.phase === 'briefing') tutor.options.tools.push(briefingAudioTool(options.mission.slug, tutor));
     if (!startedAt.current) startedAt.current = Date.now();
     const script = phaseScript(options, turns.current, collector.getObservedGoalIds());
     await tutor.start(script.instruction, controlMessage ? `${script.opening}\n${controlMessage}` : script.opening, options.silenceDurationMs);
