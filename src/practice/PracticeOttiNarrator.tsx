@@ -42,7 +42,14 @@ export function PracticeOttiNarrator({ instruction, message, purpose } : {
     setText('');
     const queue = new PcmPlaybackQueue({
       onSpeechStart: () => { if (current === version.current) setState('playing'); },
-      onTurnComplete: () => { if (current === version.current) { transport.current?.close(); transport.current = null; setState('idle'); } },
+      onTurnComplete: () => {
+        if (current !== version.current) return;
+        transport.current?.close();
+        transport.current = null;
+        if (playback.current === queue) playback.current = null;
+        void queue.close();
+        setState('idle');
+      },
     });
     playback.current = queue;
     try {
