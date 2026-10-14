@@ -20,6 +20,9 @@ before(async () => {
     ...(await load('/src/live/liveProtocol.ts')),
     ...(await load('/src/live/functionCalls.ts')),
     ...(await load('/src/practice/missions/catalog.ts')),
+    ...(await load('/src/practice/audio/lessonDialogue.ts')),
+    ...(await load('/src/practice/tutor/briefingAudioTool.ts')),
+    ...(await load('/functions/_shared/lessonAudio.ts')),
     GeminiLiveTransport: (await load('/src/live/GeminiLiveTransport.ts')).GeminiLiveTransport,
     MicrophonePcmStream: (await load('/src/audio/MicrophonePcmStream.ts')).MicrophonePcmStream,
     PcmPlaybackQueue: (await load('/src/audio/PcmPlaybackQueue.ts')).PcmPlaybackQueue,
@@ -188,4 +191,43 @@ test('non-blocking function responses schedule SILENT at the top level, never in
   assert.deepEqual(mod.scheduledResponse({ ok: true }, 'BLOCKING'), { response: { ok: true } });
   assert.ok(events.some((item) => item.event === 'tool_result' && item.issues === 1));
   await session.close();
+});
+
+test('Gemini 3.8 lesson audio uses only authored lines, two styled speakers, and WAV validation', () => {
+  const mission = mod.practiceMissionContractBySlug('a2-order-with-preferences');
+  const request = mod.buildLessonAudioRequest(mission.slug);
+  assert.equal(request.model, 'gemini-3.8-flash-tts');
+  assert.equal(request.generation_config.speech_config.speakers.length, 2);
+  assert.equal(request.generation_config.speech_config.mode, 'conversational');
+  assert.deepEqual(request.input[0].content.map((turn) => turn.text),
+    mission.canonicalDialogue.slice(0, 10).map((turn) => turn.text));
+  assert.equal(request.input[0].content[0].annotations[0].speaker, 'Partner');
+  assert.equal(request.input[0].content[1].annotations[0].speaker, 'Learner');
+  assert.ok(request.input[0].content.every((turn) => turn.annotations[0].style));
+  const wav = Buffer.alloc(44);
+  wav.write('RIFF', 0);
+  wav.write('WAVE', 8);
+  const result = mod.extractLessonWav({ steps: [{ type: 'model_output', content: [
+    { type: 'audio', data: wav.toString('base64') },
+  ] }] });
+  assert.equal(result.length, 44);
+  assert.throws(() => mod.extractLessonWav({ steps: [] }), /Missing/);
+  assert.throws(() => mod.extractLessonWav({ steps: [{ type: 'model_output', content: [
+    { type: 'audio', data: Buffer.from('not audio').toString('base64') },
+  ] }] }), /playable WAV/);
+});
+
+test('the lesson playback tool is blocking and answers only after playback finishes', async () => {
+  let finishPlayback;
+  const session = { playLessonDialogue: () => new Promise((resolve) => { finishPlayback = resolve; }) };
+  const tool = mod.briefingAudioTool('a2-order-with-preferences', session);
+  assert.equal(tool.declaration.behavior, 'BLOCKING');
+  let answered = false;
+  const request = tool.handle({}).then((result) => { answered = true; return result; });
+  await Promise.resolve();
+  assert.equal(answered, false, 'cannot tell Live the clip finished before actual playback');
+  finishPlayback({ played: true });
+  const result = await request;
+  assert.equal(result.played, true);
+  assert.match(result.instruction, /FINISHED/);
 });
