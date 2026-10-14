@@ -64,7 +64,7 @@ export class PracticeTurnAudioBuffer {
     header.setUint32(24, RATE, true);
     header.setUint32(28, RATE * 2, true);
     header.setUint16(32, 2, true);
-    header.setUint16(34, 16);
+    header.setUint16(34, 16, true);
     fourCC(36, 'data');
     header.setUint32(40, this.bytes, true);
     let offset = 44;
