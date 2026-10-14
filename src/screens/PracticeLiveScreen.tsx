@@ -411,6 +411,7 @@ export function PracticeLiveScreen() {
       await mic.start((chunk) => {
         // All raw mic frames are copied, even quiet speech; no amplitude threshold.
         live.sendAudio(chunk);
+        if (turnAudio.current.wouldOverflowWith(chunk)) flushCapturedSpeech();
         turnAudio.current.push(chunk);
         if (turnAudio.current.hasAudio) setSpeechDetected(true);
         if (turnAudio.current.overflowed) setCaptureWarning(true);
