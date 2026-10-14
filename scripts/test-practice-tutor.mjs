@@ -289,6 +289,8 @@ test('holding locally interrupts Otti, ignores late server audio and never reope
   session.mic.chunkForTest('PCM');
   assert.equal(session.endHold(), true);
   assert.equal(session.state.micOpen, false);
+  callbacks.onInterrupted();
+  assert.equal(session.state.waiting, true, 'late interruption ACK cannot release the new learner turn');
   callbacks.onOutputTranscript('Now my actual reply');
   callbacks.onGenerationComplete();
   assert.ok(session.state.text.includes('Now my actual reply'));
