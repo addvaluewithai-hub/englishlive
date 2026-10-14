@@ -23,6 +23,8 @@ export function ReviewNotesPanel({ mission, review, ar, copy, open, onClose, onP
   const [copied, setCopied] = useState(false);
   const [details, setDetails] = useState(false);
   const issues = review.corrections ?? [];
+  const improvements = review.improvements ?? [];
+  const allNotes = [...issues, ...improvements];
   async function copyReport() {
     try {
       await navigator.clipboard.writeText(buildReviewReport(mission, review, ar, getConnectionDiagnostics()));
@@ -33,14 +35,15 @@ export function ReviewNotesPanel({ mission, review, ar, copy, open, onClose, onP
     {open ? <button type="button" className="tutor-notes-backdrop" aria-label={copy.close} onClick={onClose} /> : null}
     <aside className={`tutor-notes${open ? ' is-open' : ''}`} aria-label={copy.reviewTitle}>
       <header>
-        <div><h2>{copy.reviewTitle} <span>{issues.length}</span></h2><p>{copy.reviewIntro}</p></div>
+        <div><h2>{copy.reviewTitle} <span>{allNotes.length}</span></h2><p>{copy.reviewIntro}</p></div>
         <button type="button" className="tutor-notes-close" onClick={onClose} aria-label={copy.close}>×</button>
       </header>
-      {issues.length ? <ol className="tutor-note-list">
-        {issues.map((issue, index) => <li key={`${issue.originalEn}-${issue.betterEn}`}>
-          <p className="tutor-note-heard"><small>{copy.heard}</small><span lang="en" dir="ltr">{issue.originalEn}</span></p>
+      {allNotes.length ? <ol className="tutor-note-list">
+        {allNotes.map((issue, index) => <li key={`${issue.originalEn}-${issue.betterEn}`} className={index >= issues.length ? 'is-improvement' : 'is-error'}>
+          <strong className="tutor-note-kind">{index >= issues.length ? (ar ? 'تعبير اختياري — جملتك صح' : 'Optional improvement — original is valid') : (ar ? 'خطأ لغوي' : 'Language error')}</strong>
+          <p className="tutor-note-heard"><small>{index >= issues.length ? (ar ? 'الجملة الصحيحة اللي قلتها' : 'Your valid original') : copy.heard}</small><span lang="en" dir="ltr">{issue.originalEn}</span></p>
           <p className="tutor-note-better"><small>{copy.better}</small><strong lang="en" dir="ltr">{issue.betterEn}</strong></p>
-          {(ar ? issue.feedbackAr : issue.feedbackEn) ? <p className="tutor-note-why">{ar ? issue.feedbackAr : issue.feedbackEn}</p> : null}
+          <p className="tutor-note-why"><b>{ar ? 'ليه؟' : 'Why?'}</b> { (ar ? issue.feedbackAr : issue.feedbackEn) || (ar ? 'اسأل Otti عن القاعدة أو السبب.' : 'Ask Otti for the rule or reason.') }</p>
           <button type="button" disabled={practiseDisabled} onClick={() => onPractise(index)}>{copy.practise}</button>
         </li>)}
       </ol> : <p className="tutor-empty-note">{notesIncomplete(review) ? copy.emptyIncomplete : copy.emptyComplete}</p>}
