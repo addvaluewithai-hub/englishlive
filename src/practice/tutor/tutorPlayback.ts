@@ -6,13 +6,13 @@ export function createTutorPlayback(session: TutorSession) {
   return new PcmPlaybackQueue({
     onMouthPose: (pose) => { if (!session.closed) session.performer.setMouth(pose); },
     onSpeechStart: () => {
-      if (session.closed) return;
+      if (session.closed || session.holding) return;
       session.setMic(false);
       session.update({ status: 'speaking', waiting: false });
       session.performer.speechStart();
     },
     onSpeechEnd: () => {
-      if (session.closed) return;
+      if (session.closed || session.holding) return;
       session.performer.speechEnd();
       session.playbackDrained();
     },
