@@ -5,6 +5,7 @@ import { onRequestPost } from '../functions/api/practice/coach.ts';
 import { PRACTICE_MISSION_CONTRACTS, practiceMissionContractBySlug } from '../src/practice/missions/catalog.ts';
 import { buildConversationPracticePrompt, buildConversationOpening } from '../src/practice/conversationPrompt.ts';
 import { PracticeTurnAudioBuffer } from '../src/practice/turnAudioBuffer.ts';
+import { transcribeRecordedTurns, MAX_SESSION_SEGMENTS, MAX_PARALLEL_TRANSCRIPTIONS } from '../src/practice/finalTranscript.ts';
 import { MAX_WAV_BYTES, VERBATIM_PROMPT, parsePracticeWav, transcribePracticeAudio } from '../functions/_shared/practiceTranscribe.ts';
 import { onRequestPost as onTranscribeRequestPost } from '../functions/api/practice/transcribe.ts';
 
@@ -185,12 +186,13 @@ test('Live wire setup has zero Practice tools, preserves other modes, and accept
 
 test('Practice turns retain original PCM bytes in a bounded WAV, not a transcript guess', () => {
   const audio = new PracticeTurnAudioBuffer();
-  const frame = Buffer.alloc(320);
+  const frame = Buffer.alloc(3200);
   frame.writeInt16LE(4000, 0);
-  audio.push(frame.toString('base64'), 0.01);
-  assert.equal(audio.hasSpeech, false);
-  audio.push(frame.toString('base64'), 0.06);
-  assert.equal(audio.hasSpeech, true);
+  // Quiet speech must be captured even when the voice activity estimate is low.
+  audio.push(frame.toString('base64'));
+  assert.equal(audio.hasAudio, true);
+  audio.push(frame.toString('base64'));
+  assert.equal(audio.hasAudio, true);
   const { audioBase64, overflow } = audio.takeWavBase64();
   assert.equal(overflow, false);
   const wav = Buffer.from(audioBase64, 'base64');
@@ -201,18 +203,18 @@ test('Practice turns retain original PCM bytes in a bounded WAV, not a transcrip
   assert.equal(wav.readUInt16LE(34), 16);
   assert.deepEqual(wav.subarray(44), Buffer.concat([frame, frame]));
   assert.equal(parsePracticeWav(audioBase64), audioBase64);
-  assert.equal(audio.hasSpeech, false);
+  assert.equal(audio.hasAudio, false);
   assert.equal(audio.takeWavBase64().audioBase64, null);
 });
 
 test('Practice audio limits reject malformed, tampered, or clipped data', () => {
   const audio = new PracticeTurnAudioBuffer();
   const oneSecond = Buffer.alloc(32_000);
-  for (let i = 0; i < 35; i++) audio.push(oneSecond.toString('base64'), 0.1);
+  for (let i = 0; i < 35; i++) audio.push(oneSecond.toString('base64'));
   assert.deepEqual(audio.takeWavBase64(), { audioBase64: null, overflow: true });
   assert.throws(() => parsePracticeWav('not-base64!!'), /Invalid audio/);
   const fresh = new PracticeTurnAudioBuffer();
-  fresh.push(Buffer.alloc(600).toString('base64'), 0.08);
+  fresh.push(Buffer.alloc(3600).toString('base64'));
   const valid = Buffer.from(fresh.takeWavBase64().audioBase64, 'base64');
   assert.ok(valid.length < MAX_WAV_BYTES);
   valid.writeUInt32LE(22_050, 24);
@@ -273,7 +275,7 @@ test('Flash-Lite route verifies signed-in learner and returns original spoken mi
   const signature = await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, keyPair.privateKey, new TextEncoder().encode(signed));
   const token = signed + '.' + Buffer.from(signature).toString('base64url');
   const turn = new PracticeTurnAudioBuffer();
-  turn.push(Buffer.alloc(600).toString('base64'), 0.08);
+  turn.push(Buffer.alloc(3600).toString('base64'));
   const wav = turn.takeWavBase64().audioBase64;
   let providerCalls = 0;
   t.mock.method(globalThis, 'fetch', async (url) => {
@@ -292,4 +294,42 @@ test('Flash-Lite route verifies signed-in learner and returns original spoken mi
   assert.equal(res.status, 200);
   assert.deepEqual(await res.json(), { transcript: 'I want small one please' });
   assert.equal(providerCalls, 1);
+});
+
+test('transcription is deferred until the full-session review and retains original turn order', async () => {
+  const record = (id) => ({ turn: { id, speaker: 'learner', text: '' }, audioBase64: id, pcmBytes: 3200 });
+  const rows = [record('first'), record('second'), record('third'), record('fourth')];
+  const started = [];
+  const resolvers = new Map();
+  const pending = transcribeRecordedTurns(rows, (audio) => {
+    started.push(audio);
+    return new Promise((resolve) => resolvers.set(audio, resolve));
+  });
+  assert.equal(started.length, MAX_PARALLEL_TRANSCRIPTIONS);
+  resolvers.get('third')('small coffee');
+  // Promise continuation resumes on a microtask, allowing a third worker to start another item.
+  await Promise.resolve();
+  assert.ok(started.includes('fourth'));
+  resolvers.get('second')('hot please');
+  resolvers.get('first')('I want small one');
+  resolvers.get('fourth')('thanks');
+  const result = await pending;
+  assert.deepEqual(result, { completed: 4, failed: 0, noSpeech: 0 });
+  assert.deepEqual(rows.map((r) => r.turn.text), ['I want small one', 'hot please', 'small coffee', 'thanks']);
+  assert.equal(MAX_SESSION_SEGMENTS, 24);
+});
+
+test('silent and unavailable audio do not fabricate learner turns or a clean review', async () => {
+  const rows = [
+    { turn: { id: 'silent', speaker: 'learner', text: '' }, audioBase64: '1', pcmBytes: 3200 },
+    { turn: { id: 'failed', speaker: 'learner', text: '' }, audioBase64: '2', pcmBytes: 3200 },
+    { turn: { id: 'clear', speaker: 'learner', text: '' }, audioBase64: '3', pcmBytes: 3200 },
+  ];
+  const report = await transcribeRecordedTurns(rows, async (audio) => {
+    if (audio === '1') return '[no speech]';
+    if (audio === '2') throw new Error('provider outage');
+    return 'I want small one please';
+  });
+  assert.deepEqual(report, { completed: 1, failed: 1, noSpeech: 1 });
+  assert.deepEqual(rows.map((x) => x.turn.text), ['', '', 'I want small one please']);
 });
