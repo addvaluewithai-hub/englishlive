@@ -11,6 +11,8 @@ export interface LiveSessionConfig {
   voiceName?: string;
   /** Per-session pause tolerance; other modes retain their existing default. */
   silenceDurationMs?: number;
+  /** Practice opts out of Gemini Live's unreliable input transcript; other modes stay unchanged. */
+  disableInputTranscription?: boolean;
 }
 
 export interface LiveCallbacks {
