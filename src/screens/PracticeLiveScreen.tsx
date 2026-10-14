@@ -454,8 +454,10 @@ export function PracticeLiveScreen() {
     const clock = window.setInterval(() => setElapsedSeconds(durationSeconds()), 1000);
     return () => {
       sessionGeneration.current++;
-      transcriptionGeneration.current++;
+      // Drop all retained microphone PCM on cancel/navigation/unmount.
       turnAudio.current.clear();
+      recordedTurns.current = [];
+      recordedBytes.current = 0;
       clearReplyTimeout();
       window.clearTimeout(startTimer);
       window.clearInterval(clock);
