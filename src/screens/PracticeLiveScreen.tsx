@@ -77,7 +77,6 @@ export function PracticeLiveScreen() {
   const conversationLogRef = useRef<PracticeConversationTurn[]>([]);
   const learnerTurnLoggedRef = useRef(false);
   const turnAudio = useRef(new PracticeTurnAudioBuffer());
-  const micLevelRef = useRef(0);
   const recordedTurns = useRef<RecordedPracticeTurn[]>([]);
   const recordedBytes = useRef(0);
   const incompleteAudio = useRef(0);
@@ -416,7 +415,6 @@ export function PracticeLiveScreen() {
         if (turnAudio.current.hasAudio) setSpeechDetected(true);
         if (turnAudio.current.overflowed) setCaptureWarning(true);
       }, (level) => {
-        micLevelRef.current = level;
         setMicLevel(level);
         if (level > 0.045) {
           lastSpeechAt.current = performance.now();
@@ -504,7 +502,7 @@ export function PracticeLiveScreen() {
   }
 
   function finishSpeaking() {
-    if (!transport.current?.connected || pausedRef.current || !turnAudio.current.hasAudio) return;
+    if (!transport.current?.connected || pausedRef.current || (!turnAudio.current.hasAudio && !turnAudio.current.overflowed)) return;
     setLearnerMicEnabled(false);
     flushCapturedSpeech();
     transport.current.endAudioStream();
@@ -540,9 +538,8 @@ export function PracticeLiveScreen() {
     }
     const live = transport.current;
     if (!live?.connected || status !== 'listening' || !micOpen) return;
-    // Typed input bypasses the audio transcriber; discard idle mic noise.
-    turnAudio.current.clear();
-    setSpeechDetected(false);
+    // Preserve any preceding learner voice as a separate ordered audio segment.
+    flushCapturedSpeech();
     appendConversationTurn('learner', value);
     learnerDraftRef.current = value;
     lastSpeechAt.current = performance.now();
@@ -641,6 +638,7 @@ export function PracticeLiveScreen() {
       </div>
 
       <div className="fs-live-controls practice-live-controls">
+        <p className="practice-review-evidence-note">{locale === 'ar' ? 'بنحتفظ بصوتك مؤقتًا أثناء المهمة علشان نفرّغه حرفيًا بعد إنهاء المحادثة؛ Otti مش بيستنى التفريغ.' : 'Your voice is kept temporarily during this mission for verbatim transcription after you finish; Otti never waits for it.'}</p>
         <div className="practice-conversation-goals" aria-label={locale === 'ar' ? 'فرص الكلام' : 'Speaking opportunities'}>
           {runtime.goals.map((goal) => <span key={goal.id} className={runtime.achievedGoalIds.includes(goal.id) ? 'is-observed' : ''}>
             <span aria-hidden="true">{runtime.achievedGoalIds.includes(goal.id) ? '✓' : '○'}</span>{' '}
