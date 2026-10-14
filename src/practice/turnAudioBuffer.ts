@@ -17,6 +17,13 @@ export class PracticeTurnAudioBuffer {
   get sizeBytes() { return this.bytes; }
   get overflowed() { return this.overflow; }
 
+  /** Rotate at a valid PCM boundary so long thinking/answers are not dropped. */
+  wouldOverflowWith(base64Pcm: string) {
+    const padding = base64Pcm.endsWith('==') ? 2 : base64Pcm.endsWith('=') ? 1 : 0;
+    const additionalBytes = Math.floor(base64Pcm.length * 3 / 4) - padding;
+    return this.bytes + additionalBytes > PRACTICE_MAX_SEGMENT_PCM_BYTES;
+  }
+
   push(base64Pcm: string) {
     if (this.overflow) return;
     const binary = atob(base64Pcm);
