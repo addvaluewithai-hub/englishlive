@@ -1,110 +1,136 @@
-/* Shared lesson room: avoid the legacy scenario stage's fixed 620px empty space. */
-.fs-live.practice-live.tutor-room {
-  width: min(100%, 1120px);
-  min-height: 100dvh;
-  grid-template-rows: auto auto 1fr auto;
-  padding: 0 24px 22px;
-  gap: 18px;
-  background: var(--color-surface);
+/* The tutor reuses the speaking screen (fs-live / sp-scenario-live / practice-live).
+ * Only the lesson card, goal strip, phase meta and dock action are added here. */
+
+.tutor-live.sp-scenario-live { padding-bottom: 0; }
+.tutor-live.has-side { width: min(100%, 1160px); }
+.tutor-body { position: relative; display: flex; min-width: 0; min-height: 0; }
+.tutor-main { display: flex; flex: 1; flex-direction: column; min-width: 0; }
+.tutor-main > .tutor-stage { flex: 1; }
+.has-side .tutor-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 370px);
+  gap: 24px;
+  align-items: start;
+  padding-inline: 24px;
 }
-.tutor-room .fs-live-header { margin-inline: -24px; }
-.tutor-room .fs-live-title { font-size: 16px; }
-.tutor-lesson-heading { text-align: center; }
-.tutor-phase-list {
+.has-side .tutor-side { position: sticky; top: 16px; max-height: calc(100dvh - 32px); margin-top: 16px; overflow: auto; }
+
+.tutor-phase-meta { gap: 6px; font-size: 12px; white-space: nowrap; }
+.tutor-phase-meta b { direction: ltr; color: var(--color-primary); }
+
+/* Stage: character row, status row, then one compact phase companion. */
+.tutor-stage.practice-live-stage { min-height: 560px; padding-bottom: 40px; }
+.tutor-stage-extra {
+  position: relative;
+  z-index: 5;
+  justify-self: center;
+  align-self: start;
+  width: min(560px, 100%);
+  margin-top: 14px;
+}
+.tutor-live .tutor-goals { margin: 0; }
+
+.tutor-lesson-card {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  background: var(--color-surface-raised);
+  box-shadow: var(--shadow-card);
+  text-align: start;
+}
+.tutor-lesson-card > small { color: var(--color-primary); font-size: 12px; font-weight: 800; }
+.tutor-lesson-card > strong { font-size: 16px; line-height: 1.5; }
+.tutor-lesson-card ol {
   display: flex;
-  justify-content: center;
   flex-wrap: wrap;
-  gap: 20px;
+  gap: 6px;
+  margin: 0;
   padding: 0;
-  margin: 0 0 14px;
   list-style: none;
+  counter-reset: step;
+}
+.tutor-lesson-card li {
+  counter-increment: step;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: var(--color-background);
   color: var(--color-text-muted);
   font-size: 12px;
 }
-.tutor-phase-list li { display: flex; align-items: center; gap: 7px; }
-.tutor-phase-list li > span {
+.tutor-lesson-card li::before { content: counter(step) '. '; font-weight: 800; color: var(--color-primary); }
+.tutor-facts { display: flex; flex-wrap: wrap; gap: 8px; }
+.tutor-facts > span { padding: 6px 10px; border: 1px solid var(--color-border); border-radius: 12px; font-size: 12px; }
+.tutor-facts small { display: block; color: var(--color-text-muted); font-size: 10.5px; }
+.tutor-pace-choice { display: flex; align-items: center; gap: 8px; min-height: 32px; color: var(--color-text-muted); font-size: 12px; }
+
+/* Dock: same controls as Speaking, with one labelled phase action. */
+.tutor-live .tutor-dock.fs-live-controls { position: sticky; bottom: 0; margin-top: 0; padding-top: 10px; }
+.tutor-control-row.fs-control-row {
+  max-width: 560px;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 18px;
+  direction: inherit;
+}
+.tutor-live .fs-keyboard-control {
+  justify-self: start;
+  width: 60px;
+  height: 58px;
   display: grid;
   place-items: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: var(--color-background);
-}
-.tutor-phase-list [aria-current] { color: var(--color-primary); font-weight: 700; }
-.tutor-phase-list [aria-current] > span { background: var(--color-primary); color: var(--color-on-primary); }
-.tutor-lesson-heading h1 { margin: 0; font-size: clamp(20px, 2.5vw, 28px); }
-.tutor-lesson-heading > p { max-width: 650px; margin: 8px auto 0; font-size: 14px; color: var(--color-text-muted); }
-.tutor-workspace { display: grid; align-items: start; gap: 24px; }
-.tutor-workspace.has-review { grid-template-columns: minmax(0, 1fr) minmax(290px, 350px); }
-.tutor-conversation { min-width: 0; }
-.tutor-stage { display: flex; align-items: center; flex-direction: column; justify-content: center; gap: 14px; min-height: 330px; }
-.tutor-character { width: clamp(190px, 23vw, 260px); height: clamp(190px, 23vw, 260px); }
-.tutor-character .fs-live-character-host { width: 100%; height: 100%; }
-.tutor-room .fs-live-status {
-  margin: 0;
-  min-height: 58px;
-  max-width: 100%;
-  min-width: min(280px, 100%);
-  padding: 10px 18px;
-  border-radius: 20px;
-  box-shadow: none;
-}
-.tutor-room .fs-live-status strong { font-size: 17px; }
-.tutor-caption { width: min(560px, 100%); text-align: start; padding: 12px 16px; background: var(--color-surface-raised); border-radius: 16px; }
-.tutor-caption small { color: var(--color-primary); font-weight: 700; }
-.tutor-caption p { max-height: 96px; overflow: auto; margin: 4px 0 0; line-height: 1.7; }
-.tutor-controls { margin: 18px auto 10px; max-width: 560px; }
-.tutor-control-row { display: flex; justify-content: center; align-items: center; gap: 32px; padding-block: 12px; }
-.tutor-room .tutor-mic { width: 88px; height: 88px; box-shadow: 0 0 0 8px var(--color-surface-raised); cursor: pointer; }
-.tutor-room .tutor-mic small { font-size: 10px; bottom: 12px; }
-.tutor-room .tutor-mic svg { margin-top: -12px; }
-.tutor-room .tutor-secondary {
-  display: grid;
-  place-items: center;
-  width: 64px;
-  min-height: 54px;
   border: 1px solid var(--color-border);
-  border-radius: 16px;
-  background: var(--color-surface);
+  border-radius: 22px;
   color: var(--color-text);
+  background: var(--color-surface);
+}
+.tutor-live.practice-live .fs-mic-control small { display: block; bottom: 12px; font-size: 11px; }
+.tutor-live .fs-mic-control svg { margin-top: -10px; }
+.tutor-live .fs-mic-control .fs-interrupt-bars { margin-top: -10px; }
+.tutor-dock-action { justify-self: end; display: flex; }
+.tutor-live .tutor-action.fs-help-control {
+  min-height: 56px;
+  max-width: 170px;
+  padding: 6px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 28px;
+  color: var(--color-primary);
+  background: var(--color-surface);
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+.tutor-action strong { font-size: 13.5px; line-height: 1.25; text-align: center; }
+.tutor-live .tutor-action.is-primary { border-color: transparent; color: var(--color-on-primary); background: var(--color-primary); }
+.tutor-action:disabled { opacity: .55; cursor: default; }
+.tutor-dock-links { display: flex; justify-content: center; min-height: 34px; }
+.tutor-dock-links button {
+  min-height: 34px;
+  padding: 4px 12px;
+  border: 0;
+  color: var(--color-text-muted);
+  background: transparent;
   font: inherit;
   font-size: 12px;
-  cursor: pointer;
-  box-shadow: none;
-}
-.tutor-room button:disabled { opacity: .5; cursor: default; }
-.tutor-room .tutor-secondary span { font-size: 11px; }
-.tutor-facts { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px; margin: 16px 0; }
-.tutor-facts > span { padding: 8px 12px; background: var(--color-background); border-radius: 12px; font-size: 12px; }
-.tutor-facts small { display: block; margin-bottom: 3px; color: var(--color-text-muted); }
-.tutor-lesson-footer { display: grid; gap: 14px; justify-items: center; border-top: 1px solid var(--color-border); padding-top: 16px; }
-.tutor-room .tutor-goals { margin: 0; flex-wrap: wrap; justify-content: center; max-width: 100%; }
-.tutor-next {
-  min-height: 46px;
-  min-width: 220px;
-  padding: 10px 24px;
-  border: 0;
-  border-radius: 14px;
-  background: var(--color-primary);
-  color: var(--color-on-primary);
-  font: inherit;
-  font-weight: 700;
+  text-decoration: underline;
   cursor: pointer;
 }
-.tutor-pace-choice { font-size: 13px; display: flex; gap: 8px; align-items: center; }
-.tutor-text-button { display: block; margin: 10px auto; padding: 8px; color: var(--color-primary); border: 0; background: transparent; font: inherit; font-size: 12px; cursor: pointer; }
-.tutor-notes-toggle { display: none; }
-@media (max-width: 720px) {
-  .fs-live.practice-live.tutor-room { padding-inline: 16px; gap: 12px; }
-  .tutor-room .fs-live-header { margin-inline: -16px; }
-  .tutor-workspace.has-review { grid-template-columns: minmax(0, 1fr); gap: 12px; }
-  .tutor-stage { min-height: 290px; }
-  .tutor-character { width: 200px; height: 200px; }
-  .tutor-phase-list { gap: 12px; font-size: 10px; }
-  .tutor-review-column { display: none; }
-  .tutor-review-column.is-expanded { display: block; }
-  .tutor-notes-toggle { display: block; min-height: 44px; border: 1px solid var(--color-border); border-radius: 12px; background: var(--color-surface); color: var(--color-primary); font: inherit; }
-  .tutor-control-row { gap: 24px; }
-  .tutor-room .fs-live-header { grid-template-columns: 40px minmax(0, 1fr); }
-  .tutor-room .fs-live-header > span:last-child { display: none; }
+.tutor-live :focus-visible { outline: 3px solid var(--color-primary); outline-offset: 3px; }
+
+@media (max-width: 620px) {
+  .tutor-stage.practice-live-stage { min-height: 470px; padding-bottom: 12px; }
+  .is-briefing .tutor-stage.practice-live-stage { min-height: 0; grid-template-rows: 225px auto auto; }
+  .is-briefing .tutor-stage .sp-scenario-character { height: 225px; transform: translateY(8px); }
+  .tutor-stage-extra { margin-top: 10px; }
+  .tutor-lesson-card { padding: 12px; gap: 6px; border-radius: 18px; }
+  .tutor-lesson-card > strong { font-size: 14.5px; }
+  .tutor-phase-meta { font-size: 11px; }
+  .tutor-control-row.fs-control-row { gap: 10px; }
+  .tutor-live .fs-keyboard-control { width: 52px; height: 52px; border-radius: 19px; }
+  .tutor-live .tutor-action.fs-help-control { min-height: 52px; max-width: 128px; padding-inline: 12px; }
+  .tutor-action strong { font-size: 12.5px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tutor-live .fs-mic-control.is-live { animation: none; }
 }

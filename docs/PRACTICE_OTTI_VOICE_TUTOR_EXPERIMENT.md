@@ -4,119 +4,106 @@ Experimental draft PR #45, updated 2026-10-14. Do not merge before real voice QA
 
 ## Learner experience
 
-All three phases use the same `PracticeTutor` presentation, animated `CharacterHost`,
-speech-synchronized mouth playback, shared character loader, and Live layout.
+One lesson with Otti in three phases. Every phase uses the existing speaking screen
+(`fs-live` / `sp-scenario-live` / `practice-live`): Otti's caption bubble, the animated
+`CharacterHost` with speech-synchronized mouth, the turn status pill, and the bottom dock
+(type / microphone / one phase action). A `1/3 · 2/3 · 3/3` pill in the header shows the phase.
 
-1. Introduction: use Talk with Otti to hear the scenario, learning goal, facts and
-   sample dialogue. Ask questions by microphone or text. Samples are demonstrations,
-   never evidence of learner errors. No scripted readiness answer is required.
-2. Start roleplay: the introduction connection closes and the roleplay connection
-   starts automatically. Otti acts in the scenario and records clearly detected
-   genuine errors, including small ones, through NON_BLOCKING tools with SILENT
-   acknowledgements. Valid short replies, accents and style preferences are not errors.
-3. Finish and review: final received messages are drained before the notebook is
-   frozen and passed to review. The same animated tutor starts an interactive review.
-   Ask questions, discuss corrections and rehearse corrected phrases. Rehearsal is new
-   practice and cannot change the original report. Written corrections remain below.
+1. **Lesson** (`/practice/mission/:slug`). Press *Start lesson*: Otti greets, says what we
+   will learn today, sets the scene, demonstrates at most two sample exchanges, then answers
+   questions by voice or text. A compact *Today's lesson* card (goal, steps, facts, pace
+   toggle) sits under Otti on phones and beside him on desktop. Samples are never evaluated.
+   No readiness ritual: *Start the conversation* in the dock moves on whenever the learner wants.
+2. **Conversation** (`/practice/live/:slug`). Starts automatically. Otti stays in role, never
+   corrects aloud, and silently notes goals and mistakes. Goal chips are informational only.
+3. **Review** (`/practice/complete/:slug`). Starts automatically on the same stage. Otti goes
+   through the saved notes one at a time, asks the learner to say the better sentence, answers
+   follow-up questions and practises any phrase. Written notes sit beside Otti on desktop and
+   in a bottom sheet (*Notes (n)*) on phones; *Practise this* hands a note to Otti by voice.
 
-Each phase owns a disposable connection. Microphone, playback, pause, interruption,
-stop/reconnect and cancellation share one runtime. The mic opens after audible playback
-finishes. A failed automatic start exposes the same Talk with Otti retry control.
-Arabic tutoring uses friendly Egyptian Arabic with English examples.
+Each phase owns a disposable Live connection; the continuity is the shared stage and runtime.
 
-## Follow-up after the user microphone test
+## Why the earlier test saved zero corrections
 
-The user provided a real session diagnostic: setup accepted, three successful
-`record_practice_progress` calls, zero `record_language_issue` calls, zero collector
-rejections, and finishTimedOut=true. This confirms the provider dispatched progress
-calls while the separate language-issue path was never invoked. It does NOT establish
-why the model omitted detecting/recording errors; no original microphone audio exists.
+The user's trace: setup accepted with both tools, three `record_practice_progress` calls,
+zero `record_language_issue` calls, zero rejections, `finishTimedOut: true`.
 
-The follow-up changes the observation contract, not just the prompt wording:
+- Nothing was rejected or lost: the model never called the error tool.
+- That build never asked for an end-of-roleplay review. "Finish" only waited 5 s for a
+  `turnComplete`, and timed out.
+- Google's Live API reference states that audio input and output reduce the model's
+  function-calling ability. Silent per-turn grammar notes while acting a role are the weakest
+  possible case, so per-turn notes alone cannot be the capture mechanism.
+- A public forum report for `gemini-3.8-live` describes turns whose `turnComplete` never
+  arrives. The old runtime waited for it before reopening the mic (felt "stuck").
 
-- `record_practice_progress` now requires `language_review` alongside goal IDs on
-  every actual learner turn. It can save multiple precise errors in the same call,
-  even with zero new goals. The standalone issue tool remains compatible.
-- The review distinguishes explicit `no_clear_issue`, uncertain words, and missing
-  language reviews. Communicative success is never evidence of correct grammar.
-- Finishing sends a private event in the SAME roleplay connection asking for a final
-  actual-heard-language audit. A structurally valid `final_review:true` acknowledgement
-  is awaited for at most eight seconds. Finalization audio is suppressed, the mic stays
-  closed, and received tool messages are drained before the notebook is frozen.
-- Malformed or missing final reviews cannot count as an acknowledged finalization.
-  Timeout and missing-language-review counts remain visible in copied diagnostics.
-- Fixed the playback starvation case: audio may drain before server turnComplete.
-  The runtime now checks drained playback when that late signal arrives, so it does
-  not wait forever for an audio-completion callback that already happened.
-- The lesson room now has a phase heading, compact animated conversation area and
-  working microphone actions. Removed the inert more button and detached report.
-  Review notes sit beside Otti on desktop and expand in the same lesson on mobile.
-  Each note can be selected for interactive discussion/rehearsal. Raw JSON is absent
-  from the normal learner UI; a details action copies original and review diagnostics.
+## Capture design now
 
-Validation: build/check passed; 24 practice tests and 8 UI tests passed. Tests cover
-batched language+goal observations, explicit/missing/uncertain reviews, late final
-notes, acknowledgement validity, and already-drained playback. Existing visual QA
-selectors were updated to the new structure but browser tests were NOT run at the
-user's request. Actual model detection, final acknowledgement reliability, audio
-fluency and final UI appearance require another user test; they are not proven fixed.
+- **Primary: dedicated final review in the same connection.** *Done* closes the mic, mutes
+  playback, sends `PRIVATE_FINISH_NOTES`, and waits for one `submit_final_review` call
+  (`status` + `issues`). The connection has heard the whole roleplay and now has a single
+  job. Wait 15 s, send one reminder, wait 10 s more. The UI shows "Otti is reviewing what
+  you said…" on the same stage. Received messages are drained before the notebook freezes.
+- **Bonus: per-turn notes.** `record_practice_progress` takes `goal_ids` (required) and
+  optional `issues`. Both tools are `NON_BLOCKING` and answered with `scheduling: SILENT`.
+- **Evidence rules.** An issue needs the exact heard words and a different correction;
+  explanations are optional so a real error is never dropped for a missing field. Explicit
+  non-`high` confidence is rejected. No cap; only identical original→correction pairs are
+  grouped. Valid short replies, accents and style are not errors. Nothing is invented.
+- **Honest empty states.** If the final review is `missing`/`offline`, the review says the
+  notes may be incomplete (to the learner and to Otti) instead of implying clean English.
 
-## Notebook reliability and the original zero-note report
+## Turn-taking fixes
 
-The earlier report lacked a trace. The subsequent trace above narrows the failure
-to absent language recording calls, not collector rejection. Detection quality and
-the model reason for omitting those calls remain unverified.
+- `generationComplete` is handled. If playback drains and `turnComplete` never arrives, the
+  turn returns to the learner after a 1.4 s quiet gap (logged as `missing_turn_complete`).
+- The 25 s watchdog only runs while Otti owes a reply. An open mic is the learner's thinking
+  time and never times out (previously any noise + 25 s of thinking killed the session).
+- Interrupting a reply that was already fully generated no longer mutes Otti's next reply.
 
-Concrete fixes:
+## Diagnostics (no tokens, audio or learner words)
 
-- Removed the 12-issue collector cap and 8-issue review truncation.
-- Deduplicate by original AND correction, preserving distinct fixes for the same phrase.
-- Explicitly instruct Otti to record every clearly detected genuine error, including
-  minor errors, while abstaining when exact words are uncertain.
-- Own the notebook above the connection, so stop/reconnect cannot erase it. Reconnect
-  includes prior teacher/typed context and observed goals without inventing voice text.
-- Finish waits up to eight seconds for explicit notebook finalization, drains received frames,
-  closes the connection, then snapshots notes. A timeout is reported in diagnostics;
-  this cannot guarantee receipt of future provider frames.
-- Review exposes metadata-only notebook diagnostics and includes them in Copy Otti
-  report: model/API version and offered tools, setup acceptance, received tool calls,
-  save/rejection counts and rejection reasons, unknown tools/errors, finish timeout.
-  No tokens, audio or rejected phrases enter diagnostics. No calls is not error-free.
+*Details for support → Copy details* in the review includes: model, API version and offered
+tools; setup acceptance; tool calls/results by name; `missing_turn_complete`; finish events
+(`finish_requested`, `finish_reminder`, `finish_received`/`finish_missing` with wait ms); and
+notebook counts (`turnNotes`, `finalReviewCalls`, `finalStatus`, `fromTurns`, `fromFinal`,
+`rejected` with reasons). This separates "never called" from "rejected" from "lost".
 
-The checked-in token route requests `v1beta/auth_tokens`, model `gemini-3.8-live`, and
-locks only model and audio modality. Browser setup may supply function declarations.
-The transport handles audio and tool calls in the same frame and uses the documented
-`response.scheduling = SILENT` shape. Actual deployed token/model behavior still needs
-verification from a real session's diagnostics.
+## Code map
 
-References checked on 2026-10-14:
-- https://ai.google.dev/gemini-api/docs/live-api/tools
-- https://ai.google.dev/gemini-api/docs/live-api/ephemeral-tokens
+- `src/practice/silentIssues.ts`: notebook and both tools; `notebook/issueEvidence.ts`: validation.
+- `src/practice/tutor/finishRoleplay.ts`: final-review request, reminder, drain.
+- `TutorSession.ts`, `tutorCallbacks.ts`, `turnTimers.ts`, `tutorPlayback.ts`: media and turn-taking.
+- `PracticeTutor.tsx` composes `TutorStage`, `TutorDock`, `LessonCard`, `GoalStrip`, `ReviewNotesPanel`.
+- `tutorCopy.ts` (all ar/en strings), `tutorView.ts` (state → status/mic action), `phaseScript.ts`.
+- `src/live/`: transport split into `liveToken`, `serverContent`, `functionCalls`, `setupGate`.
 
-Google's current tool guide documents NON_BLOCKING/SILENT but includes model-specific
-async support caveats. Documentation and mocked dispatch alone do not establish actual
-Gemini 3.8 Live detection or fluency.
+## Privacy and evidence
 
-## Evidence and privacy
-
-No extra microphone recording, WAV upload, separate STT or automatic Coach assessment.
-Input transcription remains disabled. Only explicit Hint requests use the existing
-hint endpoint. Goals are informational observations: multiple/out-of-order goals are
-allowed and do not gate conversation or imply mastery. Notes are browser route state,
-not new app database writes. Zero notes never proves error-free speech.
+No extra microphone recording, WAV upload, separate STT or automatic Coach. Input
+transcription stays disabled. Hints use the existing endpoint only on request. Notes live in
+route state, not new database writes. Zero notes never proves error-free speech. If the
+connection drops and the learner reconnects, the new connection has not heard earlier speech,
+so the final review only covers speech after the reconnect (per-turn notes are kept).
 
 ## Validation
 
-- `npm run check`: passed (existing asset/chunk-size warnings).
-- `npm run test:practice`: 24 tests passed, including token setup, mixed audio/tool
-  frames, notebook limits/rejections, interactive runtime, playback/listening,
-  interruption, pause/resume, cancellation, draining and retry-note retention.
-- `npm run test:ui`: 8 tests passed.
-- Source files changed/added remain below 300 lines.
-- An already-running mock browser smoke completed six introduction/roleplay/review
-  journeys. Further browser checks were cancelled at the user's request; the user
-  will test the real UI and audio.
-- Real signed-in microphone/provider QA is still required. Confirm actual detected
-  errors and small errors are recorded, inspect diagnostics on a zero-note result,
-  verify late notes/reconnect, ask review follow-up questions and rehearse phrases,
-  and listen to Arabic/English voice and animation across all three phases.
+- `npm run check`: passed (existing chunk-size warnings).
+- `npm run test:practice`: 29 passed. Covers both tool declarations and SILENT responses with
+  audio in the same frame, final review with reminder and honest `missing` outcome, early
+  final calls not counting as finalization, no-cap retention, missing `turnComplete`
+  hand-back, thinking time never timing out, interrupt muting, pause, cancel and note retention.
+- `npm run test:ui`: 8 passed.
+- Existing `visual-qa-live-layout.mjs` (40 scenarios) and `visual-qa-home.mjs` (20 scenarios)
+  passed locally against a visual-QA build after updating selectors. Screenshots of all three
+  phases in ar/en at 390 and 1280 px were inspected.
+
+## Still needs a real signed-in microphone test
+
+Mocks do not prove Live behaviour. Please check: Otti actually calls `submit_final_review`
+after *Done* (copy details: `finish_received`, `fromFinal`); small errors appear in the notes;
+the mic reopens promptly after each Otti turn; the review conversation answers questions and
+reacts to practice; Arabic/English voice and mouth animation in all three phases.
+
+References: Google Gemini Live API tool use and Gemini 3.8 Live model pages
+(ai.google.dev/gemini-api/docs/live-api/tools, ai.google.dev/gemini-api/docs/models/gemini-3.8-live).

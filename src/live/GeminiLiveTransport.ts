@@ -1,6 +1,9 @@
-import type { FunctionCall, FunctionResponse, ServerMessage } from './liveProtocol';
-import { decodeSocketMessage, responseObject, scheduledResponse, buildLiveSetup } from './liveProtocol';
-import { apiUrl } from '../config/api';
+import type { FunctionResponse, ServerMessage } from './liveProtocol';
+import { decodeSocketMessage, buildLiveSetup } from './liveProtocol';
+import { answerFunctionCall } from './functionCalls';
+import { fetchLiveToken } from './liveToken';
+import { dispatchServerContent } from './serverContent';
+import { createSetupGate } from './setupGate';
 import { DEFAULT_LIVE_MODEL, isLiveModel, type LiveModel } from './models';
 import type { LiveClientTool } from './tools';
 import type { LiveCallbacks, LiveSessionConfig, LiveTokenResponse, LiveTransport } from './types';
@@ -24,19 +27,7 @@ export class GeminiLiveTransport implements LiveTransport {
   constructor(
     private readonly callbacks: LiveCallbacks,
     private readonly customTools: readonly LiveClientTool[] = [],
-    private readonly tokenProvider: () => Promise<LiveTokenResponse> = async () => {
-      const response = await fetch(apiUrl('/api/gemini-token'), {
-        method: 'POST',
-        headers: { accept: 'application/json' },
-      });
-      const payload = (await response.json().catch(() => null)) as
-        | { token?: string; model?: string; error?: string }
-        | null;
-      if (!response.ok || !payload?.token || !payload.model) {
-        throw new Error(payload?.error || `Could not start voice session (${response.status}).`);
-      }
-      return { token: payload.token, model: payload.model };
-    },
+    private readonly tokenProvider: () => Promise<LiveTokenResponse> = fetchLiveToken,
   ) {}
 
   get connected() {
@@ -85,49 +76,29 @@ export class GeminiLiveTransport implements LiveTransport {
     this.callbacks.onStatus('idle');
   }
 
-  private toolDeclarations() {
-    return this.customTools.map((tool) => tool.declaration);
-  }
-
   private async openSocket(token: string) {
     return new Promise<void>((resolve, reject) => {
       const socket = new WebSocket(`${LIVE_ENDPOINT}?access_token=${encodeURIComponent(token)}`);
       socket.binaryType = 'arraybuffer';
       this.socket = socket;
-      let settled = false;
-      let setupTimer: number | null = null;
-      const clearSetupTimer = () => {
-        if (setupTimer !== null) window.clearTimeout(setupTimer);
-        setupTimer = null;
-      };
-      const resolveSetup = () => {
-        if (settled) return;
-        settled = true;
-        clearSetupTimer();
-        resolve();
-      };
-      const rejectSetup = (error: Error) => {
-        if (settled) return;
-        settled = true;
-        clearSetupTimer();
-        reject(error);
-      };
+      const gate = createSetupGate(resolve, reject);
 
       socket.addEventListener('open', () => {
         if (this.socket !== socket) {
           socket.close();
-          rejectSetup(new Error('Session cancelled.'));
+          gate.reject(new Error('Session cancelled.'));
           return;
         }
-        setupTimer = window.setTimeout(() => {
+        gate.arm(SETUP_TIMEOUT_MS, () => {
           const error = new Error('Gemini Live did not complete setup in time.');
           this.callbacks.onError(error.message);
           this.callbacks.onStatus('error');
-          rejectSetup(error);
+          gate.reject(error);
           socket.close(1000, 'setup timeout');
-        }, SETUP_TIMEOUT_MS);
+        });
 
-        const setup = buildLiveSetup(this.model, this.systemInstruction, this.sessionConfig, this.toolDeclarations(), this.resumptionHandle);
+        const setup = buildLiveSetup(this.model, this.systemInstruction, this.sessionConfig,
+          this.customTools.map((tool) => tool.declaration), this.resumptionHandle);
         this.callbacks.onDiagnostic?.({ event: 'setup_sent', model: this.model, apiVersion: 'v1beta', tools: this.customTools.map((tool) => tool.declaration.name) });
         this.send({ setup });
       });
@@ -137,13 +108,16 @@ export class GeminiLiveTransport implements LiveTransport {
           .then(async () => {
             if (this.socket !== socket) return;
             const message = JSON.parse(await decodeSocketMessage(event.data)) as ServerMessage;
-            if (message.error) throw new Error(message.error.message || 'Gemini Live returned an error.');
+            if (message.error) {
+              this.callbacks.onDiagnostic?.({ event: 'server_error' });
+              throw new Error(message.error.message || 'Gemini Live returned an error.');
+            }
 
             if (message.setupComplete !== undefined) {
               this.callbacks.onDiagnostic?.({ event: 'setup_accepted' });
               this.setupComplete = true;
               this.callbacks.onStatus('listening');
-              resolveSetup();
+              gate.resolve();
               return;
             }
 
@@ -156,22 +130,11 @@ export class GeminiLiveTransport implements LiveTransport {
               return;
             }
 
-            const serverContent = message.serverContent;
-            if (serverContent?.interrupted) this.callbacks.onInterrupted?.();
-            const inputText = serverContent?.inputTranscription?.text?.trim();
-            if (inputText) this.callbacks.onInputTranscript?.(inputText);
-            const outputText = serverContent?.outputTranscription?.text?.trim();
-            if (outputText) this.callbacks.onOutputTranscript?.(outputText);
-            for (const part of serverContent?.modelTurn?.parts ?? []) {
-              if (part.inlineData?.data) {
-                this.callbacks.onAudio?.(part.inlineData.data, part.inlineData.mimeType ?? 'audio/pcm;rate=24000');
-              }
-              if (part.text?.trim() && !outputText) this.callbacks.onOutputTranscript?.(part.text.trim());
-            }
-            if (serverContent?.turnComplete) this.callbacks.onTurnComplete?.();
+            dispatchServerContent(message.serverContent, this.callbacks);
 
             for (const call of message.toolCall?.functionCalls ?? []) {
-              await this.handleFunctionCall(call);
+              await answerFunctionCall(call, this.customTools, this.acknowledgedCallIds, this.callbacks,
+                (responses) => this.sendFunctionResponses(responses));
             }
           })
           .catch((reason) => {
@@ -185,7 +148,7 @@ export class GeminiLiveTransport implements LiveTransport {
         const error = new Error('Gemini Live WebSocket error.');
         this.callbacks.onError(error.message);
         this.callbacks.onStatus('error');
-        rejectSetup(error);
+        gate.reject(error);
       });
 
       socket.addEventListener('close', (event) => {
@@ -193,36 +156,10 @@ export class GeminiLiveTransport implements LiveTransport {
           this.socket = null;
           this.setupComplete = false;
         }
-        clearSetupTimer();
-        if (!settled && !this.reconnecting) rejectSetup(new Error(event.reason || 'Gemini Live connection closed.'));
+        gate.clearTimer();
+        if (!gate.settled && !this.reconnecting) gate.reject(new Error(event.reason || 'Gemini Live connection closed.'));
       });
     });
-  }
-
-  private async handleFunctionCall(call: FunctionCall) {
-    this.callbacks.onDiagnostic?.({ event: 'tool_call', name: call.name });
-    if (!call.name) return;
-    if (call.id && this.acknowledgedCallIds.has(call.id)) return;
-    if (call.id) this.acknowledgedCallIds.add(call.id);
-    const tool = this.customTools.find((candidate) => candidate.declaration.name === call.name);
-    if (!tool) {
-      this.callbacks.onDiagnostic?.({ event: 'unknown_tool', name: call.name });
-      this.sendFunctionResponses([{ id: call.id, name: call.name, response: { error: `Unknown tool: ${call.name}` } }]);
-      return;
-    }
-    try {
-      const value = responseObject(await tool.handle(call.args ?? {}));
-      this.callbacks.onDiagnostic?.({ event: 'tool_result', name: call.name, saved: value.saved === true });
-      this.sendFunctionResponses([{
-        id: call.id,
-        name: call.name,
-        response: scheduledResponse(value, tool.declaration.behavior),
-      }]);
-    } catch (reason) {
-      this.callbacks.onDiagnostic?.({ event: 'tool_error', name: call.name });
-      const message = reason instanceof Error ? reason.message : 'Tool failed.';
-      this.sendFunctionResponses([{ id: call.id, name: call.name, response: { error: message } }]);
-    }
   }
 
   async flushPendingMessages() {

@@ -1,109 +1,126 @@
-import { languageIssueParameters, languageReviewParameters, createLanguageReviewTracker } from './languageReview';
 import type { LiveClientTool } from '../live/tools';
+import { issueKey, issueListSchema, parseIssue } from './notebook/issueEvidence';
 import type { PracticeCorrectionRecord } from './runtime';
 import type { PracticeMissionContract } from './types';
 
-const LIMIT = 240;
+export const FINAL_REVIEW_TOOL = 'submit_final_review';
+export const PROGRESS_TOOL = 'record_practice_progress';
+export type FinalReviewStatus = 'issues' | 'no_clear_issue' | 'uncertain' | 'invalid';
 
-function clean(value: unknown, max = LIMIT) {
-  return typeof value === 'string' ? value.trim().slice(0, max) : '';
-}
+export type NotebookDiagnostics = {
+  turnNotes: number;
+  finalReviewCalls: number;
+  finalStatus: FinalReviewStatus | null;
+  saved: number;
+  fromTurns: number;
+  fromFinal: number;
+  rejected: number;
+  reasons: Record<string, number>;
+};
 
 /**
- * No recorded audio, no provider STT and no independent coach.
- * Otti reports high-confidence, verbatim learner errors while already listening.
- * Evidence is in-memory only and is never shown during the Live roleplay.
+ * Otti's private notebook for one roleplay. Nothing is recorded from the microphone here:
+ * the Live model reports what it heard through two tools. Per-turn notes are a bonus;
+ * the final review, requested once the roleplay ends, is the primary capture path because
+ * the model is no longer splitting attention between acting and note-taking.
  */
 export function createSilentIssueCollector(mission: PracticeMissionContract, onGoalChange?: (observedGoalIds: string[]) => void) {
-  const issues: PracticeCorrectionRecord[] = [];
-  let rejected = 0;
-  let calls = 0;
-  const reasons: Record<string, number> = {};
-  const reject = (reason: string) => {
-    rejected++;
-    reasons[reason] = (reasons[reason] ?? 0) + 1;
-    return { saved: false };
-  };
   const validBeats = new Set(mission.beats.map((beat) => beat.id));
   const allowedGoals = new Set(mission.beats.filter((beat) => beat.type === 'required').map((beat) => beat.id));
+  const issues: PracticeCorrectionRecord[] = [];
+  const keys = new Set<string>();
   const observedGoals = new Set<string>();
+  let counts = { turnNotes: 0, finalReviewCalls: 0, fromTurns: 0, fromFinal: 0, rejected: 0 };
+  let reasons: Record<string, number> = {};
+  let finalStatus: FinalReviewStatus | null = null;
+  let finalRequested = false;
+  let finalized = false;
 
-  const tool: LiveClientTool = {
-    declaration: {
-      name: 'record_language_issue',
-      behavior: 'NON_BLOCKING',
-      description: 'Privately record ONE clearly heard learner English mistake and its precise correction. Never speak about this call or ask for a retry. Call only at high confidence. If the exact spoken words are uncertain, do not call.',
-      parameters: languageIssueParameters,
-    },
-    handle(args) {
-      calls++;
-      const originalEn = clean(args.original_en, 220);
-      const betterEn = clean(args.better_en, 220);
-      const feedbackAr = clean(args.explanation_ar, 260);
-      const feedbackEn = clean(args.explanation_en, 260);
-      const confidence = clean(args.confidence, 20).toLowerCase();
-      const beat = clean(args.beat_id, 80);
-      const beatId = validBeats.has(beat) ? beat : 'conversation';
-      const normalize = (text: string) => text.toLowerCase().replace(/\s+/g, ' ').trim();
-      const key = normalize(originalEn) + '→' + normalize(betterEn);
-      if (confidence !== 'high') return reject('confidence');
-      if (!originalEn || !betterEn || !feedbackAr || !feedbackEn) return reject('missing_fields');
-      if (originalEn.toLowerCase() === betterEn.toLowerCase()) return reject('unchanged');
-      if (issues.some((entry) => normalize(entry.originalEn) + '→' + normalize(entry.betterEn) === key)) {
-        return reject('repeat');
+  function record(list: unknown, source: 'fromTurns' | 'fromFinal') {
+    let saved = 0;
+    for (const value of Array.isArray(list) ? list.slice(0, 40) : []) {
+      const parsed = parseIssue(value, validBeats);
+      const reason = !parsed.ok ? parsed.reason : keys.has(issueKey(parsed.issue)) ? 'repeat' : null;
+      if (reason || !parsed.ok) {
+        counts.rejected++;
+        reasons[reason ?? 'invalid'] = (reasons[reason ?? 'invalid'] ?? 0) + 1;
+        continue;
       }
-      issues.push({ beatId, originalEn, betterEn, feedbackAr, feedbackEn, requiresRetry: false });
-      return { saved: true };
-    },
-  };
+      keys.add(issueKey(parsed.issue));
+      issues.push(parsed.issue);
+      counts[source]++;
+      saved++;
+    }
+    return saved;
+  }
 
-  const languageReview = createLanguageReviewTracker(tool.handle);
-
-  // Observations are informational only. They must NEVER gate the next Otti
-  // reply, force a retry, or imply mastery from one successful exchange.
+  // Goals are informational only. They never gate Otti's reply or imply mastery.
   const progressTool: LiveClientTool = {
     declaration: {
-      name: 'record_practice_progress',
+      name: PROGRESS_TOOL,
       behavior: 'NON_BLOCKING',
-      description: 'Silently record EVERY actual learner turn: first check the exact English for errors (do not normalize it), then note authored goals. Successful communication does NOT imply correct grammar. Include language_review even if goal_ids is empty or all goals were previously noted. Never announce these notes or wait for the result. On PRIVATE_FINISH_NOTES, audit actual heard language and set final_review true.',
+      description: 'Private notebook. After a learner turn, note authored goals they just showed and any clearly heard English mistakes. Never mention it aloud and never wait for it.',
       parameters: {
         type: 'OBJECT',
         properties: {
-          language_review: languageReviewParameters,
-          final_review: { type: 'BOOLEAN', description: 'True ONLY in response to PRIVATE_FINISH_NOTES from the app.' },
-          goal_ids: {
-            type: 'ARRAY',
-            items: { type: 'STRING' },
-            description: 'Zero or more exact goal IDs from the current authored mission, ONLY if the learner actually demonstrated them.',
-          },
+          goal_ids: { type: 'ARRAY', items: { type: 'STRING' }, description: 'Authored goal IDs the learner actually demonstrated. Empty is fine.' },
+          issues: issueListSchema,
         },
-        required: ['language_review', 'goal_ids'],
+        required: ['goal_ids'],
       },
     },
     handle(args) {
-      const languageSaved = languageReview.accept(args.language_review, args.final_review === true);
-      if (!Array.isArray(args.goal_ids)) return { saved: false, count: 0 };
-      const ids = args.goal_ids.slice(0, 12).filter((id): id is string => typeof id === 'string');
-      let newlyObserved = 0;
-      for (const id of ids) {
-        if (!allowedGoals.has(id) || observedGoals.has(id)) continue;
+      counts.turnNotes++;
+      const saved = record(args.issues, 'fromTurns');
+      let newGoals = 0;
+      for (const id of Array.isArray(args.goal_ids) ? args.goal_ids.slice(0, 12) : []) {
+        if (typeof id !== 'string' || !allowedGoals.has(id) || observedGoals.has(id)) continue;
         observedGoals.add(id);
-        newlyObserved++;
+        newGoals++;
       }
-      if (newlyObserved) onGoalChange?.([...observedGoals]);
-      return { saved: newlyObserved > 0 || languageSaved, count: newlyObserved };
+      if (newGoals) onGoalChange?.([...observedGoals]);
+      return { saved: saved > 0 || newGoals > 0, issues: saved, goals: newGoals };
+    },
+  };
+
+  const finalReviewTool: LiveClientTool = {
+    declaration: {
+      name: FINAL_REVIEW_TOOL,
+      behavior: 'NON_BLOCKING',
+      description: 'Call exactly once when the app sends PRIVATE_FINISH_NOTES. List EVERY clearly heard learner English mistake from the whole roleplay, small ones included, even ones already noted. Use the learner exact words.',
+      parameters: {
+        type: 'OBJECT',
+        properties: {
+          status: { type: 'STRING', enum: ['issues', 'no_clear_issue', 'uncertain'], description: 'issues if any mistake was clearly heard; no_clear_issue only if the learner English was clearly correct; uncertain if you could not hear it well.' },
+          issues: issueListSchema,
+        },
+        required: ['status', 'issues'],
+      },
+    },
+    handle(args) {
+      counts.finalReviewCalls++;
+      const saved = record(args.issues, 'fromFinal');
+      const status = String(args.status);
+      finalStatus = status === 'issues' || status === 'no_clear_issue' || status === 'uncertain' ? status : 'invalid';
+      if (finalRequested) finalized = true;
+      return { saved: true, issues: saved };
     },
   };
 
   return {
-    tool,
     progressTool,
+    finalReviewTool,
+    tools: [progressTool, finalReviewTool] as LiveClientTool[],
     getIssues: () => issues.map((issue) => ({ ...issue })),
     getObservedGoalIds: () => [...observedGoals],
-    getRejectedCount: () => rejected,
-    getDiagnostics: () => ({ calls, saved: issues.length, rejected, reasons: { ...reasons }, languageReviews: languageReview.snapshot() }),
-    isFinalized: languageReview.isFinalized,
-    beginFinalReview: languageReview.beginFinalReview,
-    clear() { issues.length = 0; languageReview.reset(); observedGoals.clear(); rejected = 0; calls = 0; for (const key of Object.keys(reasons)) delete reasons[key]; onGoalChange?.([]); },
+    getDiagnostics: (): NotebookDiagnostics => ({ ...counts, finalStatus, saved: issues.length, reasons: { ...reasons } }),
+    beginFinalReview() { finalRequested = true; finalized = false; },
+    isFinalized: () => finalized,
+    clear() {
+      issues.length = 0; keys.clear(); observedGoals.clear();
+      counts = { turnNotes: 0, finalReviewCalls: 0, fromTurns: 0, fromFinal: 0, rejected: 0 };
+      reasons = {}; finalStatus = null; finalRequested = false; finalized = false;
+      onGoalChange?.([]);
+    },
   };
 }

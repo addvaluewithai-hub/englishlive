@@ -1,5 +1,7 @@
 import type { PracticeCorrectionRecord, PracticeSupportSummary } from '../runtime';
 import type { LiveDiagnostic, LiveStatus } from '../../live/types';
+import type { NotebookDiagnostics } from '../silentIssues';
+import type { FinalReviewOutcome } from './finishRoleplay';
 
 export type TutorPhase = 'briefing' | 'roleplay' | 'review';
 export type TutorState = {
@@ -14,6 +16,14 @@ export type TutorState = {
 export const idleTutorState: TutorState = {
   status: 'idle', text: '', micOpen: false, level: 0, paused: false, waiting: false, error: null,
 };
+export type CountedDiagnostic = LiveDiagnostic & { count: number };
+/** Metadata only: no tokens, audio, learner words or rejected phrases. */
+export type NotebookTrace = {
+  transport: CountedDiagnostic[];
+  notebook: NotebookDiagnostics;
+  finalReview: FinalReviewOutcome;
+  finalWaitMs: number;
+};
 export type PracticeCompletionState = {
   support?: PracticeSupportSummary;
   corrections?: PracticeCorrectionRecord[];
@@ -21,10 +31,5 @@ export type PracticeCompletionState = {
   durationSeconds?: number;
   conversationText?: string;
   recordedByOtti?: boolean;
-  diagnostics?: {
-    transport: LiveDiagnostic[];
-    collector: { calls: number; saved: number; rejected: number; reasons: Record<string, number>;
-      languageReviews?: { checks: number; missing: number; noClearIssue: number; uncertain: number; finalized: boolean } };
-    finishTimedOut: boolean;
-  };
+  diagnostics?: NotebookTrace;
 };

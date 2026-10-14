@@ -74,13 +74,14 @@ try {
             assert.equal(await page.locator('.practice-live .fs-live-brand').evaluate((node) => getComputedStyle(node).display), 'none');
             assert.equal(await page.locator('.fs-live-close').getAttribute('aria-label'), expected.close);
             assert.equal(await page.locator('.fs-live-status strong').innerText(), expected.status);
-            assert.equal(await page.locator('.tutor-room h1').count(), 1);
-            assert.equal(await page.locator('.tutor-caption').count(), 1);
+            assert.equal(await page.locator('.tutor-phase-meta').count(), 1);
+            assert.equal(await page.locator('.tutor-stage .sp-otti-transcript').count(), 1);
+            assert.equal(await page.locator('.tutor-stage .fs-live-character-host').count(), 1, 'roleplay uses the animated speaking stage');
             assert.equal(await page.locator('.practice-hint-toggle strong').innerText(), expected.hintTitle);
             assert.equal(await page.locator('.practice-hint-toggle small').innerText(), expected.hintBody);
             assert.equal(await page.locator('.tutor-stage').evaluate((node) => getComputedStyle(node).backgroundImage), 'none');
             assert.equal(await page.locator('.fs-keyboard-control').getAttribute('aria-label'), expected.keyboard);
-            assert.equal(await page.locator('.tutor-secondary').count(), 2);
+            assert.equal(await page.locator('.tutor-action').count(), 1);
 
           }
 
@@ -182,18 +183,19 @@ try {
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true, `Practice composer ${locale}: horizontal overflow`);
     // Runtime pause/resume is covered by the media state-machine tests, not static visual mode.
     await page.goto(`${baseUrl}/practice/mission/b1-resolve-wrong-order`, { waitUntil: 'networkidle' });
-    const start = page.locator('.tutor-next');
+    const start = page.locator('.tutor-action.is-primary');
     await page.locator('.tutor-pace-choice input').check();
     await start.click();
     assert.equal(new URL(page.url()).search, '?pace=relaxed');
     await page.locator('.practice-live .practice-conversation-goals > span').first().waitFor();
     assert.equal(await page.locator('.practice-conversation-goals > span').count(), 4);
     assert.equal(await page.locator('.practice-conversation-goals > .is-observed').count(), 0, 'goals must not be claimed without observed speech');
-    await page.locator('.tutor-next').click();
+    await page.locator('.tutor-action').click();
     await page.locator('.tutor-notes-toggle').waitFor();
-    assert.equal(await page.locator('.tutor-room h1').innerText(), locale === 'ar' ? 'نراجع سوا' : 'Review together');
+    assert.equal(await page.locator('.tutor-live').getAttribute('aria-label'), locale === 'ar' ? 'نراجع سوا' : 'Review together');
+    assert.equal(await page.locator('.tutor-stage .fs-live-character-host').count(), 1, 'review keeps the same animated stage');
     assert.equal(await page.locator('.practice-conversation-goals > .is-observed').count(), 0);
-    assert.equal(await page.locator('.tutor-note-list article').count(), 0);
+    assert.equal(await page.locator('.tutor-note-list li').count(), 0);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true, `Practice recap ${locale}: horizontal overflow`);
     await context.close();
   }
@@ -217,7 +219,7 @@ try {
     await history.locator('header button').click();
     await page.locator('.fs-keyboard-control').click();
     const input = page.locator('.fs-type-row input');
-    assert.equal(await input.getAttribute('dir'), 'auto');
+    assert.equal(await input.getAttribute('dir'), 'ltr');
     assert.equal(await input.getAttribute('placeholder'), expected.placeholder);
     assert.equal(await page.locator('.fs-type-row button').innerText(), expected.send);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true, `Free Speak interactions ${locale}: horizontal overflow`);

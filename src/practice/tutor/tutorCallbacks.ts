@@ -1,4 +1,4 @@
-import type { LiveCallbacks, LiveDiagnostic } from '../../live/types';
+import type { LiveCallbacks } from '../../live/types';
 import type { TutorSession } from './TutorSession';
 
 function append(previous: string, piece: string) {
@@ -6,9 +6,15 @@ function append(previous: string, piece: string) {
   return previous.endsWith(piece) ? previous : `${previous} ${piece}`;
 }
 
-export function tutorCallbacks(session: TutorSession, diagnostic: (event: LiveDiagnostic) => void): LiveCallbacks {
+/** Bridge Live provider events into the tutor turn-taking state machine. */
+export function tutorCallbacks(session: TutorSession): LiveCallbacks {
+  const silenced = () => session.closed || session.finishing || session.suppressOutput || session.state.paused;
   return {
-    onDiagnostic: (event) => { if (!session.closed) diagnostic(event); },
+    onDiagnostic: (event) => {
+      if (session.closed) return;
+      if (event.event === 'tool_call') session.noteServerActivity();
+      session.options.diagnostic(event);
+    },
     onStatus: (status) => {
       if (status === 'connecting' || status === 'reconnecting') {
         session.setMic(false);
@@ -18,7 +24,8 @@ export function tutorCallbacks(session: TutorSession, diagnostic: (event: LiveDi
     },
     onInputTranscript: () => undefined,
     onOutputTranscript: (piece) => {
-      if (session.closed || session.finishing || session.suppressOutput || session.state.paused) return;
+      if (silenced()) return;
+      session.noteServerActivity();
       session.serverTurnPending = true;
       session.setMic(false);
       session.queue?.pushTranscript(piece);
@@ -26,11 +33,11 @@ export function tutorCallbacks(session: TutorSession, diagnostic: (event: LiveDi
       session.update({ text: session.teacherDraft });
     },
     onAudio: (audio, mime) => {
-      if (session.closed || session.finishing || session.suppressOutput || session.state.paused) return;
+      if (silenced()) return;
+      session.noteServerActivity();
       session.serverTurnPending = true;
       session.hasAudio = true;
       session.setMic(false);
-      session.armWatchdog();
       void session.queue?.enqueue(audio, Number(mime.match(/rate=(\d+)/i)?.[1] ?? 24000))
         .catch(() => session.fail('Could not play Otti audio. Reconnect to continue.'));
     },
@@ -44,8 +51,16 @@ export function tutorCallbacks(session: TutorSession, diagnostic: (event: LiveDi
       session.hasAudio = false;
       session.listen();
     },
+    onGenerationComplete: () => {
+      if (session.closed) return;
+      session.noteServerActivity();
+      session.generationDone = true;
+      // Text-only or tool-only generations have nothing to play: hand the turn back now.
+      if (!session.hasAudio && !session.queue?.isPlaying) { session.serverTurnPending = false; session.flushTeacher(); session.listen(); }
+    },
     onTurnComplete: () => {
       if (session.closed) return;
+      session.noteServerActivity();
       session.serverTurnPending = false;
       session.suppressOutput = session.finishing;
       session.flushTeacher();

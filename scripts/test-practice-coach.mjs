@@ -140,7 +140,7 @@ test('authenticated HTTP flow verifies a JWT, validates input, and returns norma
   assert.equal(providerCalls, 1);
 });
 
-test('Practice Live declares NON_BLOCKING silent language and progress tools, other modes stay tool-free', async (t) => {
+test('Practice Live declares NON_BLOCKING silent notebook and final-review tools, other modes stay tool-free', async (t) => {
   const { createServer } = await import('vite');
   const server = await createServer({ server: { middlewareMode: true, hmr: false }, optimizeDeps: { noDiscovery: true, include: [] }, appType: 'custom' });
   const previousWindow = globalThis.window;
@@ -172,66 +172,48 @@ test('Practice Live declares NON_BLOCKING silent language and progress tools, ot
   const collector = createSilentIssueCollector(mission);
   for (const [config, expectedSilence] of [[{ silenceDurationMs: 1200, disableInputTranscription: true }, 1200], [{ silenceDurationMs: 2400, disableInputTranscription: true }, 2400], [{}, 3600]]) {
     const enabled = config.disableInputTranscription === true;
-    const live = new GeminiLiveTransport(callbacks, enabled ? [collector.tool, collector.progressTool] : [], async () => ({ token: 'test-ephemeral-token', model: 'gemini-3.8-live' }));
+    const live = new GeminiLiveTransport(callbacks, enabled ? collector.tools : [], async () => ({ token: 'test-ephemeral-token', model: 'gemini-3.8-live' }));
     await live.connect(buildConversationPracticePrompt(mission), config);
     const socket = sockets.at(-1);
     const setup = socket.sent[0].setup;
     assert.equal(setup.inputAudioTranscription === undefined, enabled);
     if (enabled) {
-      assert.equal(setup.tools[0].functionDeclarations.length, 2);
-      assert.equal(setup.tools[0].functionDeclarations[0].name, 'record_language_issue');
-      assert.equal(setup.tools[0].functionDeclarations[0].behavior, 'NON_BLOCKING');
-      assert.equal(setup.tools[0].functionDeclarations[1].name, 'record_practice_progress');
-      assert.equal(setup.tools[0].functionDeclarations[1].behavior, 'NON_BLOCKING');
-      // Fake provider emits the tool request while audio can keep streaming.
+      assert.deepEqual(setup.tools[0].functionDeclarations.map((tool) => [tool.name, tool.behavior]),
+        [['record_practice_progress', 'NON_BLOCKING'], ['submit_final_review', 'NON_BLOCKING']]);
+      // Fake provider emits the tool request while audio keeps streaming in the same frame.
       socket.dispatchEvent(new MessageEvent('message', { data: JSON.stringify({
         serverContent: { modelTurn: { parts: [{ inlineData: { data: 'AAAA', mimeType: 'audio/pcm;rate=24000' } }] } },
-        toolCall: { functionCalls: [{ id: 'error-1', name: 'record_language_issue', args: {
-          original_en: 'I want small one', better_en: 'I want a small one',
-          explanation_ar: 'ناقص a', explanation_en: 'Add a before small one',
-          confidence: 'high', beat_id: 'agree_solution',
+        toolCall: { functionCalls: [{ id: 'note-1', name: 'record_practice_progress', args: {
+          goal_ids: ['report_problem', 'agree_solution', 'unknown'],
+          issues: [{ original_en: 'I want small one', better_en: 'I want a small one', explanation_ar: 'ناقص a', explanation_en: 'Add a before small one' }],
         } }] },
       }) }));
       await new Promise((resolve) => setTimeout(resolve, 0));
       await live.flushPendingMessages();
       assert.ok(audioFrames > 0, 'audio in the same frame as a tool call must still flow');
       assert.ok(diagnostics.some((event) => event.event === 'setup_accepted'));
-      assert.ok(diagnostics.some((event) => event.event === 'tool_result' && event.name === 'record_language_issue'));
+      assert.ok(diagnostics.some((event) => event.event === 'tool_result' && event.name === 'record_practice_progress' && event.saved));
       assert.equal(collector.getIssues().length, 1);
-      assert.equal(socket.sent.at(-1).toolResponse.functionResponses[0].response.scheduling, 'SILENT');
+      assert.deepEqual(collector.getObservedGoalIds(), ['report_problem', 'agree_solution'].filter((id) => mission.beats.some((beat) => beat.id === id && beat.type === 'required')));
+      const response = socket.sent.at(-1).toolResponse.functionResponses[0];
+      assert.deepEqual([response.id, response.name, response.response.scheduling], ['note-1', 'record_practice_progress', 'SILENT']);
+      collector.beginFinalReview();
       socket.dispatchEvent(new MessageEvent('message', { data: JSON.stringify({
-        toolCall: { functionCalls: [{ id: 'progress-1', name: 'record_practice_progress', args: { goal_ids: ['report_problem', 'agree_solution', 'unknown'] } }] },
+        toolCall: { functionCalls: [{ id: 'final-1', name: 'submit_final_review', args: { status: 'issues',
+          issues: [{ original_en: 'Me want refund', better_en: 'I want a refund' }] } }] },
       }) }));
       await new Promise((resolve) => setTimeout(resolve, 0));
-      assert.deepEqual(collector.getObservedGoalIds(), ['report_problem', 'agree_solution'].filter((id) => mission.beats.some((beat) => beat.id === id && beat.type === 'required')));
+      await live.flushPendingMessages();
+      assert.equal(collector.isFinalized(), true);
+      assert.equal(collector.getIssues().length, 2);
       assert.equal(socket.sent.at(-1).toolResponse.functionResponses[0].response.scheduling, 'SILENT');
+      collector.clear();
     } else assert.equal(setup.tools, undefined);
     assert.equal(setup.realtimeInputConfig.automaticActivityDetection.silenceDurationMs, expectedSilence);
     live.endAudioStream();
     assert.deepEqual(socket.sent.at(-1), { realtimeInput: { audioStreamEnd: true } });
     live.close();
   }
-});
-
-test('silent issue collector stores only deduplicated high-confidence corrections and never invents words', () => {
-  const collector = createSilentIssueCollector(mission);
-  const base = {
-    original_en: 'He go to work', better_en: 'He goes to work',
-    explanation_ar: 'نضيف s للفعل', explanation_en: 'Third-person singular verb takes s',
-    confidence: 'high', beat_id: 'agree_solution',
-  };
-  assert.deepEqual(collector.tool.handle({ ...base, confidence: 'low' }), { saved: false });
-  assert.deepEqual(collector.tool.handle({ ...base, original_en: '' }), { saved: false });
-  assert.deepEqual(collector.tool.handle({ ...base, better_en: base.original_en }), { saved: false });
-  assert.deepEqual(collector.tool.handle(base), { saved: true });
-  assert.deepEqual(collector.tool.handle(base), { saved: false });
-  const first = collector.getIssues();
-  assert.equal(first.length, 1);
-  assert.equal(first[0].originalEn, 'He go to work');
-  first[0].originalEn = 'modified outside';
-  assert.equal(collector.getIssues()[0].originalEn, 'He go to work');
-  collector.clear();
-  assert.equal(collector.getIssues().length, 0);
 });
 
 test('Otti introductory audio is grounded in authored scenario and sample, review only in confirmed tool notes', () => {
@@ -257,14 +239,14 @@ test('non-blocking goal checklist records flexible authored goals without forcin
   const draft = practiceMissionContractBySlug('a2-order-with-preferences');
   let snapshots = [];
   const collector = createSilentIssueCollector(draft, (ids) => snapshots.push(ids));
-  assert.deepEqual(collector.progressTool.handle({ goal_ids: ['close', 'unrecognized'] }), { saved: false, count: 0 });
-  assert.deepEqual(collector.progressTool.handle({ goal_ids: [] }), { saved: false, count: 0 });
-  assert.deepEqual(collector.progressTool.handle({ goal_ids: 'order_drink' }), { saved: false, count: 0 });
+  assert.deepEqual(collector.progressTool.handle({ goal_ids: ['close', 'unrecognized'] }), { saved: false, issues: 0, goals: 0 });
+  assert.deepEqual(collector.progressTool.handle({ goal_ids: [] }), { saved: false, issues: 0, goals: 0 });
+  assert.deepEqual(collector.progressTool.handle({ goal_ids: 'order_drink' }), { saved: false, issues: 0, goals: 0 });
   // Learner can give drink, size and heat preference in ONE free-form answer.
-  assert.deepEqual(collector.progressTool.handle({ goal_ids: ['choose_temperature', 'order_drink', 'choose_size'] }), { saved: true, count: 3 });
+  assert.deepEqual(collector.progressTool.handle({ goal_ids: ['choose_temperature', 'order_drink', 'choose_size'] }), { saved: true, issues: 0, goals: 3 });
   assert.deepEqual(collector.getObservedGoalIds(), ['choose_temperature', 'order_drink', 'choose_size']);
-  assert.deepEqual(collector.progressTool.handle({ goal_ids: ['order_drink', 'choose_size'] }), { saved: false, count: 0 });
-  assert.deepEqual(collector.progressTool.handle({ goal_ids: ['choose_addons', 'close'] }), { saved: true, count: 1 });
+  assert.deepEqual(collector.progressTool.handle({ goal_ids: ['order_drink', 'choose_size'] }), { saved: false, issues: 0, goals: 0 });
+  assert.deepEqual(collector.progressTool.handle({ goal_ids: ['choose_addons', 'close'] }), { saved: true, issues: 0, goals: 1 });
   assert.deepEqual(collector.getObservedGoalIds(), ['choose_temperature', 'order_drink', 'choose_size', 'choose_addons']);
   assert.equal(snapshots.length, 2);
   assert.match(buildConversationPracticePrompt(draft), /NOT a conversation script or gating mechanism/);

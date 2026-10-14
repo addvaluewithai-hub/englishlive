@@ -123,7 +123,7 @@ try {
         boundary = await assertMigratedBoundary(page, locale, experience);
         assert.equal(await page.locator('[data-englotti-live-ui]').count(), 1);
         assert.equal(await page.locator('.practice-live .fs-live-character-host').count(), 1);
-        assert.equal(await page.locator('.tutor-next').textContent().then((value) => value?.includes(locale === 'ar' ? 'ندخل الموقف' : 'Enter the conversation')), true);
+        assert.equal(await page.locator('.tutor-action.is-primary').textContent().then((value) => value?.includes(locale === 'ar' ? 'يلا نبدأ الموقف' : 'Start the conversation')), true);
 
         await page.goto(`${baseUrl}/practice/complete/a1-ask-someone-to-repeat`);
         await assertMigratedBoundary(page, locale, experience);

@@ -1,105 +1,168 @@
 import assert from 'node:assert/strict';
-import { test } from 'node:test';
+import { after, before, test } from 'node:test';
 import { createServer } from 'vite';
 
 // Exercise the actual session/callback state machine with fake media, not a real provider.
-test('animated tutor runtime: interactive turns, pause, interruption, drain, retry notes and cancellation', async (t) => {
-  const server = await createServer({ server: { middlewareMode: true, hmr: false }, optimizeDeps: { noDiscovery: true, include: [] }, appType: 'custom' });
-  t.after(() => server.close());
-  const { TutorSession } = await server.ssrLoadModule('/src/practice/tutor/TutorSession.ts');
-  const { GeminiLiveTransport } = await server.ssrLoadModule('/src/live/GeminiLiveTransport.ts');
-  const { MicrophonePcmStream } = await server.ssrLoadModule('/src/audio/MicrophonePcmStream.ts');
-  const { PcmPlaybackQueue } = await server.ssrLoadModule('/src/audio/PcmPlaybackQueue.ts');
-  const { createSilentIssueCollector } = await server.ssrLoadModule('/src/practice/silentIssues.ts');
-  const { practiceMissionContractBySlug } = await server.ssrLoadModule('/src/practice/missions/catalog.ts');
-  const priorWindow = globalThis.window;
+let server;
+let mod;
+const connects = [];
+const texts = [];
+const counts = { stop: 0, close: 0 };
+const priorWindow = globalThis.window;
+
+before(async () => {
+  server = await createServer({ server: { middlewareMode: true, hmr: false }, optimizeDeps: { noDiscovery: true, include: [] }, appType: 'custom' });
+  const load = (path) => server.ssrLoadModule(path);
+  mod = {
+    ...(await load('/src/practice/tutor/TutorSession.ts')),
+    ...(await load('/src/practice/tutor/finishRoleplay.ts')),
+    ...(await load('/src/practice/silentIssues.ts')),
+    ...(await load('/src/practice/missions/catalog.ts')),
+    GeminiLiveTransport: (await load('/src/live/GeminiLiveTransport.ts')).GeminiLiveTransport,
+    MicrophonePcmStream: (await load('/src/audio/MicrophonePcmStream.ts')).MicrophonePcmStream,
+    PcmPlaybackQueue: (await load('/src/audio/PcmPlaybackQueue.ts')).PcmPlaybackQueue,
+  };
   globalThis.window = { setTimeout, clearTimeout };
-  t.after(() => { if (priorWindow === undefined) delete globalThis.window; else globalThis.window = priorWindow; });
-  t.mock.method(globalThis, 'fetch', async () => Response.json({ source: 'neon', character: {
-    slug: 'otti', revisionId: 'published-voice', content: { voiceName: 'Puck' },
-  } }));
-  const connects = [];
-  const texts = [];
-  let stopCount = 0;
-  let closeCount = 0;
-  t.mock.method(GeminiLiveTransport.prototype, 'connect', async function (instruction, config) {
-    connects.push({ instruction, config }); this.callbacks.onStatus('listening');
+  const proto = (name) => mod[name].prototype;
+  Object.defineProperty(proto('GeminiLiveTransport'), 'connected', { configurable: true, get() { return !this.closedForTest; } });
+  Object.assign(proto('GeminiLiveTransport'), {
+    async connect(instruction, config) { connects.push({ instruction, config }); this.callbacks.onStatus('listening'); },
+    sendText(text) { texts.push(text); },
+    endAudioStream() {},
+    async flushPendingMessages() {},
+    close() { this.closedForTest = true; counts.close++; },
   });
-  const connectedDescriptor = Object.getOwnPropertyDescriptor(GeminiLiveTransport.prototype, 'connected');
-  Object.defineProperty(GeminiLiveTransport.prototype, 'connected', { configurable: true, get: () => true });
-  t.after(() => Object.defineProperty(GeminiLiveTransport.prototype, 'connected', connectedDescriptor));
-  t.mock.method(GeminiLiveTransport.prototype, 'sendText', (text) => texts.push(text));
-  t.mock.method(GeminiLiveTransport.prototype, 'endAudioStream', () => {});
-  t.mock.method(GeminiLiveTransport.prototype, 'close', () => { closeCount++; });
-  t.mock.method(MicrophonePcmStream.prototype, 'start', async () => {});
-  t.mock.method(MicrophonePcmStream.prototype, 'stop', async () => { stopCount++; });
-  t.mock.method(PcmPlaybackQueue.prototype, 'unlock', async () => {});
-  t.mock.method(PcmPlaybackQueue.prototype, 'close', async () => {});
-  t.mock.method(PcmPlaybackQueue.prototype, 'interrupt', () => {});
-  t.mock.method(PcmPlaybackQueue.prototype, 'enqueue', async () => {});
-  t.mock.method(PcmPlaybackQueue.prototype, 'markTurnComplete', () => {});
-  const collector = createSilentIssueCollector(practiceMissionContractBySlug('a2-order-with-preferences'));
-  const turns = [];
-  const make = (extra = {}) => new TutorSession({ host: () => null, update() {}, turns, onTurn() {},
-    diagnostic() {}, tools: [collector.tool, collector.progressTool], ...extra });
-  const session = make();
+  Object.assign(proto('MicrophonePcmStream'), { async start() {}, async stop() { counts.stop++; }, setEnabled() {} });
+  Object.assign(proto('PcmPlaybackQueue'), {
+    async unlock() {}, async close() {}, interrupt() {}, async enqueue() {}, markTurnComplete() {}, pushTranscript() {},
+  });
+  globalThis.fetch = async () => Response.json({ source: 'neon', character: { slug: 'otti', revisionId: 'published-voice', content: { voiceName: 'Puck' } } });
+});
+
+after(async () => {
+  if (priorWindow === undefined) delete globalThis.window; else globalThis.window = priorWindow;
+  await server.close();
+});
+
+function make(tools = [], extra = {}) {
+  const events = [];
+  const session = new mod.TutorSession({ host: () => null, update() {}, turns: [], onTurn() {},
+    diagnostic: (event) => events.push(event.event), tools, ...extra });
+  return { session, events };
+}
+
+test('turn-taking: audio plays before the mic opens, text-only replies and pause never deadlock', async () => {
+  const { session } = make();
   await session.start('review instructions', 'explain one correction', 2400);
-  assert.equal(connects[0].config.voiceName, 'Charon', 'use the same published-character normalization as Speaking');
-  assert.equal(connects[0].config.disableInputTranscription, true);
+  assert.equal(connects.at(-1).config.voiceName, 'Charon', 'same published-character voice normalization as Speaking');
+  assert.equal(connects.at(-1).config.disableInputTranscription, true);
   const callbacks = session.live.callbacks;
   callbacks.onOutputTranscript('Try: I want a small one.');
   callbacks.onAudio('AAAA', 'audio/pcm;rate=24000');
   callbacks.onTurnComplete();
-  assert.equal(session.state.micOpen, false, 'server completion must not open mic before audible playback finishes');
+  assert.equal(session.state.micOpen, false, 'server completion must not open the mic before playback finishes');
   session.queue.callbacks.onTurnComplete();
   assert.equal(session.state.micOpen, true);
   session.send('Why do I need a?');
   assert.equal(texts.at(-1), 'Why do I need a?');
   callbacks.onOutputTranscript('Because one is countable.');
-  callbacks.onTurnComplete();
-  assert.equal(session.state.micOpen, true, 'text-only response must not deadlock');
+  callbacks.onGenerationComplete();
+  assert.equal(session.state.micOpen, true, 'a text-only generation hands the turn back');
   session.togglePause();
   assert.equal(session.state.micOpen, false);
   session.togglePause();
   assert.equal(session.state.micOpen, true);
-  callbacks.onAudio('AAAA', 'audio/pcm');
-  callbacks.onTurnComplete();
-  await session.queue.drainEnqueues();
-  await Promise.resolve();
-  assert.equal(session.state.micOpen, true, 'already-drained audio must not strand the mic when turnComplete arrives late');
   session.update({ status: 'speaking' });
   session.interrupt();
   assert.equal(session.state.micOpen, true);
-  callbacks.onInterrupted();
-  collector.tool.handle({ original_en: 'I want small one', better_en: 'I want a small one',
-    explanation_en: 'Use an article.', explanation_ar: 'ناقص a', confidence: 'high' });
-  session.serverTurnPending = true;
-  const finish = session.settle();
-  setTimeout(() => callbacks.onTurnComplete(), 10);
-  assert.equal(await finish, false);
-  assert.equal(session.state.micOpen, false, 'finish cannot reopen mic');
+  callbacks.onAudio('AAAA', 'audio/pcm');
+  callbacks.onGenerationComplete();
+  session.interrupt();
+  assert.equal(session.suppressOutput, false, 'interrupting a fully generated reply must not mute the next reply');
+  callbacks.onOutputTranscript('Next reply.');
+  assert.equal(session.state.text.endsWith('Next reply.'), true);
   await session.close();
   callbacks.onOutputTranscript('late frame');
   assert.notEqual(session.state.text, 'late frame');
-  const retry = make();
-  await retry.start('retry', 'resume', 1200);
-  assert.equal(collector.getIssues().length, 1, 'connection retry retains the external notebook');
-  await retry.close();
-  assert.equal(stopCount, 2);
-  assert.equal(closeCount, 2);
-  const cancelled = make();
-  const starting = cancelled.start('intro', 'introduce', 1200);
-  await cancelled.close();
-  await starting;
-  assert.equal(connects.length, 2, 'cancel during initial await must not open a new socket');
-  const finalizing = make({ notesFinalized: collector.isFinalized });
-  await finalizing.start('roleplay', 'start', 1200);
+});
+
+test('a reply whose turnComplete never arrives still hands the turn back after playback drains', async () => {
+  const { session, events } = make();
+  await session.start('roleplay', 'start', 1200);
+  const callbacks = session.live.callbacks;
+  callbacks.onAudio('AAAA', 'audio/pcm');
+  session.queue.callbacks.onSpeechStart();
+  session.queue.callbacks.onSpeechEnd();
+  assert.equal(session.state.micOpen, false);
+  await new Promise((resolve) => setTimeout(resolve, 1600));
+  assert.equal(session.state.micOpen, true, 'learner is not stranded by a missing turnComplete');
+  assert.ok(events.includes('missing_turn_complete'));
+  callbacks.onAudio('AAAA', 'audio/pcm');
+  callbacks.onGenerationComplete();
+  session.queue.callbacks.onSpeechEnd();
+  assert.equal(session.state.micOpen, true, 'generationComplete + drained playback opens the mic at once');
+  await session.close();
+});
+
+test('learner thinking time on an open mic never triggers the reply timeout', async (t) => {
+  const { session } = make();
+  await session.start('roleplay', 'start', 1200);
+  session.live.callbacks.onGenerationComplete();
+  assert.equal(session.state.micOpen, true);
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'] });
+  session.awaitReply();
+  session.setMic(true);
+  t.mock.timers.tick(60_000);
+  assert.notEqual(session.state.status, 'error');
+  session.setMic(false);
+  session.awaitReply();
+  t.mock.timers.tick(26_000);
+  assert.equal(session.state.status, 'error', 'a reply Otti owes does time out');
+  t.mock.timers.reset();
+});
+
+test('finish asks the same connection for the final review, keeps the mic closed and freezes notes after it', async () => {
+  const collector = mod.createSilentIssueCollector(mod.practiceMissionContractBySlug('a2-order-with-preferences'));
+  const { session, events } = make(collector.tools);
+  await session.start('roleplay', 'start', 1200);
+  collector.progressTool.handle({ goal_ids: [], issues: [{ original_en: 'I want small one', better_en: 'I want a small one' }] });
   collector.beginFinalReview();
-  const settling = finalizing.settle();
+  const finishing = mod.finishRoleplay(session, collector.isFinalized);
   assert.match(texts.at(-1), /PRIVATE_FINISH_NOTES/);
-  collector.progressTool.handle({ goal_ids: [], final_review: true,
-    language_review: { status: 'no_clear_issue', issues: [], reason: 'No further clear issue.' } });
-  assert.equal(await settling, false);
-  assert.equal(finalizing.state.micOpen, false);
-  await finalizing.close();
+  assert.equal(session.state.micOpen, false);
+  session.live.callbacks.onTurnComplete();
+  assert.equal(session.state.micOpen, false, 'finishing never reopens the mic');
+  collector.finalReviewTool.handle({ status: 'issues', issues: [{ original_en: 'Me no like sugar', better_en: "I don't like sugar" }] });
+  const result = await finishing;
+  assert.equal(result.outcome, 'received');
+  assert.deepEqual(events.filter((event) => event.startsWith('finish_')), ['finish_requested', 'finish_received']);
+  await session.close();
+  assert.equal(collector.getIssues().length, 2);
+});
+
+test('a silent provider gets one reminder, then the review is honestly marked missing; retry keeps notes', async (t) => {
+  const collector = mod.createSilentIssueCollector(mod.practiceMissionContractBySlug('a2-order-with-preferences'));
+  collector.progressTool.handle({ goal_ids: [], issues: [{ original_en: 'He go', better_en: 'He goes' }] });
+  const { session, events } = make(collector.tools);
+  await session.start('roleplay', 'start', 1200);
+  collector.beginFinalReview();
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'] });
+  const finishing = mod.finishRoleplay(session, collector.isFinalized);
+  for (let i = 0; i < 30; i++) { t.mock.timers.tick(1_000); await Promise.resolve(); await Promise.resolve(); }
+  t.mock.timers.reset();
+  const result = await finishing;
+  assert.equal(result.outcome, 'missing');
+  assert.ok(events.includes('finish_reminder'));
+  assert.equal(collector.getIssues().length, 1, 'per-turn notes survive a missing final review');
+  assert.deepEqual(await mod.finishRoleplay(null, collector.isFinalized), { outcome: 'offline', waitedMs: 0 });
+  await session.close();
+});
+
+test('cancel during the initial await never opens a socket', async () => {
+  const before = connects.length;
+  const { session } = make();
+  const starting = session.start('intro', 'introduce', 1200);
+  await session.close();
+  await starting;
+  assert.equal(connects.length, before);
 });

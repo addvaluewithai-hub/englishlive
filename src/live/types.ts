@@ -16,8 +16,9 @@ export interface LiveSessionConfig {
 }
 
 export type LiveDiagnostic = {
-  event: 'setup_sent' | 'setup_accepted' | 'tool_call' | 'tool_result' | 'unknown_tool' | 'tool_error';
-  model?: string; apiVersion?: string; tools?: string[]; name?: string; saved?: boolean;
+  event: 'setup_sent' | 'setup_accepted' | 'tool_call' | 'tool_result' | 'unknown_tool' | 'tool_error' | 'server_error'
+    | 'missing_turn_complete' | 'finish_requested' | 'finish_reminder' | 'finish_received' | 'finish_missing';
+  model?: string; apiVersion?: string; tools?: string[]; name?: string; saved?: boolean; ms?: number;
 };
 
 export interface LiveCallbacks {
@@ -33,6 +34,8 @@ export interface LiveCallbacks {
   onPerformanceCancelled?(): void;
   onInterrupted(): void;
   onTurnComplete(): void;
+  /** The model finished generating this turn; turnComplete may still follow (or, rarely, never arrive). */
+  onGenerationComplete?(): void;
   onError(message: string): void;
 }
 

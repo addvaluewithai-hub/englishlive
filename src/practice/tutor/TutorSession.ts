@@ -1,5 +1,5 @@
 import { MicrophonePcmStream } from '../../audio/MicrophonePcmStream';
-import { PcmPlaybackQueue } from '../../audio/PcmPlaybackQueue';
+import type { PcmPlaybackQueue } from '../../audio/PcmPlaybackQueue';
 import type { CharacterHostHandle } from '../../character/CharacterHost';
 import { CharacterPerformanceController } from '../../character/CharacterPerformanceController';
 import { getCharacterDefinition } from '../../character/registry';
@@ -9,7 +9,23 @@ import type { LiveClientTool } from '../../live/tools';
 import type { LiveDiagnostic } from '../../live/types';
 import type { ConversationTurn } from '../conversationTypes';
 import { tutorCallbacks } from './tutorCallbacks';
+import { createTutorPlayback } from './tutorPlayback';
+import { TurnTimers } from './turnTimers';
 import { idleTutorState, type TutorState } from './types';
+
+/** How long Otti may stay silent while owing a reply. The learner's own thinking time is never limited. */
+const REPLY_TIMEOUT_MS = 25_000;
+/** If playback drained but the server never sent turnComplete, hand the turn back after this quiet gap. */
+const QUIET_HANDBACK_MS = 1_400;
+
+export type TutorSessionOptions = {
+  host: () => CharacterHostHandle | null;
+  update: (state: TutorState) => void;
+  tools: LiveClientTool[];
+  turns: ConversationTurn[];
+  onTurn: () => void;
+  diagnostic: (event: LiveDiagnostic) => void;
+};
 
 /** One disposable media connection. The lesson notebook is owned above this class. */
 export class TutorSession {
@@ -19,27 +35,17 @@ export class TutorSession {
   suppressOutput = false;
   hasAudio = false;
   serverTurnPending = false;
+  generationDone = false;
   teacherDraft = '';
   repeatAfterPause = false;
-  lastSpeech = 0;
   live: GeminiLiveTransport | null = null;
   mic: MicrophonePcmStream | null = null;
   queue: PcmPlaybackQueue | null = null;
   readonly performer: CharacterPerformanceController;
-  private watchdog: ReturnType<typeof setTimeout> | null = null;
-  private turns: ConversationTurn[];
+  readonly timers = new TurnTimers(REPLY_TIMEOUT_MS, QUIET_HANDBACK_MS);
 
-  constructor(private readonly options: {
-    host: () => CharacterHostHandle | null;
-    update: (state: TutorState) => void;
-    tools: LiveClientTool[];
-    turns: ConversationTurn[];
-    onTurn: () => void;
-    diagnostic: (event: LiveDiagnostic) => void;
-    notesFinalized?: () => boolean;
-  }) {
+  constructor(readonly options: TutorSessionOptions) {
     this.performer = new CharacterPerformanceController(options.host);
-    this.turns = options.turns;
   }
 
   update(patch: Partial<TutorState>) {
@@ -55,8 +61,9 @@ export class TutorSession {
   }
 
   log(speaker: ConversationTurn['speaker'], text: string) {
-    if (!text.trim() || this.turns.at(-1)?.text === text.trim()) return;
-    this.turns.push({ id: `turn-${this.turns.length + 1}`, speaker, text: text.trim() });
+    const turns = this.options.turns;
+    if (!text.trim() || turns.at(-1)?.text === text.trim()) return;
+    turns.push({ id: `turn-${turns.length + 1}`, speaker, text: text.trim() });
     this.options.onTurn();
   }
 
@@ -68,24 +75,13 @@ export class TutorSession {
   async start(instruction: string, opening: string, silenceDurationMs: number) {
     this.update({ status: 'connecting', error: null });
     this.performer.thinking();
-    this.armWatchdog();
-    this.queue = new PcmPlaybackQueue({
-      onMouthPose: (pose) => { if (!this.closed) this.performer.setMouth(pose); },
-      onSpeechStart: () => {
-        if (this.closed) return;
-        this.setMic(false);
-        this.update({ status: 'speaking', waiting: false });
-        this.performer.speechStart();
-      },
-      onSpeechEnd: () => { if (!this.closed) { this.performer.speechEnd(); this.listen(); } },
-      onTurnComplete: () => this.listen(),
-    });
+    this.queue = createTutorPlayback(this);
     try {
       // Unlock in the button gesture, before network awaits.
       await this.queue.unlock();
       const published = await loadPublishedCharacter(getCharacterDefinition('otti'));
       if (this.closed) return;
-      this.live = new GeminiLiveTransport(tutorCallbacks(this, this.options.diagnostic), this.options.tools);
+      this.live = new GeminiLiveTransport(tutorCallbacks(this), this.options.tools);
       this.mic = new MicrophonePcmStream();
       this.mic.setEnabled(false);
       await this.live.connect(instruction, {
@@ -94,15 +90,7 @@ export class TutorSession {
       });
       if (this.closed) return;
       const mic = this.mic;
-      await mic.start((audio) => this.live?.sendAudio(audio), (level) => {
-        if (this.closed) return;
-        this.update({ level });
-        if (level > 0.045) {
-          this.serverTurnPending = true;
-          this.lastSpeech = Date.now();
-          if (!this.watchdog) this.armWatchdog();
-        }
-      });
+      await mic.start((audio) => this.live?.sendAudio(audio), (level) => { if (!this.closed) this.update({ level }); });
       if (this.closed) { await mic.stop(); return; }
       this.request(opening);
     } catch (reason) {
@@ -110,15 +98,17 @@ export class TutorSession {
     }
   }
 
+  /** Send an app or typed learner turn and wait for Otti. */
   request(text: string) {
     if (!this.live?.connected || this.closed) return;
     this.suppressOutput = false;
     this.hasAudio = false;
+    this.generationDone = false;
     this.serverTurnPending = true;
     this.setMic(false);
     this.update({ waiting: true, status: 'listening' });
     this.live.sendText(text);
-    this.armWatchdog();
+    this.awaitReply();
   }
 
   send(text: string) {
@@ -127,19 +117,38 @@ export class TutorSession {
     this.request(text);
   }
 
+  /** Give the turn to the learner. Never while finishing or paused. */
   listen() {
-    if (this.closed || this.serverTurnPending || this.state.paused) return;
-    this.clearWatchdog();
-    this.lastSpeech = 0;
+    if (this.closed || this.finishing || this.serverTurnPending || this.state.paused) return;
+    this.clearTimers();
     this.setMic(true);
     this.update({ status: 'listening', waiting: false });
     this.performer.listening();
   }
 
+  noteServerActivity() {
+    this.timers.activity();
+  }
+
+  /** Playback ran dry. Some provider turns never send turnComplete; do not strand the learner. */
+  playbackDrained() {
+    if (!this.serverTurnPending) { this.listen(); return; }
+    if (this.generationDone) { this.serverTurnPending = false; this.listen(); return; }
+    this.timers.quiet(() => {
+      if (this.closed || this.finishing || this.queue?.isPlaying || !this.serverTurnPending || !this.hasAudio) return;
+      this.options.diagnostic({ event: 'missing_turn_complete' });
+      this.serverTurnPending = false;
+      this.hasAudio = false;
+      this.flushTeacher();
+      this.listen();
+    });
+  }
+
   interrupt() {
     if (this.closed) return;
     this.flushTeacher();
-    this.suppressOutput = true;
+    // Mute only the rest of a reply still being generated; a finished reply must not mute the next one.
+    this.suppressOutput = this.serverTurnPending && !this.generationDone;
     this.queue?.interrupt();
     this.performer.interrupt();
     this.serverTurnPending = false;
@@ -150,9 +159,10 @@ export class TutorSession {
     if (!this.state.micOpen || !this.live?.connected) return;
     this.setMic(false);
     this.serverTurnPending = true;
+    this.generationDone = false;
     this.update({ waiting: true });
     this.live.endAudioStream();
-    this.armWatchdog();
+    this.awaitReply();
   }
 
   togglePause() {
@@ -160,7 +170,7 @@ export class TutorSession {
     this.update({ paused });
     if (paused) {
       this.repeatAfterPause = this.state.status === 'speaking' || this.state.waiting;
-      this.clearWatchdog();
+      this.clearTimers();
       this.interrupt();
       this.setMic(false);
     } else if (this.repeatAfterPause) {
@@ -169,19 +179,14 @@ export class TutorSession {
     } else this.listen();
   }
 
-  clearWatchdog() {
-    if (this.watchdog) clearTimeout(this.watchdog);
-    this.watchdog = null;
+  /** Time out only while Otti owes a reply; an open mic is the learner's thinking time. */
+  awaitReply() {
+    this.timers.awaitReply(() => !(this.closed || this.finishing || this.state.paused || this.state.micOpen),
+      () => this.fail('Otti did not respond in time. Your notes are safe. Reconnect or finish and review.'));
   }
 
-  armWatchdog() {
-    this.clearWatchdog();
-    this.watchdog = setTimeout(() => {
-      this.watchdog = null;
-      if (this.closed || this.state.paused) return;
-      if (this.state.micOpen && Date.now() - this.lastSpeech < 25_000) { this.armWatchdog(); return; }
-      this.fail('Otti did not respond in time. Your notes are safe. Reconnect or finish and review.');
-    }, 25_000);
+  clearTimers() {
+    this.timers.clear();
   }
 
   fail(message: string) {
@@ -189,31 +194,10 @@ export class TutorSession {
     void this.close();
   }
 
-  /** Allow the final response/tools to arrive before freezing the roleplay notebook. */
-  async settle() {
-    this.finishing = true;
-    this.clearWatchdog();
-    this.setMic(false);
-    this.suppressOutput = true;
-    this.queue?.interrupt();
-    this.live?.endAudioStream();
-    const needsFinalReview = Boolean(this.options.notesFinalized && this.live?.connected && !this.closed);
-    if (needsFinalReview) {
-      this.live?.sendText('PRIVATE_FINISH_NOTES: the learner ended roleplay. No more spoken roleplay. Silently audit the ACTUAL learner English heard in this session, including minor genuine errors not yet saved. Call record_practice_progress with language_review, goal_ids and final_review:true. Preserve exact originals; do not invent errors or use prompt examples as evidence. If no clear issues or uncertain, state that honestly in the tool.');
-    }
-    const deadline = Date.now() + 8000;
-    while (!this.closed && needsFinalReview && !this.options.notesFinalized?.() && Date.now() < deadline) {
-      await new Promise((resolve) => setTimeout(resolve, 50));
-    }
-    await this.live?.flushPendingMessages();
-    this.flushTeacher();
-    return needsFinalReview && !this.options.notesFinalized?.();
-  }
-
   async close() {
     if (this.closed) return;
     this.closed = true;
-    this.clearWatchdog();
+    this.clearTimers();
     this.live?.close();
     this.performer.close();
     await Promise.allSettled([this.mic?.stop(), this.queue?.close()]);

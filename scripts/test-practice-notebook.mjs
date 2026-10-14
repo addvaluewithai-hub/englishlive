@@ -1,52 +1,108 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { createSilentIssueCollector } from '../src/practice/silentIssues.ts';
+import { createSilentIssueCollector, FINAL_REVIEW_TOOL, PROGRESS_TOOL } from '../src/practice/silentIssues.ts';
+import { parseIssue } from '../src/practice/notebook/issueEvidence.ts';
 import { practiceMissionContractBySlug } from '../src/practice/missions/catalog.ts';
 import { briefingNarration, reviewNarration } from '../src/practice/ottiNarration.ts';
 import { onRequestPost } from '../functions/api/gemini-token.ts';
 
 const mission = practiceMissionContractBySlug('a2-order-with-preferences');
 const issue = (n = 0) => ({ original_en: `He go ${n}`, better_en: `He goes ${n}`,
-  explanation_ar: 'نضيف s', explanation_en: 'Third-person singular takes s.', confidence: 'high' });
+  explanation_ar: 'نضيف s', explanation_en: 'Third-person singular takes s.' });
+const final = (issues, status = 'issues') => ({ status, issues });
 
-test('notebook retains all distinct issues beyond former limits, groups only identical correction pairs', () => {
+test('roleplay offers exactly the per-turn notebook and the dedicated final review, both silent', () => {
   const collector = createSilentIssueCollector(mission);
-  for (let n = 0; n < 30; n++) assert.deepEqual(collector.tool.handle(issue(n)), { saved: true });
-  assert.deepEqual(collector.tool.handle(issue()), { saved: false });
-  assert.deepEqual(collector.tool.handle({ ...issue(), better_en: 'He went 0' }), { saved: true });
+  assert.deepEqual(collector.tools.map((tool) => tool.declaration.name), [PROGRESS_TOOL, FINAL_REVIEW_TOOL]);
+  for (const tool of collector.tools) assert.equal(tool.declaration.behavior, 'NON_BLOCKING');
+  assert.deepEqual(collector.progressTool.declaration.parameters.required, ['goal_ids'], 'issues are optional per turn');
+  assert.deepEqual(collector.finalReviewTool.declaration.parameters.required, ['status', 'issues']);
+});
+
+test('a real error is kept even without explanations; quotes are never invented or normalized', () => {
+  const beats = new Set(['order_drink']);
+  const parsed = parseIssue({ original_en: 'I want large coffee', better_en: 'I want a large coffee' }, beats);
+  assert.equal(parsed.ok, true);
+  assert.equal(parsed.issue.originalEn, 'I want large coffee');
+  assert.equal(parsed.issue.feedbackAr, '');
+  assert.deepEqual(parseIssue({ original_en: 'Large, please.', better_en: 'large please' }, beats), { ok: false, reason: 'unchanged' });
+  assert.deepEqual(parseIssue({ original_en: 'x', better_en: 'y', confidence: 'low' }, beats), { ok: false, reason: 'not_confident' });
+  assert.deepEqual(parseIssue({ better_en: 'y' }, beats), { ok: false, reason: 'missing_fields' });
+  assert.deepEqual(parseIssue('He go', beats), { ok: false, reason: 'not_object' });
+});
+
+test('no cap: every distinct correction is retained; only identical pairs are grouped', () => {
+  const collector = createSilentIssueCollector(mission);
+  for (let n = 0; n < 30; n++) collector.progressTool.handle({ goal_ids: [], issues: [issue(n)] });
+  collector.progressTool.handle({ goal_ids: [], issues: [issue(0), { ...issue(0), better_en: 'He went 0' }] });
   assert.equal(collector.getIssues().length, 31);
   const review = reviewNarration(mission, 'en', collector.getIssues());
   assert.match(review.text, /He go 29/);
   assert.match(review.text, /He went 0/);
-  const { languageReviews, ...counts } = collector.getDiagnostics();
-  assert.equal(languageReviews.checks, 0);
-  assert.deepEqual(counts, { calls: 32, saved: 31, rejected: 1, reasons: { repeat: 1 } });
-});
-
-test('no calls and rejected calls are distinguishable without retaining raw rejected speech', () => {
-  const collector = createSilentIssueCollector(mission);
-  assert.equal(collector.getDiagnostics().calls, 0);
-  collector.tool.handle({ ...issue(), confidence: 'low' });
-  collector.tool.handle({ ...issue(), explanation_ar: '' });
   const diagnostics = collector.getDiagnostics();
-  assert.deepEqual(diagnostics.reasons, { confidence: 1, missing_fields: 1 });
-  assert.doesNotMatch(JSON.stringify(diagnostics), /He go/);
-  diagnostics.reasons.confidence = 999;
-  assert.equal(collector.getDiagnostics().reasons.confidence, 1);
+  assert.deepEqual({ ...diagnostics, reasons: { ...diagnostics.reasons } }, {
+    turnNotes: 31, finalReviewCalls: 0, finalStatus: null, saved: 31, fromTurns: 31, fromFinal: 0, rejected: 1, reasons: { repeat: 1 },
+  });
 });
 
-test('introduction permits questions without assessing samples, review stays interactive and evidence-bound', () => {
+test('final review saves errors the per-turn notes missed and repeats are grouped, not double counted', () => {
+  const collector = createSilentIssueCollector(mission);
+  collector.progressTool.handle({ goal_ids: ['order_drink'], issues: [issue(1)] });
+  collector.beginFinalReview();
+  assert.equal(collector.isFinalized(), false);
+  collector.finalReviewTool.handle(final([issue(1), issue(2), issue(3)]));
+  assert.equal(collector.isFinalized(), true);
+  assert.deepEqual(collector.getIssues().map((item) => item.originalEn), ['He go 1', 'He go 2', 'He go 3']);
+  const { fromTurns, fromFinal, finalStatus } = collector.getDiagnostics();
+  assert.deepEqual({ fromTurns, fromFinal, finalStatus }, { fromTurns: 1, fromFinal: 2, finalStatus: 'issues' });
+});
+
+test('an early final-review call cannot acknowledge finishing; honest empty statuses are recorded', () => {
+  const collector = createSilentIssueCollector(mission);
+  collector.finalReviewTool.handle(final([issue(4)]));
+  assert.equal(collector.isFinalized(), false, 'only a call after PRIVATE_FINISH_NOTES finalizes');
+  assert.equal(collector.getIssues().length, 1, 'but its evidence is kept');
+  collector.beginFinalReview();
+  collector.finalReviewTool.handle(final([], 'uncertain'));
+  assert.equal(collector.isFinalized(), true);
+  assert.equal(collector.getDiagnostics().finalStatus, 'uncertain');
+});
+
+test('rejections are counted by reason without retaining the rejected words', () => {
+  const collector = createSilentIssueCollector(mission);
+  collector.progressTool.handle({ goal_ids: [], issues: [{ ...issue(), confidence: 'low' }, { original_en: 'He go' }, 'bad'] });
+  const diagnostics = collector.getDiagnostics();
+  assert.deepEqual(diagnostics.reasons, { not_confident: 1, missing_fields: 1, not_object: 1 });
+  assert.doesNotMatch(JSON.stringify(diagnostics), /He go/);
+  diagnostics.reasons.not_confident = 999;
+  assert.equal(collector.getDiagnostics().reasons.not_confident, 1);
+});
+
+test('goals and language notes travel in one call; goals never gate or repeat', () => {
+  const ids = [];
+  const collector = createSilentIssueCollector(mission, (next) => ids.push(next));
+  const result = collector.progressTool.handle({ goal_ids: ['choose_size', 'order_drink', 'nope'], issues: [issue(5)] });
+  assert.deepEqual(result, { saved: true, issues: 1, goals: 2 });
+  assert.deepEqual(collector.progressTool.handle({ goal_ids: ['order_drink'] }), { saved: false, issues: 0, goals: 0 });
+  assert.deepEqual(collector.getObservedGoalIds(), ['choose_size', 'order_drink']);
+  assert.equal(ids.length, 1);
+  collector.clear();
+  assert.deepEqual([collector.getIssues().length, collector.getObservedGoalIds().length, collector.getDiagnostics().turnNotes], [0, 0, 0]);
+});
+
+test('introduction teaches without assessing samples; review is interactive, grounded and honest when incomplete', () => {
   for (const locale of ['ar', 'en']) {
     const intro = briefingNarration(mission, locale);
-    assert.match(intro.instruction, /Listen and answer/);
+    assert.match(intro.instruction, /say what we will learn today/);
     assert.match(intro.instruction, /must not be evaluated/);
     assert.match(intro.instruction, /Do not demand a scripted approval/);
     const review = reviewNarration(mission, locale, []);
-    assert.match(review.instruction, /interactive review conversation/);
-    assert.match(review.instruction, /follow-up questions/);
+    assert.match(review.instruction, /real conversation/);
+    assert.match(review.instruction, /follow-up question/);
     assert.match(review.instruction, /never add rehearsal mistakes/);
-    assert.doesNotMatch(review.instruction, /no interactive questions/);
     assert.match(review.text, /NO CONFIDENT LANGUAGE ISSUES/);
+    assert.doesNotMatch(review.text, /may be incomplete/);
+    assert.match(reviewNarration(mission, locale, [], true).text, /may be incomplete/);
   }
 });
 
@@ -65,52 +121,4 @@ test('issued REST token locks audio/model while allowing browser tool declaratio
   assert.equal(sent.body.fieldMask, 'model,generationConfig.responseModalities');
   assert.equal(sent.body.bidiGenerateContentSetup.model, 'models/gemini-3.8-live');
   assert.equal(sent.body.bidiGenerateContentSetup.tools, undefined);
-});
-
-
-test('the actual progress-call path saves language errors and goals together, including no-new-goal turns', () => {
-  const collector = createSilentIssueCollector(mission);
-  const language_review = { status: 'issues', issues: [issue()], reason: 'Missing agreement.' };
-  collector.progressTool.handle({ language_review, goal_ids: ['order_drink', 'choose_size'] });
-  assert.equal(collector.getIssues().length, 1);
-  assert.deepEqual(collector.getObservedGoalIds(), ['order_drink', 'choose_size']);
-  collector.progressTool.handle({ language_review: { ...language_review, issues: [issue(1)] }, goal_ids: [] });
-  assert.equal(collector.getIssues().length, 2);
-  assert.equal(collector.getDiagnostics().languageReviews.checks, 2);
-  assert.equal(collector.tool.declaration.behavior, 'NON_BLOCKING');
-  assert.ok(collector.progressTool.declaration.parameters.required.includes('language_review'));
-});
-
-test('missing reviews, explicit no-clear-issue and uncertain audio stay distinguishable', () => {
-  const collector = createSilentIssueCollector(mission);
-  collector.progressTool.handle({ goal_ids: ['order_drink'] });
-  collector.progressTool.handle({ language_review: { status: 'no_clear_issue', issues: [], reason: 'Valid short preference.' }, goal_ids: [] });
-  collector.progressTool.handle({ language_review: { status: 'uncertain', issues: [], reason: 'Exact words unclear.' }, goal_ids: [] });
-  assert.deepEqual(collector.getDiagnostics().languageReviews,
-    { checks: 2, missing: 1, noClearIssue: 1, uncertain: 1, finalized: false });
-  assert.equal(collector.getIssues().length, 0);
-});
-
-test('final notebook audit saves late actual issues; malformed finalization cannot claim completion', () => {
-  const collector = createSilentIssueCollector(mission);
-  collector.beginFinalReview();
-  collector.progressTool.handle({ goal_ids: [], final_review: true });
-  assert.equal(collector.isFinalized(), false);
-  collector.progressTool.handle({ goal_ids: [], final_review: true,
-    language_review: { status: 'issues', issues: [issue(9)], reason: 'Actual final observed fragment.' } });
-  assert.equal(collector.isFinalized(), true);
-  assert.equal(collector.getIssues()[0].originalEn, 'He go 9');
-  collector.beginFinalReview();
-  assert.equal(collector.isFinalized(), false);
-  assert.equal(collector.getIssues().length, 1);
-});
-
-
-test('partial malformed final review retains valid notes but does not acknowledge completion', () => {
-  const collector = createSilentIssueCollector(mission);
-  collector.progressTool.handle({ goal_ids: [], final_review: true,
-    language_review: { status: 'issues', issues: [issue(3), { original_en: 'missing correction' }], reason: 'Partial payload.' } });
-  assert.equal(collector.getIssues().length, 1);
-  assert.equal(collector.isFinalized(), false);
-  assert.equal(collector.getDiagnostics().languageReviews.missing, 1);
 });
