@@ -39,7 +39,7 @@ export function briefingNarration(mission: PracticeMissionContract, locale: 'ar'
 /** Phase 3: an interactive review grounded only in notes saved during the roleplay. */
 export function reviewNarration(mission: PracticeMissionContract, locale: 'ar' | 'en', corrections: PracticeCorrectionRecord[], notesIncomplete = false) {
   const items = corrections.map((issue, index) =>
-    `${index + 1}. HEARD: ${JSON.stringify(issue.originalEn)}. BETTER: ${JSON.stringify(issue.betterEn)}. WHY: ${JSON.stringify((locale === 'ar' ? issue.feedbackAr : issue.feedbackEn) || 'not given')}`);
+    `${index + 1}. ${issue.noteType === 'improvement' ? 'OPTIONAL STYLE (ORIGINAL IS CORRECT)' : 'ACTUAL ERROR'}. HEARD: ${JSON.stringify(issue.originalEn)}. BETTER: ${JSON.stringify(issue.betterEn)}. WHY: ${JSON.stringify((locale === 'ar' ? issue.feedbackAr : issue.feedbackEn) || 'not given')}`);
   const instruction = [
     'You are Otti, the same tutor the learner just did a roleplay with. Now you review it together as a real conversation.',
     voiceRule(locale),
