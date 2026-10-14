@@ -107,6 +107,7 @@ export class GeminiLiveTransport implements LiveTransport {
     this.sessionConfig = {
       voiceName: config.voiceName?.trim() || undefined,
       silenceDurationMs: config.silenceDurationMs === undefined ? undefined : Math.max(500, Math.min(5000, config.silenceDurationMs)),
+      disableInputTranscription: config.disableInputTranscription === true,
     };
     this.callbacks.onStatus('connecting');
     const issued = await this.tokenProvider();
@@ -218,7 +219,10 @@ export class GeminiLiveTransport implements LiveTransport {
             },
             turnCoverage: 'TURN_INCLUDES_ONLY_ACTIVITY',
           },
-          inputAudioTranscription: { languageCodes: ['en-US', 'ar-EG'] },
+          // Practice records its own mic stream for verbatim transcription.
+          // Omitting the field disables input transcription in the Live setup;
+          // all non-Practice voice modes retain their prior configuration.
+          ...(!this.sessionConfig.disableInputTranscription ? { inputAudioTranscription: { languageCodes: ['en-US', 'ar-EG'] } } : {}),
           outputAudioTranscription: {},
           contextWindowCompression: { slidingWindow: {} },
           sessionResumption: this.resumptionHandle ? { handle: this.resumptionHandle } : {},
