@@ -60,6 +60,7 @@ const scenarios = [
   { name: 'practice-a2-order-preferences-live', path: '/practice/live/a2-order-with-preferences', full: true },
   { name: 'practice-b1-food-world', path: '/practice/B1/world/food-shopping', full: true },
   { name: 'practice-b1-wrong-order-start', path: '/practice/mission/b1-resolve-wrong-order', full: true },
+  { name: 'practice-b1-wrong-order-listen', path: '/practice/mission/b1-resolve-wrong-order', click: '.practice-intro-actions .practice-intro-primary', full: true },
   { name: 'practice-b1-wrong-order-live', path: '/practice/live/b1-resolve-wrong-order', full: true },
   { name: 'practice-b1-travel-world', path: '/practice/B1/world/travel-transport', full: true },
   { name: 'legacy-speak-alias', path: '/speak', full: true },
