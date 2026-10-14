@@ -273,6 +273,7 @@ export function PracticeLiveScreen() {
         onSpeechEnd: () => {
           setWaitingForReply(false);
           setLearnerMicEnabled(!pausedRef.current);
+          lastSpeechAt.current = null; // reset watchdog at start of the next learner turn
           setStatus((current) => current === 'idle' || current === 'error' ? current : 'listening');
           characterPerformance.speechEnd();
         },
@@ -351,7 +352,10 @@ export function PracticeLiveScreen() {
       setElapsedSeconds(0);
       await mic.start((chunk) => live.sendAudio(chunk), (level) => {
         setMicLevel(level);
-        if (level > 0.045) lastSpeechAt.current = performance.now();
+        if (level > 0.045) {
+          if (lastSpeechAt.current === null) armReplyTimeout();
+          lastSpeechAt.current = performance.now();
+        }
       });
       if (session !== sessionGeneration.current) { await mic.stop(); return; }
       setWaitingForReply(true);
