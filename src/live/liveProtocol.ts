@@ -22,9 +22,11 @@ export function scheduledResponse(
   value: Record<string, unknown>,
   behavior: 'BLOCKING' | 'NON_BLOCKING' | undefined,
 ) {
+  // Gemini FunctionResponse.scheduling belongs beside response, not inside the
+  // arbitrary result data. Otherwise the Live server never sees SILENT.
   return behavior === 'NON_BLOCKING'
-    ? { ...value, scheduling: 'SILENT' }
-    : value;
+    ? { response: value, scheduling: 'SILENT' as const }
+    : { response: value };
 }
 
 export function buildLiveSetup(model: string, instruction: string, config: LiveSessionConfig, functionDeclarations: LiveClientTool['declaration'][], resumptionHandle: string | null) {
@@ -105,5 +107,6 @@ export interface FunctionResponse {
   id?: string;
   name: string;
   response: Record<string, unknown>;
+  scheduling?: 'SILENT' | 'WHEN_IDLE' | 'INTERRUPT';
 }
 
