@@ -92,7 +92,7 @@ export function usePracticeTutor(options: {
   function discussCorrection(index: number) {
     const issue = options.corrections[index];
     if (!issue || options.phase !== 'review') return;
-    const message = 'PRIVATE_REVIEW_SELECTION: the learner tapped this saved note to discuss and practise. Explain it briefly, model the better sentence, invite them to say it, then listen. This is NOT new learner speech: ' + JSON.stringify({ heard: issue.originalEn, better: issue.betterEn });
+    const message = 'PRIVATE_REVIEW_SELECTION: the learner tapped this saved note. FIRST explain WHY the original is wrong with the relevant grammar or word-choice rule, contrast the changed words, and give one small example if useful. Then model the better sentence, invite them to try, and listen. Never provide only the fix. This is NOT new learner speech: ' + JSON.stringify({ heard: issue.originalEn, better: issue.betterEn, why: options.locale === 'ar' ? issue.feedbackAr : issue.feedbackEn });
     const current = session.current;
     if (!current || current.closed) { void start(message); return; }
     if (current.state.paused) current.update({ paused: false });
