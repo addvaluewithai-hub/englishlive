@@ -222,7 +222,9 @@ test('Otti introductory audio is grounded in authored scenario and sample, revie
   const before = briefingNarration(draft, 'ar');
   assert.match(before.text, /Coffee or Tea/);
   assert.match(before.text, /Staff: Hi. What would you like/);
-  assert.match(before.instruction, /SAMPLE/);
+  assert.match(before.instruction, /play_lesson_dialogue/);
+  assert.match(before.instruction, /before speaking any audio/i);
+  assert.match(before.instruction, /Never read, recite or act out/i);
   const none = reviewNarration(draft, 'en', []);
   assert.match(none.text, /NO CONFIDENT LANGUAGE ISSUES/);
   assert.doesNotMatch(none.text, /you made a mistake/i);
