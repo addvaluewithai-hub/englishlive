@@ -112,6 +112,8 @@ export class TutorSession {
     if (this.closed || this.finishing || !this.queue) return { played: false, reason: 'session_closed' };
     this.exampleAudioPlaying = true;
     this.awaitingExampleFollowup = false;
+    this.hasAudio = false;
+    this.generationDone = false;
     this.serverTurnPending = true;
     this.clearTimers();
     this.setMic(false);
