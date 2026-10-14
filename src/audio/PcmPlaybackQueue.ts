@@ -26,6 +26,7 @@ export class PcmPlaybackQueue {
   private outputActive = false;
   private turnCompletePending = false;
   private turnHasAudio = false;
+  private standaloneFinish: ((played: boolean) => void) | null = null;
   private starvationTimer: number | null = null;
   private timers = new Set<number>();
   private readonly visemes = new VisemeAnalyzer();
@@ -73,6 +74,10 @@ export class PcmPlaybackQueue {
   }
 
   interrupt() {
+    // Resolve pending standalone playback when a user interrupts or leaves the lesson.
+    const finish = this.standaloneFinish;
+    this.standaloneFinish = null;
+    finish?.(false);
     this.generation += 1;
     const hadPlayback = this.outputActive || this.active.size > 0;
     this.clearStarvationTimer();
@@ -89,6 +94,35 @@ export class PcmPlaybackQueue {
     this.visemes.resetTranscript();
     this.callbacks.onMouthPose?.(null);
     if (hadPlayback) this.callbacks.onSpeechEnd?.();
+  }
+
+  /** Play a complete two-voice WAV using the user-unlocked WebAudio context (no autoplay block). */
+  async playStandaloneWav(wav: ArrayBuffer): Promise<boolean> {
+    this.interrupt();
+    if (!this.context) await this.unlock();
+    const context = this.context;
+    if (!context) return false;
+    const generation = this.generation;
+    const decoded = await context.decodeAudioData(wav.slice(0));
+    if (generation !== this.generation) return false;
+    return new Promise<boolean>((resolve) => {
+      const source = context.createBufferSource();
+      source.buffer = decoded;
+      source.connect(context.destination);
+      this.standaloneFinish = resolve;
+      this.active.add(source);
+      this.outputActive = true;
+      source.onended = () => {
+        if (generation !== this.generation) return;
+        this.standaloneFinish = null;
+        this.active.delete(source);
+        this.outputActive = false;
+        this.callbacks.onSpeechEnd?.();
+        resolve(true);
+      };
+      this.callbacks.onSpeechStart?.();
+      source.start();
+    });
   }
 
   async close() {
