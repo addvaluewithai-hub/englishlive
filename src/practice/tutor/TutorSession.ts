@@ -1,4 +1,5 @@
 import { MicrophonePcmStream } from '../../audio/MicrophonePcmStream';
+import { fetchLessonAudio } from '../audio/fetchLessonAudio';
 import type { PcmPlaybackQueue } from '../../audio/PcmPlaybackQueue';
 import type { CharacterHostHandle } from '../../character/CharacterHost';
 import { CharacterPerformanceController } from '../../character/CharacterPerformanceController';
@@ -35,6 +36,9 @@ export class TutorSession {
   suppressOutput = false;
   hasAudio = false;
   audioFramesSent = 0;
+  exampleAudioPlaying = false;
+  awaitingExampleFollowup = false;
+  private exampleAbort: AbortController | null = null;
   serverTurnPending = false;
   generationDone = false;
   teacherDraft = '';
@@ -103,10 +107,45 @@ export class TutorSession {
     }
   }
 
+  /** BLOCKING Live tool: return only when the whole two-speaker recording ends. */
+  async playLessonDialogue(missionSlug: string) {
+    if (this.closed || this.finishing || !this.queue) return { played: false, reason: 'session_closed' };
+    this.exampleAudioPlaying = true;
+    this.awaitingExampleFollowup = false;
+    this.serverTurnPending = true;
+    this.clearTimers();
+    this.setMic(false);
+    this.update({ waiting: true });
+    const controller = new AbortController();
+    this.exampleAbort = controller;
+    this.options.diagnostic({ event: 'example_audio_requested' });
+    try {
+      const wav = await fetchLessonAudio(missionSlug, controller.signal);
+      if (controller.signal.aborted || this.closed) return { played: false, reason: 'cancelled' };
+      const played = await this.queue.playStandaloneWav(wav);
+      this.options.diagnostic({ event: played ? 'example_audio_completed' : 'example_audio_cancelled' });
+      return { played, ...(played ? {} : { reason: 'interrupted' }) };
+    } catch {
+      if (!controller.signal.aborted && !this.closed) this.options.diagnostic({ event: 'example_audio_failed' });
+      return { played: false, reason: controller.signal.aborted ? 'cancelled' : 'unavailable' };
+    } finally {
+      if (this.exampleAbort === controller) this.exampleAbort = null;
+      this.exampleAudioPlaying = false;
+      if (!this.closed && !this.finishing && !controller.signal.aborted) {
+        // Gemini receives the tool result next. Keep the mic closed for Otti's follow-up.
+        this.awaitingExampleFollowup = true;
+        this.serverTurnPending = true;
+        this.update({ status: 'listening', waiting: true });
+        this.awaitReply();
+      }
+    }
+  }
+
   /** Send an app or typed learner turn and wait for Otti. */
   request(text: string) {
     if (!this.live?.connected || this.closed) return;
     this.suppressOutput = false;
+    this.awaitingExampleFollowup = false;
     this.hasAudio = false;
     this.generationDone = false;
     this.serverTurnPending = true;
@@ -125,7 +164,8 @@ export class TutorSession {
 
   /** Give the turn to the learner. Never while finishing or paused. */
   listen() {
-    if (this.closed || this.finishing || this.serverTurnPending || this.state.paused) return;
+    if (this.closed || this.finishing || this.serverTurnPending || this.state.paused ||
+        this.exampleAudioPlaying || this.awaitingExampleFollowup) return;
     this.clearTimers();
     if (!this.state.micOpen) {
       this.audioFramesSent = 0;
@@ -142,6 +182,7 @@ export class TutorSession {
 
   /** Playback ran dry. Some provider turns never send turnComplete; do not strand the learner. */
   playbackDrained() {
+    if (this.exampleAudioPlaying || this.awaitingExampleFollowup) return;
     if (!this.serverTurnPending) { this.listen(); return; }
     if (this.generationDone) { this.serverTurnPending = false; this.listen(); return; }
     this.timers.quiet(() => {
@@ -156,6 +197,9 @@ export class TutorSession {
 
   interrupt() {
     if (this.closed) return;
+    this.exampleAbort?.abort();
+    this.exampleAudioPlaying = false;
+    this.awaitingExampleFollowup = false;
     this.flushTeacher();
     // Mute only the rest of a reply still being generated; a finished reply must not mute the next one.
     this.suppressOutput = this.serverTurnPending && !this.generationDone;
@@ -208,6 +252,8 @@ export class TutorSession {
   async close() {
     if (this.closed) return;
     this.closed = true;
+    this.exampleAbort?.abort();
+    this.queue?.interrupt();
     this.options.diagnostic({ event: 'session_closed' });
     this.clearTimers();
     this.live?.close();
