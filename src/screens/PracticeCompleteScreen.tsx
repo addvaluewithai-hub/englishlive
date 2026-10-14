@@ -12,6 +12,7 @@ import styles from './PracticeJourney.module.css';
 type CompletionState = {
   support?: PracticeSupportSummary;
   corrections?: PracticeCorrectionRecord[];
+  achievedGoalIds?: string[];
   durationSeconds?: number;
   conversationText?: string;
   recordedByOtti?: boolean;
@@ -27,6 +28,10 @@ export function PracticeCompleteScreen() {
   const support = state.support ?? { intentHints: 0, usefulLanguageReveals: 0, fullHelpReveals: 0 };
   // Only high-confidence Live tool observations appear. No separate Coach API call.
   const corrections = state.recordedByOtti && Array.isArray(state.corrections) ? state.corrections : [];
+  const goals = mission?.beats.filter((beat) => beat.type === 'required') ?? [];
+  const allowedGoalIds = new Set(goals.map((goal) => goal.id));
+  const achievedGoalIds = state.recordedByOtti && Array.isArray(state.achievedGoalIds)
+    ? state.achievedGoalIds.filter((goal) => allowedGoalIds.has(goal)) : [];
   const [copied, setCopied] = useState(false);
 
   async function copyReport() {
@@ -35,6 +40,8 @@ export function PracticeCompleteScreen() {
       'Practice: ' + mission.level + ' — ' + mission.titleEn,
       'Source: Otti private Live observations (not a verbatim audio transcript)',
       'Confident issues recorded: ' + corrections.length,
+      'Speaking opportunities observed (not proof of mastery):',
+      ...goals.map((goal) => (achievedGoalIds.includes(goal.id) ? '[observed] ' : '[not observed] ') + goal.learnerIntentEn),
       ...corrections.flatMap((item, i) => [
         `${i + 1}. Heard: ${item.originalEn}`,
         `   Better: ${item.betterEn}`,
@@ -61,6 +68,12 @@ export function PracticeCompleteScreen() {
       {state.recordedByOtti ? (
         <>
           <PracticeOttiNarrator purpose="review" instruction={narration.instruction} message={narration.text} />
+          <div className="practice-conversation-goals is-recap" aria-label={locale === 'ar' ? 'فرص الكلام اللي ظهرت' : 'Observed speaking opportunities'}>
+            {goals.map((goal) => <span key={goal.id} className={achievedGoalIds.includes(goal.id) ? 'is-observed' : ''}>
+              <span aria-hidden="true">{achievedGoalIds.includes(goal.id) ? '✓' : '○'}</span>{' '}
+              {locale === 'ar' ? goal.overviewAr : goal.learnerIntentEn}
+            </span>)}
+          </div>
           <section className="practice-complete-corrections" aria-label={locale === 'ar' ? 'تقرير المحادثة' : 'Conversation report'}>
             <header>
               <small>{locale === 'ar' ? 'تقرير Otti' : 'Otti report'}</small>
