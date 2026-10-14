@@ -93,7 +93,8 @@ test('goals and language notes travel in one call; goals never gate or repeat', 
 test('introduction teaches without assessing samples; review is interactive, grounded and honest when incomplete', () => {
   for (const locale of ['ar', 'en']) {
     const intro = briefingNarration(mission, locale);
-    assert.match(intro.instruction, /say what we will learn today/);
+    assert.match(intro.instruction, /play_lesson_dialogue/);
+    assert.match(intro.instruction, /say what we will learn/);
     assert.match(intro.instruction, /must not be evaluated/);
     assert.match(intro.instruction, /Do not demand a scripted approval/);
     const review = reviewNarration(mission, locale, []);
