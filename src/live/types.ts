@@ -19,7 +19,8 @@ export type LiveDiagnostic = {
   event: 'setup_sent' | 'setup_accepted' | 'tool_call' | 'tool_result' | 'unknown_tool' | 'tool_error' | 'server_error'
     | 'missing_turn_complete' | 'finish_requested' | 'finish_reminder' | 'finish_received' | 'finish_missing'
     | 'mic_open' | 'audio_submitted' | 'text_submitted' | 'provider_turn_complete' | 'provider_generation_complete'
-    | 'socket_closed' | 'session_closed' | 'tool_response_sent' | 'tool_response_dropped' | 'duplicate_tool_call';
+    | 'socket_closed' | 'session_closed' | 'tool_response_sent' | 'tool_response_dropped' | 'duplicate_tool_call'
+    | 'example_audio_requested' | 'example_audio_completed' | 'example_audio_cancelled' | 'example_audio_failed';
   model?: string; apiVersion?: string; tools?: string[]; name?: string; saved?: boolean; ms?: number;
   issues?: number; goals?: number; frames?: number;
 };
