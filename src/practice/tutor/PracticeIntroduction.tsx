@@ -69,7 +69,7 @@ export function PracticeIntroduction({ mission, onClose, onStart }: {
   }
 
   useEffect(() => {
-    if (page !== 'listen') return;
+    if (page !== 'listen' || import.meta.env.VITE_VISUAL_QA === '1') return;
     // Prefetch when opening the listen screen. There is no Gemini Live socket.
     void loadAudio().catch(() => undefined);
   }, [page]);
