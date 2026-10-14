@@ -133,8 +133,8 @@ try {
         await page.goto(`${baseUrl}/practice/complete/a1-ask-someone-to-repeat`);
         boundary = await assertMigratedBoundary(page, locale, experience);
         await assertPracticeRoot(page, '.practice-complete', locale);
-        assert.equal(await page.locator('.practice-complete h1').textContent(), locale === 'ar' ? 'مراجعة محادثتك' : 'Your conversation review');
-        assert.equal(await page.locator('.practice-complete-primary').textContent(), locale === 'ar' ? 'جرّب تاني بطريقتك' : 'Try again in your own words');
+        assert.equal(await page.locator('.practice-complete h1').textContent(), locale === 'ar' ? 'نراجع كلامك سوا' : 'Your speaking review');
+        assert.equal(await page.locator('.practice-complete-primary').textContent(), locale === 'ar' ? 'جرّب تاني' : 'Try again');
         assert.equal(await page.locator('.practice-complete-secondary').textContent(), locale === 'ar' ? 'موقف تاني' : 'Another situation');
 
         await page.goto(`${baseUrl}/speak`);
