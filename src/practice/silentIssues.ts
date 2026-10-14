@@ -14,10 +14,12 @@ function clean(value: unknown, max = LIMIT) {
  * Otti reports high-confidence, verbatim learner errors while already listening.
  * Evidence is in-memory only and is never shown during the Live roleplay.
  */
-export function createSilentIssueCollector(mission: PracticeMissionContract) {
+export function createSilentIssueCollector(mission: PracticeMissionContract, onGoalChange?: (observedGoalIds: string[]) => void) {
   const issues: PracticeCorrectionRecord[] = [];
   let rejected = 0;
   const validBeats = new Set(mission.beats.map((beat) => beat.id));
+  const allowedGoals = new Set(mission.beats.filter((beat) => beat.type === 'required').map((beat) => beat.id));
+  const observedGoals = new Set<string>();
 
   const tool: LiveClientTool = {
     declaration: {
@@ -57,10 +59,45 @@ export function createSilentIssueCollector(mission: PracticeMissionContract) {
     },
   };
 
+  // Observations are informational only. They must NEVER gate the next Otti
+  // reply, force a retry, or imply mastery from one successful exchange.
+  const progressTool: LiveClientTool = {
+    declaration: {
+      name: 'record_practice_progress',
+      behavior: 'NON_BLOCKING',
+      description: 'Privately mark one or several authored speaking opportunities clearly demonstrated by the LEARNER in the current live conversation. Never announce these notes, impose order, or delay your next reply. Do not infer a goal from the staff question alone.',
+      parameters: {
+        type: 'OBJECT',
+        properties: {
+          goal_ids: {
+            type: 'ARRAY',
+            items: { type: 'STRING' },
+            description: 'One or more exact goal IDs from the current authored mission, ONLY if the learner actually demonstrated them.',
+          },
+        },
+        required: ['goal_ids'],
+      },
+    },
+    handle(args) {
+      if (!Array.isArray(args.goal_ids)) return { saved: false, count: 0 };
+      const ids = args.goal_ids.slice(0, 12).filter((id): id is string => typeof id === 'string');
+      let newlyObserved = 0;
+      for (const id of ids) {
+        if (!allowedGoals.has(id) || observedGoals.has(id)) continue;
+        observedGoals.add(id);
+        newlyObserved++;
+      }
+      if (newlyObserved) onGoalChange?.([...observedGoals]);
+      return { saved: newlyObserved > 0, count: newlyObserved };
+    },
+  };
+
   return {
     tool,
+    progressTool,
     getIssues: () => issues.map((issue) => ({ ...issue })),
+    getObservedGoalIds: () => [...observedGoals],
     getRejectedCount: () => rejected,
-    clear() { issues.length = 0; rejected = 0; },
+    clear() { issues.length = 0; observedGoals.clear(); rejected = 0; onGoalChange?.([]); },
   };
 }
