@@ -8,7 +8,7 @@ const REMINDER_WAIT_MS = 10_000;
 export const FINISH_NOTES_EVENT = [
   'PRIVATE_FINISH_NOTES: the learner pressed Done. The roleplay is over. Do not speak.',
   'Think back over everything the learner said in this session and call submit_final_review once now.',
-  'Include EVERY clearly heard English mistake, small ones too, with their exact words and a corrected version, even if you already noted it.',
+  'Include EVERY clearly heard English mistake, small ones too, with their exact words, a corrected version and WHY it was wrong (grammar or word-usage rule), in simple Egyptian Arabic and English, even if already noted.',
   'Do not invent quotes and do not use prompt examples as evidence. If their English was clearly correct use status no_clear_issue; if you could not hear it well use uncertain.',
 ].join(' ');
 
