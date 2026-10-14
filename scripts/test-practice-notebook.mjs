@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { createSilentIssueCollector, FINAL_REVIEW_TOOL, PROGRESS_TOOL } from '../src/practice/silentIssues.ts';
-import { parseIssue } from '../src/practice/notebook/issueEvidence.ts';
+import { parseIssue, parseImprovement } from '../src/practice/notebook/issueEvidence.ts';
 import { practiceMissionContractBySlug } from '../src/practice/missions/catalog.ts';
 import { briefingNarration, reviewNarration } from '../src/practice/ottiNarration.ts';
 import { onRequestPost } from '../functions/api/gemini-token.ts';
@@ -121,4 +121,34 @@ test('issued REST token locks audio/model while allowing browser tool declaratio
   assert.equal(sent.body.fieldMask, 'model,generationConfig.responseModalities');
   assert.equal(sent.body.bidiGenerateContentSetup.model, 'models/gemini-3.8-live');
   assert.equal(sent.body.bidiGenerateContentSetup.tools, undefined);
+});
+
+test('optional polite improvements remain separate from proven grammar errors', () => {
+  const collector = createSilentIssueCollector(mission);
+  const correct = { original_en: 'I want a refund.', better_en: 'Could I get a refund, please?',
+    note_type: 'improvement', explanation_ar: 'الجملة صحيحة، لكن التانية ألطف.',
+    explanation_en: 'Both are valid; the second is more polite.' };
+  collector.progressTool.handle({ goal_ids: [], issues: [correct, issue(1)],
+    improvements: [correct, { original_en: 'That is too big.', better_en: 'That is quite large.',
+      explanation_en: 'A softer expression of the same meaning.' }] });
+  assert.equal(collector.getIssues().length, 1);
+  assert.equal(collector.getImprovements().length, 2);
+  assert.equal(collector.getIssues()[0].originalEn, 'He go 1');
+  assert.equal(collector.getImprovements()[0].originalEn, 'I want a refund.');
+  const reviewed = reviewNarration(mission, 'en', [
+    ...collector.getIssues(), ...collector.getImprovements().map((note) => ({ ...note, noteType: 'improvement' })),
+  ]);
+  assert.match(reviewed.text, /OPTIONAL STYLE \(ORIGINAL IS CORRECT\)/);
+  assert.match(reviewed.text, /ACTUAL ERROR/);
+  assert.equal(parseIssue(correct, new Set()).ok, false);
+  assert.equal(parseImprovement(correct, new Set()).ok, true);
+});
+
+test('no missing explanation can discard a real learner mistake', () => {
+  const collector = createSilentIssueCollector(mission);
+  collector.progressTool.handle({ goal_ids: [], issues: [{ original_en: 'He go', better_en: 'He goes' }] });
+  assert.equal(collector.getIssues().length, 1);
+  assert.equal(collector.getIssues()[0].feedbackEn, '');
+  assert.equal(collector.getDiagnostics().saved, 1);
+  assert.equal(collector.getImprovements().length, 0);
 });
