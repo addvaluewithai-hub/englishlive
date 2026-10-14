@@ -34,6 +34,7 @@ export class TutorSession {
   finishing = false;
   suppressOutput = false;
   hasAudio = false;
+  audioFramesSent = 0;
   serverTurnPending = false;
   generationDone = false;
   teacherDraft = '';
@@ -90,7 +91,11 @@ export class TutorSession {
       });
       if (this.closed) return;
       const mic = this.mic;
-      await mic.start((audio) => this.live?.sendAudio(audio), (level) => { if (!this.closed) this.update({ level }); });
+      await mic.start((audio) => {
+        if (!this.live?.connected || this.closed) return;
+        this.audioFramesSent++;
+        this.live.sendAudio(audio);
+      }, (level) => { if (!this.closed) this.update({ level }); });
       if (this.closed) { await mic.stop(); return; }
       this.request(opening);
     } catch (reason) {
@@ -122,7 +127,10 @@ export class TutorSession {
   listen() {
     if (this.closed || this.finishing || this.serverTurnPending || this.state.paused) return;
     this.clearTimers();
-    if (!this.state.micOpen) this.options.diagnostic({ event: 'mic_open' });
+    if (!this.state.micOpen) {
+      this.audioFramesSent = 0;
+      this.options.diagnostic({ event: 'mic_open' });
+    }
     this.setMic(true);
     this.update({ status: 'listening', waiting: false });
     this.performer.listening();
@@ -164,7 +172,7 @@ export class TutorSession {
     this.generationDone = false;
     this.update({ waiting: true });
     this.live.endAudioStream();
-    this.options.diagnostic({ event: 'audio_submitted' });
+    this.options.diagnostic({ event: 'audio_submitted', frames: this.audioFramesSent });
     this.awaitReply();
   }
 
