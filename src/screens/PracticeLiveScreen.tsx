@@ -253,6 +253,8 @@ export function PracticeLiveScreen() {
   async function finishMission(completed: boolean) {
     if (ending || !mission) return;
     setEnding(true);
+    // Stop the mic before freezing the final WAV so no trailing PCM can be lost.
+    setLearnerMicEnabled(false);
     flushCapturedSpeech();
     flushTeacherTurn();
     const support = runtime.getSupportSummary();
