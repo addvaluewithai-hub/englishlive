@@ -6,8 +6,8 @@ export const issueItemSchema = {
   properties: {
     original_en: { type: 'STRING', description: 'The learner exact words as heard, mistake included. Never fix or paraphrase them.' },
     better_en: { type: 'STRING', description: 'The same sentence with ONLY the mistake corrected, keeping the learner meaning.' },
-    explanation_ar: { type: 'STRING', description: 'One short friendly Egyptian Arabic sentence explaining the fix.' },
-    explanation_en: { type: 'STRING', description: 'One short simple English sentence explaining the fix.' },
+    explanation_ar: { type: 'STRING', description: 'Explain WHY the exact original phrase is incorrect in friendly Egyptian Arabic. Name the grammar/usage rule and contrast the relevant words (e.g. past time needs went, not go). Do not merely restate the better phrase.' },
+    explanation_en: { type: 'STRING', description: 'Explain WHY the exact original phrase is incorrect in simple English: the rule and which words changed. Do not merely repeat the correction.' },
   },
   required: ['original_en', 'better_en'],
 };
