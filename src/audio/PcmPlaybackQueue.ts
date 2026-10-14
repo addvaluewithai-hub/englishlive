@@ -121,7 +121,14 @@ export class PcmPlaybackQueue {
         resolve(true);
       };
       this.callbacks.onSpeechStart?.();
-      source.start();
+      try { source.start(); }
+      catch {
+        this.active.delete(source);
+        this.outputActive = false;
+        this.standaloneFinish = null;
+        this.callbacks.onSpeechEnd?.();
+        resolve(false);
+      }
     });
   }
 
