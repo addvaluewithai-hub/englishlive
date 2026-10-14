@@ -185,7 +185,7 @@ export class TutorSession {
     this.generationDone = false;
     this.hasAudio = false;
     this.setMic(true);
-    this.update({ status: 'listening', waiting: false });
+    this.update({ status: 'listening', waiting: false, holding: true });
     this.performer.listening();
     this.options.diagnostic({ event: 'hold_started' });
     this.options.diagnostic({ event: 'mic_open' });
@@ -197,6 +197,7 @@ export class TutorSession {
     if (!this.holding) return false;
     this.holding = false;
     this.setMic(false);
+    this.update({ holding: false });
     const hadSpeech = this.activityStarted;
     this.bufferedFrames = [];
     this.activityStarted = false;
