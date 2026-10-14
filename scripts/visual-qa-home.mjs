@@ -122,8 +122,10 @@ try {
         await page.goto(`${baseUrl}/practice/mission/a1-ask-someone-to-repeat`);
         boundary = await assertMigratedBoundary(page, locale, experience);
         assert.equal(await page.locator('[data-englotti-live-ui]').count(), 1);
-        assert.equal(await page.locator('.practice-live .fs-live-character-host').count(), 1);
-        assert.equal(await page.locator('.tutor-action.is-primary').textContent().then((value) => value?.includes(locale === 'ar' ? 'يلا نبدأ الموقف' : 'Start the conversation')), true);
+        assert.equal(await page.locator('.practice-intro .fs-live-character-host').count(), 0, 'Otti must not mount in scenario intro');
+        assert.equal(await page.locator('.practice-intro-hero').count(), 1);
+        assert.equal(await page.locator('.practice-intro-actions .practice-intro-primary').count(), 1);
+        assert.equal(await page.locator('.practice-intro-actions .practice-intro-secondary').count(), 1);
 
         await page.goto(`${baseUrl}/practice/complete/a1-ask-someone-to-repeat`);
         await assertMigratedBoundary(page, locale, experience);
