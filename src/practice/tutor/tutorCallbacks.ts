@@ -44,13 +44,16 @@ export function tutorCallbacks(session: TutorSession): LiveCallbacks {
     },
     onInterrupted: () => {
       if (session.closed || session.holding) return;
+      const awaitingManualReply = session.options.pushToTalk && session.state.waiting;
       session.flushTeacher();
       session.queue?.interrupt();
       session.performer.interrupt();
       session.suppressOutput = session.finishing;
-      session.serverTurnPending = false;
+      // Gemini can acknowledge the barge-in AFTER the learner releases.
+      // That old interrupt must not mark the new learner turn as complete.
+      session.serverTurnPending = !!awaitingManualReply;
       session.hasAudio = false;
-      session.listen();
+      if (!awaitingManualReply) session.listen();
     },
     onGenerationComplete: () => {
       if (session.closed) return;
