@@ -1,42 +1,37 @@
-# Practice verbatim microphone transcript — Flash-Lite preview
+# Practice: whole-session verbatim transcript + final-only coach (experimental)
 
-**Status:** Experimental PR only; not production-certified. Dedicated to the Practice voice screen; other Live modes keep their old configuration.
+**Status:** Draft PR #44 preview; NOT merged, NOT released as a certified speaking assessment.
 
-## What changes
+## Decision from live user trial (2026-10-14)
 
-1. `PracticeLiveScreen` opts out of `inputAudioTranscription` in the **Live setup**; Otti still receives the original PCM stream, uses Live automatic voice activity detection and responds with Live audio. Otti's **output transcription** remains on for the AI text bubble.
-2. The **identical** 16kHz mono PCM chunks already transmitted to Gemini Live are simultaneously retained **in memory only**. A small pre-roll retains initial phonemes; a hard 30s cap fails closed rather than submitting truncated speech.
-3. On the first Otti output or the explicit **Done speaking** action, the completed learner mic turn is framed as a standard PCM WAV and sent to `POST /api/practice/transcribe` in the background.
-4. The endpoint requires the existing verified Neon JWT, validates MIME by actual WAV header and limits, and forwards audio privately with the existing server-only `GEMINI_API_KEY` to **`gemini-3.1-flash-lite`** `generateContent`. No Files API, no Cloudflare R2, no database write and no server-side audio retention.
-5. The prompt demands literal **word-for-word** learner speech, including A1 mistakes, hesitations, repetitions and false starts. It forbids grammatical correction, paraphrasing, translation, invented words and wrong-script rewriting. Temperature is 0. The model may still make errors; this is an empirically testable instruction, not a guarantee of word-level accuracy.
-6. The resulting **Flash-Lite transcript** alone becomes the learner text in the conversation log and is sent to the existing authenticated Background Coach. **Otti never waits for the HTTP transcription request** to reply. Typed learner messages already contain exact words, so they bypass Flash-Lite.
-7. Unreturned/failed audio has an empty pending slot; **never substitute guessed text or send an empty turn as language evidence**. The finish-and-review flow waits for bounded in-flight transcription before handing the transcript to recap.
+The earlier PR #44 preview transcribed and coached individual voice turns. A real A2 session showed correct context-aware Otti replies but several missing learner lines and some poor transcriptions. Critically, the transcript had consecutive Otti replies across selected size/temperature even though Otti evidently received an answer. Delaying the **coach alone** cannot recover audio that was never saved; microphone capture and turn boundaries must be fixed first.
 
-## Expected impact / trade-offs
+### New pipeline
 
-- **Positive:** eliminates the incorrect Gemini Live input transcription from Practice; grammar feedback refers to a separate transcription of the actual speech.
-- **Unchanged:** Gemini Live still powers Otti, and its output transcription powers on-screen Otti messages. Non-Practice modes still request input transcription.
-- **Different:** while the learner speaks, real-time recognized-word UI cannot show text because Flash-Lite is asynchronous. After the turn ends, the transcript can appear; the audio still streams to Otti immediately.
-- **Extra spend / network:** one Flash-Lite multimodal call per recorded learner turn, plus the existing Background Coach cost, instead of free/included Live transcripts. Check Google pricing and watch real usage; set upstream per-user rate limits/quotas before wide release.
-- **Potential fidelity:** model-generated verbatim is never guaranteed. Compare it against manually verified audio with intentionally malformed A1 English and Arabic code-switches.
-- **Privacy:** each spoken segment is transmitted to the Gemini API twice (the existing Live connection plus this new Flash-Lite request). Audio buffers are erased after packaging; requests are not persisted by application code. Consent and privacy notices should disclose this extra processing. Confirm provider data-retention settings for the selected endpoint and account.
-- **Bounds:** 30s per mic turn, 24s client deadline / 20s provider deadline; failures are visible and do not block Otti. No provider availability or user mic tests verified merely by CI.
+1. Gemini Live still receives **all of the same original microphone PCM** to understand speech and generate Otti audio. Live **inputAudioTranscription is disabled only in Practice**, while output transcription for Otti stays on. Other voice modes are not modified.
+2. A Practice-only in-memory recorder collects **all 16kHz PCM frames sent to Otti while the mic is enabled**, including quiet utterances and the beginnings/ends of speech. There is **no loudness threshold to admit voice to the recorder**.
+3. Recording is partitioned at the first Otti reply, an explicit Done speaking action, or a safe audio-size rotation. If a mic interval exceeds 30 seconds, the recorder rotates to another ordered WAV segment *before* hitting the provider limit: it does not silently drop the first segment. The session is limited to **24 audio segments / 180 seconds of learner microphone PCM**. Beyond that, the session marks its final review incomplete; raise those limits only with cost/QA evidence.
+4. **No Flash-Lite transcription and no grammar coach run during the conversation.** The segments are kept only in the browser's in-memory route state. Typed replies are recorded as text and skip Flash-Lite.
+5. On **Finish and review**, the Live voice session stops. We then submit the saved WAV segments over authenticated `POST /api/practice/transcribe` to **`gemini-3.1-flash-lite`**, using at most three parallel requests. Each result fills its original chronological slot *before* the corresponding Otti response, even when API requests return out of order. A visible progress indicator shows completion. Failed segments are not replaced with guessed words.
+6. The Flash-Lite prompt explicitly requests **word-for-word** learner speech, including grammar errors, false starts and hesitations; English uses Latin script and actual Arabic is rendered as Arabic. **No repair, correction or translation.** Completely silent chunks should yield `[no speech]`.
+7. A **single final Background Coach recap** runs on the full ordered transcript, on the completion screen, **only if all recorded segments were captured and transcribed**. If any audio was lost, overflowed or failed, the review is marked **incomplete** and no claims of corrected English or completed goals are made; the available transcript is still copyable. Hints are still intentionally learner-triggered during the Live dialogue; until the final transcript exists they have authored scenario facts and Otti output, not a fabricated learner transcript.
 
-## QA plan for preview (must run with real signed-in microphones)
+### Technical and privacy boundaries
 
-Record controlled, consented test speech **with actual learner mistakes**; compare to manually transcribed truth. Suggested English cases:
-- `I want small one please` **must not** become `I'd like a small one, please`.
-- `He go to work every day` must retain `go`.
-- `I no have money` must retain `no have`.
-- `I, I want two… one coffee` must preserve self-correction.
-- `I'd like tea, please` should remain Latin-script English rather than Devanagari.
-- 1–2 words, hesitation, thinking-time setting, repeat, interruption, pause/resume and explicit Done speaking.
-- Typed replies bypass transcription, and malformed/no provider response does not add false corrections.
-- Check microphone quality, response fluidity, correct learner-turn to Otti-turn order, recap integrity, latency and provider spend.
+- Mic is still disabled during Otti playback, as in the existing app, except when the learner explicitly interrupts using the app control; **simultaneous speech while disabled is not captured or sent to Live**. This preview does not pretend to solve true simultaneous full-duplex speech.
+- The original PCM is not written to a database, disk, Cloudflare R2 or a Files API. WAV data is held temporarily in memory until review/cancellation/unmount. Each segment is transmitted to Google Live during dialogue and to Flash-Lite on review; the additional processing is disclosed in the speaking UI.
+- A 30-second PCM segment (960,000 bytes) is the maximum server payload. The endpoint verifies a signed-in Neon JWT, WAV headers and frame format, and uses the existing server-side `GEMINI_API_KEY`. Requests are limited to 24s on client / 20s on server; there is no automatic retry storm.
+- A 180-second total mic-audio limit and 24-segment limit bound memory and cost. **These are experiment limits, not a CEFR or lesson-duration target**. They may reject very long learner speaking sessions; the user sees a clear incomplete-review message, not invented feedback.
+- This preview uses extra Flash-Lite multimodal API calls; rate limiting, quotas, privacy notice, cost monitoring and provider-retention configuration need approval before production.
+- The recorded audio is the same post-processed (echo-cancelled, noise-suppressed) PCM sent to Otti, not a second independent raw mic device. No guarantee of absolute transcription accuracy.
 
-## Gates
+### QA and acceptance
 
-- `npm run check`, `npm run test:ui`, `npm run test:practice`; source tests mock Google response. No "provider quality" claim from mocks.
-- Real signed-in preview session with provider `gemini-3.1-flash-lite` and recording consent.
-- Monitor error volume, retries, average payload size and request costs; add rate-limiting and retention documentation before production rollout.
-- **Do not merge to production** without the above empirical comparison against the current Live transcription.
+- Deterministic test suites: `npm run check`, `npm run test:ui`, `npm run test:practice`. Mocked provider tests prove serialization, authentication, ordered async results, explicit no-speech and no fabrication. They do **not** prove verbatim recognition quality.
+- On real signed-in preview, say `I want small one please`, `He go to work every day`, `I no have money`, or a natural sentence containing repetition; the verbatim transcript **must preserve actual mistakes**, not infer grammatical fixes.
+- Speak *quietly* and in several short turns across Otti's questions, including a size and hot/cold choice. Copy the final conversation and check that each learner response is present in the right slot.
+- Test Done speaking, pause/resume, app interruption of Otti, typed replies, a long response split at 30 seconds, recap and missing-network handling.
+- Verify Otti's responsiveness doesn't depend on transcription or coach throughput. Record cost/latency from the finish click to the completed transcript and then the final recap.
+- Confirm failure/incomplete UX and no score/mastery claims.
+
+**Do not merge PR #44 to main until real mic, signed-in transcription and final coach QA pass.**
