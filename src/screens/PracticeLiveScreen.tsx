@@ -12,12 +12,12 @@ import { loadPublishedCharacter } from '../content/client';
 import { useI18n } from '../i18n/LocaleProvider';
 import { GeminiLiveTransport } from '../live/GeminiLiveTransport';
 import type { LiveStatus } from '../live/types';
-import { PracticeFeedbackCard } from '../practice/PracticeFeedbackCard';
 import { PracticeHintCard } from '../practice/PracticeHintCard';
 import { practiceMissionContractBySlug } from '../practice/missions/catalog';
 import { useConversationPracticeRuntime } from '../practice/conversationRuntime';
 import type { ConversationTurn } from '../practice/conversationTypes';
 import { buildConversationOpening } from '../practice/conversationPrompt';
+import { createSilentIssueCollector } from '../practice/silentIssues';
 import { LiveConversationHeader, LiveConversationStatus } from '../ui/product/LiveConversationChrome';
 
 type PracticeConversationTurn = ConversationTurn;
@@ -74,13 +74,14 @@ export function PracticeLiveScreen() {
   const [waitingForReply, setWaitingForReply] = useState(false);
   const conversationLogRef = useRef<PracticeConversationTurn[]>([]);
   const learnerTurnLoggedRef = useRef(false);
+  const issueCollector = useRef<ReturnType<typeof createSilentIssueCollector> | null>(null);
   const copyResetTimerRef = useRef<number | null>(null);
 
   const [status, setStatus] = useState<LiveStatus>('idle');
   const [micOpen, setMicOpen] = useState(false);
   const [micLevel, setMicLevel] = useState(0);
   const [teacherText, setTeacherText] = useState('');
-  const [learnerDraft, setLearnerDraft] = useState('');
+  const [, setLearnerDraft] = useState('');
   const [keyboardOpen, setKeyboardOpen] = useState(false);
   const [typedText, setTypedText] = useState('');
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -102,7 +103,7 @@ export function PracticeLiveScreen() {
     if (speaker === 'learner') {
       firstReplyPending.current = true;
       replyHasAudio.current = false;
-      void runtime.reviewTurn([...conversationLogRef.current]);
+      // Only typed learner content is logged exactly. Voice errors come from the silent Live tool; no independent coach.
     }
   }
 
@@ -130,22 +131,17 @@ export function PracticeLiveScreen() {
     if (pendingTeacher && !(last?.speaker === 'otti' && last.text === pendingTeacher)) {
       turns.push({ id: 'pending-otti', speaker: 'otti', text: pendingTeacher });
     }
-    const trace = runtime.getEvaluationTrace();
+    const observedIssues = issueCollector.current?.getIssues() ?? [];
     return [
       `Practice: ${mission.level} — ${mission.titleEn}`,
       '',
       ...turns.map((turn) => `${turn.speaker === 'otti' ? 'Otti' : 'Learner'}: ${turn.text}`),
-      ...(trace.length ? [
-        '',
-        '--- Background coach ---',
-        ...trace.map((item) => {
-          const original = item.originalEn ? ` | said: ${item.originalEn}` : '';
-          const correction = item.betterEn ? ` | better: ${item.betterEn}` : '';
-          return `[${item.beatId}] language=${item.languageStatus}${original}${correction} | ${item.reasonEn}`;
-        }),
-      ] : []),
       '',
-      `Voice: no tools | pause tolerance: ${silenceDurationMs}ms`,
+      'Learner voice is not transcribed. Only typed learner lines are verbatim.',
+      '--- Privately noted by Otti during Live ---',
+      ...observedIssues.map((issue) => `Heard: ${issue.originalEn} | Better: ${issue.betterEn} | Why: ${issue.feedbackEn}`),
+      '',
+      `Voice: NON_BLOCKING silent issue tool | pause tolerance: ${silenceDurationMs}ms`,
       ...replyTimings.current.map((sample) => `Reply ${sample.turn}: ${sample.delayMs}ms after last detected learner speech`),
     ].join('\n');
   }
@@ -221,12 +217,12 @@ export function PracticeLiveScreen() {
     flushLearnerTurn();
     flushTeacherTurn();
     const support = runtime.getSupportSummary();
-    const corrections = runtime.getCorrectionSummary();
+    const corrections = issueCollector.current?.getIssues() ?? [];
     await stopTransport();
     if (completed) {
       navigate(`/practice/complete/${mission.slug}`, {
         replace: true,
-        state: { support, corrections, durationSeconds: durationSeconds(), conversationText: conversationText(), transcript: [...conversationLogRef.current], achievedGoalIds: runtime.achievedGoalIds },
+        state: { support, corrections, durationSeconds: durationSeconds(), conversationText: conversationText(), recordedByOtti: true },
       });
     } else {
       navigate(`/practice/mission/${mission.slug}`, { replace: true });
@@ -251,6 +247,7 @@ export function PracticeLiveScreen() {
     setWaitingForReply(false);
     replyTimings.current = [];
     runtime.reset();
+    issueCollector.current = createSilentIssueCollector(mission);
     repeatAfterPause.current = false;
     firstReplyPending.current = false;
     replyHasAudio.current = false;
@@ -285,13 +282,8 @@ export function PracticeLiveScreen() {
 
       const live = new GeminiLiveTransport({
         onStatus: setStatus,
-        onInputTranscript: (text) => {
-          armReplyTimeout();
-          if (!learnerDraftRef.current.trim()) learnerTurnLoggedRef.current = false;
-          const next = appendTranscript(learnerDraftRef.current, text);
-          learnerDraftRef.current = next;
-          setLearnerDraft(next);
-        },
+        // Practice no longer requests Live input STT; never overwrite typed text with a guessed transcript.
+        onInputTranscript: () => undefined,
         onOutputTranscript: (text) => {
           if (pausedRef.current) { repeatAfterPause.current = true; return; }
           if (manualInterrupt.current) return;
@@ -342,7 +334,7 @@ export function PracticeLiveScreen() {
           teacherDraftRef.current = '';
         },
         onError: (message) => setError(message),
-      });
+      }, issueCollector.current ? [issueCollector.current.tool] : []);
       transport.current = live;
 
       const mic = new MicrophonePcmStream();
@@ -353,7 +345,7 @@ export function PracticeLiveScreen() {
 
       await queue.unlock();
       if (session !== sessionGeneration.current) { await queue.close(); return; }
-      await live.connect(prompt, { voiceName: characterConfig.voiceName ?? undefined, silenceDurationMs });
+      await live.connect(prompt, { voiceName: characterConfig.voiceName ?? undefined, silenceDurationMs, disableInputTranscription: true });
       if (session !== sessionGeneration.current) { live.close(); await queue.close(); return; }
       startedAtMs.current = Date.now();
       setElapsedSeconds(0);
@@ -438,7 +430,7 @@ export function PracticeLiveScreen() {
   }
 
   function finishSpeaking() {
-    if (!transport.current?.connected || pausedRef.current || !learnerDraftRef.current.trim()) return;
+    if (!transport.current?.connected || pausedRef.current || !microphone.current?.isEnabled) return;
     setLearnerMicEnabled(false);
     transport.current.endAudioStream();
     armReplyTimeout();
@@ -562,26 +554,15 @@ export function PracticeLiveScreen() {
           learnerTurn={learnerTurn}
         />
 
-        {learnerDraft ? (
-          <p className="practice-live-heard">
-            <span>{t('practice.heardPrefix')}</span>{' '}
-            <span dir="auto">{learnerDraft}</span>
-          </p>
-        ) : null}
+        <p className="practice-review-evidence-note">{locale === 'ar' ? 'Otti بيسمعك مباشرة. الملاحظات مش هتظهر أثناء الكلام؛ هتسمعها منه بعد ما تخلص.' : 'Otti listens directly. Private notes will be shared only after you finish.'}</p>
       </div>
 
       <div className="fs-live-controls practice-live-controls">
-        <div className="practice-conversation-goals" aria-label={locale === 'ar' ? 'فرص الكلام' : 'Speaking opportunities'}>
-          {runtime.goals.map((goal) => <span key={goal.id} className={runtime.achievedGoalIds.includes(goal.id) ? 'is-observed' : ''}>
-            <span aria-hidden="true">{runtime.achievedGoalIds.includes(goal.id) ? '✓' : '○'}</span>{' '}
-            {locale === 'ar' ? goal.overviewAr : goal.learnerIntentEn}
-          </span>)}
-        </div>
         <div className="practice-conversation-actions">
           <button type="button" onClick={togglePause} disabled={connecting || ending || waitingForReply}>
             {paused ? (locale === 'ar' ? 'نكمل' : 'Resume') : (locale === 'ar' ? 'وقفة للمراجعة' : 'Pause to review')}
           </button>
-          <button type="button" onClick={finishSpeaking} disabled={!learnerTurn || !learnerDraft.trim()}>
+          <button type="button" onClick={finishSpeaking} disabled={!learnerTurn}>
             {locale === 'ar' ? 'خلصت كلامي' : 'Done speaking'}
           </button>
           <button type="button" onClick={() => void finishMission(true)} disabled={ending}>
@@ -594,7 +575,6 @@ export function PracticeLiveScreen() {
             : (locale === 'ar' ? 'نسخ الحوار' : 'Copy conversation')}
         </button>
 
-        <PracticeFeedbackCard runtime={runtime} />
 
         <PracticeHintCard runtime={runtime} learnerTurn={learnerTurn && !paused} onRequestHint={requestContextualHint} />
 
@@ -649,7 +629,6 @@ export function PracticeLiveScreen() {
         </div>
 
         <div className="fs-mic-meter" aria-hidden="true"><span style={{ width: `${Math.max(learnerTurn ? 3 : 0, micLevel * 100)}%` }} /></div>
-        {runtime.coachError ? <p className="practice-coach-status">{locale === 'ar' ? 'الملاحظات مش متاحة حاليًا. كمل كلامك، ونحاول تاني في المراجعة.' : 'Feedback is unavailable for now. Keep talking; we will retry at review.'}</p> : null}
         {error ? <p className="fs-live-error" role="alert">{error}</p> : null}
       </div>
 
