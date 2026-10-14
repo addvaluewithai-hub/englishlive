@@ -421,8 +421,9 @@ export function PracticeLiveScreen() {
         setMicLevel(level);
         if (level > 0.045) {
           lastSpeechAt.current = performance.now();
-          // No Live input transcripts: retain the watchdog on detected voice.
-          armReplyTimeout();
+          // Live input transcripts are disabled; arm the watchdog once at the
+          // start of the mic segment, not for every sound frame.
+          if (turnAudio.current.sizeBytes === 0) armReplyTimeout();
         }
       });
       if (session !== sessionGeneration.current) { await mic.stop(); return; }
