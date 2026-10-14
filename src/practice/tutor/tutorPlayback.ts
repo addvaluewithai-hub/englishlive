@@ -9,11 +9,13 @@ export function createTutorPlayback(session: TutorSession) {
       if (session.closed) return;
       session.setMic(false);
       session.update({ status: 'speaking', waiting: false });
-      session.performer.speechStart();
+      // The sample's two actors are NOT Otti. Keep his mouth still during it.
+      if (session.exampleAudioPlaying) session.performer.listening();
+      else session.performer.speechStart();
     },
     onSpeechEnd: () => {
       if (session.closed) return;
-      session.performer.speechEnd();
+      if (!session.exampleAudioPlaying) session.performer.speechEnd();
       session.playbackDrained();
     },
     onTurnComplete: () => session.listen(),
