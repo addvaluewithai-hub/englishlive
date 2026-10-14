@@ -4,6 +4,8 @@ import { parseCoachInput, normalizeCoachResult, analyzePractice } from '../funct
 import { onRequestPost } from '../functions/api/practice/coach.ts';
 import { PRACTICE_MISSION_CONTRACTS, practiceMissionContractBySlug } from '../src/practice/missions/catalog.ts';
 import { buildConversationPracticePrompt, buildConversationOpening } from '../src/practice/conversationPrompt.ts';
+import { createSilentIssueCollector } from '../src/practice/silentIssues.ts';
+import { briefingNarration, reviewNarration } from '../src/practice/ottiNarration.ts';
 
 const mission = practiceMissionContractBySlug('b1-resolve-wrong-order');
 const transcript = [
@@ -138,7 +140,7 @@ test('authenticated HTTP flow verifies a JWT, validates input, and returns norma
   assert.equal(providerCalls, 1);
 });
 
-test('Live wire setup has zero Practice tools, preserves other modes, and accepts explicit end-of-speech', async (t) => {
+test('Practice Live declares one NON_BLOCKING note tool with SILENT acknowledgement, and other modes stay tool-free', async (t) => {
   const { createServer } = await import('vite');
   const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' });
   const previousWindow = globalThis.window;
@@ -165,15 +167,73 @@ test('Live wire setup has zero Practice tools, preserves other modes, and accept
   });
   const { GeminiLiveTransport } = await server.ssrLoadModule('/src/live/GeminiLiveTransport.ts');
   const callbacks = { onStatus() {}, onInputTranscript() {}, onOutputTranscript() {}, onAudio() {}, onInterrupted() {}, onTurnComplete() {}, onError(message) { throw new Error(message); } };
-  for (const [config, expectedSilence] of [[{ silenceDurationMs: 1200 }, 1200], [{ silenceDurationMs: 2400 }, 2400], [{}, 3600]]) {
-    const live = new GeminiLiveTransport(callbacks, [], async () => ({ token: 'test-ephemeral-token', model: 'gemini-3.8-live' }));
+  const collector = createSilentIssueCollector(mission);
+  for (const [config, expectedSilence] of [[{ silenceDurationMs: 1200, disableInputTranscription: true }, 1200], [{ silenceDurationMs: 2400, disableInputTranscription: true }, 2400], [{}, 3600]]) {
+    const enabled = config.disableInputTranscription === true;
+    const live = new GeminiLiveTransport(callbacks, enabled ? [collector.tool] : [], async () => ({ token: 'test-ephemeral-token', model: 'gemini-3.8-live' }));
     await live.connect(buildConversationPracticePrompt(mission), config);
     const socket = sockets.at(-1);
     const setup = socket.sent[0].setup;
-    assert.equal(setup.tools, undefined);
+    assert.equal(setup.inputAudioTranscription === undefined, enabled);
+    if (enabled) {
+      assert.equal(setup.tools[0].functionDeclarations.length, 1);
+      assert.equal(setup.tools[0].functionDeclarations[0].name, 'record_language_issue');
+      assert.equal(setup.tools[0].functionDeclarations[0].behavior, 'NON_BLOCKING');
+      // Fake provider emits the tool request while audio can keep streaming.
+      socket.dispatchEvent(new MessageEvent('message', { data: JSON.stringify({
+        toolCall: { functionCalls: [{ id: 'error-1', name: 'record_language_issue', args: {
+          original_en: 'I want small one', better_en: 'I want a small one',
+          explanation_ar: 'ناقص a', explanation_en: 'Add a before small one',
+          confidence: 'high', beat_id: 'agree_solution',
+        } }] },
+      }) }));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      assert.equal(collector.getIssues().length, 1);
+      assert.equal(socket.sent.at(-1).toolResponse.functionResponses[0].response.scheduling, 'SILENT');
+    } else assert.equal(setup.tools, undefined);
     assert.equal(setup.realtimeInputConfig.automaticActivityDetection.silenceDurationMs, expectedSilence);
     live.endAudioStream();
     assert.deepEqual(socket.sent.at(-1), { realtimeInput: { audioStreamEnd: true } });
     live.close();
   }
+});
+
+test('silent issue collector stores only deduplicated high-confidence corrections and never invents words', () => {
+  const collector = createSilentIssueCollector(mission);
+  const base = {
+    original_en: 'He go to work', better_en: 'He goes to work',
+    explanation_ar: 'نضيف s للفعل', explanation_en: 'Third-person singular verb takes s',
+    confidence: 'high', beat_id: 'agree_solution',
+  };
+  assert.deepEqual(collector.tool.handle({ ...base, confidence: 'low' }), { saved: false });
+  assert.deepEqual(collector.tool.handle({ ...base, original_en: '' }), { saved: false });
+  assert.deepEqual(collector.tool.handle({ ...base, better_en: base.original_en }), { saved: false });
+  assert.deepEqual(collector.tool.handle(base), { saved: true });
+  assert.deepEqual(collector.tool.handle(base), { saved: false });
+  const first = collector.getIssues();
+  assert.equal(first.length, 1);
+  assert.equal(first[0].originalEn, 'He go to work');
+  first[0].originalEn = 'modified outside';
+  assert.equal(collector.getIssues()[0].originalEn, 'He go to work');
+  collector.clear();
+  assert.equal(collector.getIssues().length, 0);
+});
+
+test('Otti introductory audio is grounded in authored scenario and sample, review only in confirmed tool notes', () => {
+  const draft = practiceMissionContractBySlug('a2-order-with-preferences');
+  const before = briefingNarration(draft, 'ar');
+  assert.match(before.text, /Coffee or Tea/);
+  assert.match(before.text, /Staff: Hi. What would you like/);
+  assert.match(before.instruction, /SAMPLE/);
+  const none = reviewNarration(draft, 'en', []);
+  assert.match(none.text, /NO CONFIDENT LANGUAGE ISSUES/);
+  assert.doesNotMatch(none.text, /you made a mistake/i);
+  const issues = [{
+    beatId: 'order_drink', originalEn: 'I want small one', betterEn: 'I want a small one',
+    feedbackAr: 'ناقص a', feedbackEn: 'Add the article a', requiresRetry: false,
+  }];
+  const spoken = reviewNarration(draft, 'ar', issues);
+  assert.match(spoken.text, /I want small one/);
+  assert.match(spoken.text, /I want a small one/);
+  assert.match(spoken.instruction, /Do not invent errors/);
 });
