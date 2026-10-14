@@ -20,7 +20,8 @@ The chronological timeline retains up to the last 500 events in memory and survi
 | --- | --- |
 | `setup_sent` does not list `record_practice_progress` and `submit_final_review` | Tools were not registered on this connection. Check that the phase is `roleplay` and the session was created with `collector.tools`. |
 | `setup_sent` lists both but `setup_accepted` is absent | Setup failed or the connection closed; look for `server_error` / `socket_closed`. |
-| `mic_open` and `audio_submitted` appear, but no `tool_call` before or during the next reply | The model did not request a tool. This can be model decision/prompt behavior; the log alone cannot prove which. |
+| `audio_submitted` has `frames: 0` | No microphone PCM frames were sent in that turn. Investigate capture/permissions, not the tool prompt. |
+| `mic_open` and `audio_submitted` with sent frames appear, but no `tool_call` before or during the next reply | The model did not request a tool. This can be model decision/prompt behavior; the log alone cannot prove which. |
 | `tool_call` appears, followed by `unknown_tool` or `tool_error` | Dispatch/schema/handler issue, not a missed model invocation. |
 | `tool_result` reports `issues: 0` | The model supplied no distinct valid issues, or the notebook rejected/deduplicated them. Check `notebook.reasons`, `notebook.rejected` and `finalStatus`. |
 | `tool_response_dropped` appears | The connection was no longer open when the client attempted to send the tool response. |
