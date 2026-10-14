@@ -38,7 +38,9 @@ export function extractLessonWav(payload: Interaction) {
     .flatMap((step) => step.content ?? []).filter((part) => part.type === 'audio' && !!part.data) ?? [];
   const encoded = blocks.at(-1)?.data;
   if (!encoded || encoded.length > 15_000_000) throw new Error('Missing or oversized Gemini TTS audio.');
-  const bytes = Uint8Array.from(atob(encoded), (ch) => ch.charCodeAt(0));
+  const binary = atob(encoded);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index++) bytes[index] = binary.charCodeAt(index);
   if (bytes.length < 44 || new TextDecoder().decode(bytes.subarray(0, 4)) !== 'RIFF' ||
       new TextDecoder().decode(bytes.subarray(8, 12)) !== 'WAVE') {
     throw new Error('Gemini TTS did not return a playable WAV.');
