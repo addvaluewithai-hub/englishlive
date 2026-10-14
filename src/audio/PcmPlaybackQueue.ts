@@ -32,6 +32,10 @@ export class PcmPlaybackQueue {
 
   constructor(private readonly callbacks: PlaybackCallbacks = {}) {}
 
+  get isPlaying() { return this.outputActive || this.active.size > 0; }
+
+  async drainEnqueues() { await this.enqueueChain; }
+
   async unlock() {
     if (!this.context) this.context = new AudioContext({ latencyHint: 'interactive' });
     if (this.context.state === 'suspended') await this.context.resume();

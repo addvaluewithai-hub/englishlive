@@ -1,0 +1,24 @@
+import type { PracticeMissionContract } from '../types';
+import type { PracticeCompletionState } from './types';
+
+/** True when the final review never arrived, so an empty list must not read as clean English. */
+export function notesIncomplete(review: PracticeCompletionState) {
+  return review.diagnostics?.finalReview !== undefined && review.diagnostics.finalReview !== 'received';
+}
+
+/** Plain-text support report. Metadata only beyond the saved notes themselves; no tokens or audio. */
+export function buildReviewReport(mission: PracticeMissionContract, review: PracticeCompletionState, ar: boolean, reviewConnection: unknown) {
+  const issues = review.corrections ?? [];
+  const trace = review.diagnostics;
+  return [
+    `Practice: ${mission.level} — ${mission.titleEn}`,
+    'Source: Otti Live listening notes, not a verbatim transcript or proficiency score.',
+    `Saved corrections: ${issues.length}`,
+    ...issues.map((issue) => `Heard: ${issue.originalEn}\nBetter: ${issue.betterEn}\nWhy: ${(ar ? issue.feedbackAr : issue.feedbackEn) || '-'}`),
+    'Observed goals: ' + ((review.achievedGoalIds ?? []).join(', ') || 'none'),
+    `Final review: ${trace?.finalReview ?? 'unknown'} after ${trace?.finalWaitMs ?? 0} ms`,
+    'Notebook: ' + JSON.stringify(trace?.notebook ?? {}),
+    'Roleplay connection: ' + JSON.stringify(trace?.transport ?? []),
+    'Review connection: ' + JSON.stringify(reviewConnection),
+  ].join('\n\n');
+}

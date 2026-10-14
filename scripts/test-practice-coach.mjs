@@ -4,6 +4,8 @@ import { parseCoachInput, normalizeCoachResult, analyzePractice } from '../funct
 import { onRequestPost } from '../functions/api/practice/coach.ts';
 import { PRACTICE_MISSION_CONTRACTS, practiceMissionContractBySlug } from '../src/practice/missions/catalog.ts';
 import { buildConversationPracticePrompt, buildConversationOpening } from '../src/practice/conversationPrompt.ts';
+import { createSilentIssueCollector } from '../src/practice/silentIssues.ts';
+import { briefingNarration, reviewNarration } from '../src/practice/ottiNarration.ts';
 
 const mission = practiceMissionContractBySlug('b1-resolve-wrong-order');
 const transcript = [
@@ -138,9 +140,9 @@ test('authenticated HTTP flow verifies a JWT, validates input, and returns norma
   assert.equal(providerCalls, 1);
 });
 
-test('Live wire setup has zero Practice tools, preserves other modes, and accepts explicit end-of-speech', async (t) => {
+test('Practice Live declares NON_BLOCKING silent notebook and final-review tools, other modes stay tool-free', async (t) => {
   const { createServer } = await import('vite');
-  const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' });
+  const server = await createServer({ server: { middlewareMode: true, hmr: false }, optimizeDeps: { noDiscovery: true, include: [] }, appType: 'custom' });
   const previousWindow = globalThis.window;
   const PreviousWebSocket = globalThis.WebSocket;
   const sockets = [];
@@ -164,16 +166,90 @@ test('Live wire setup has zero Practice tools, preserves other modes, and accept
     await server.close();
   });
   const { GeminiLiveTransport } = await server.ssrLoadModule('/src/live/GeminiLiveTransport.ts');
-  const callbacks = { onStatus() {}, onInputTranscript() {}, onOutputTranscript() {}, onAudio() {}, onInterrupted() {}, onTurnComplete() {}, onError(message) { throw new Error(message); } };
-  for (const [config, expectedSilence] of [[{ silenceDurationMs: 1200 }, 1200], [{ silenceDurationMs: 2400 }, 2400], [{}, 3600]]) {
-    const live = new GeminiLiveTransport(callbacks, [], async () => ({ token: 'test-ephemeral-token', model: 'gemini-3.8-live' }));
+  const diagnostics = [];
+  let audioFrames = 0;
+  const callbacks = { onDiagnostic(event) { diagnostics.push(event); }, onStatus() {}, onInputTranscript() {}, onOutputTranscript() {}, onAudio() { audioFrames++; }, onInterrupted() {}, onTurnComplete() {}, onError(message) { throw new Error(message); } };
+  const collector = createSilentIssueCollector(mission);
+  for (const [config, expectedSilence] of [[{ silenceDurationMs: 1200, disableInputTranscription: true }, 1200], [{ silenceDurationMs: 2400, disableInputTranscription: true }, 2400], [{}, 3600]]) {
+    const enabled = config.disableInputTranscription === true;
+    const live = new GeminiLiveTransport(callbacks, enabled ? collector.tools : [], async () => ({ token: 'test-ephemeral-token', model: 'gemini-3.8-live' }));
     await live.connect(buildConversationPracticePrompt(mission), config);
     const socket = sockets.at(-1);
     const setup = socket.sent[0].setup;
-    assert.equal(setup.tools, undefined);
+    assert.equal(setup.inputAudioTranscription === undefined, enabled);
+    if (enabled) {
+      assert.deepEqual(setup.tools[0].functionDeclarations.map((tool) => [tool.name, tool.behavior]),
+        [['record_practice_progress', 'NON_BLOCKING'], ['submit_final_review', 'NON_BLOCKING']]);
+      // Fake provider emits the tool request while audio keeps streaming in the same frame.
+      socket.dispatchEvent(new MessageEvent('message', { data: JSON.stringify({
+        serverContent: { modelTurn: { parts: [{ inlineData: { data: 'AAAA', mimeType: 'audio/pcm;rate=24000' } }] } },
+        toolCall: { functionCalls: [{ id: 'note-1', name: 'record_practice_progress', args: {
+          goal_ids: ['report_problem', 'agree_solution', 'unknown'],
+          issues: [{ original_en: 'I want small one', better_en: 'I want a small one', explanation_ar: 'ناقص a', explanation_en: 'Add a before small one' }],
+        } }] },
+      }) }));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await live.flushPendingMessages();
+      assert.ok(audioFrames > 0, 'audio in the same frame as a tool call must still flow');
+      assert.ok(diagnostics.some((event) => event.event === 'setup_accepted'));
+      assert.ok(diagnostics.some((event) => event.event === 'tool_result' && event.name === 'record_practice_progress' && event.saved));
+      assert.equal(collector.getIssues().length, 1);
+      assert.deepEqual(collector.getObservedGoalIds(), ['report_problem', 'agree_solution'].filter((id) => mission.beats.some((beat) => beat.id === id && beat.type === 'required')));
+      const response = socket.sent.at(-1).toolResponse.functionResponses[0];
+      assert.deepEqual([response.id, response.name, response.response.scheduling], ['note-1', 'record_practice_progress', 'SILENT']);
+      collector.beginFinalReview();
+      socket.dispatchEvent(new MessageEvent('message', { data: JSON.stringify({
+        toolCall: { functionCalls: [{ id: 'final-1', name: 'submit_final_review', args: { status: 'issues',
+          issues: [{ original_en: 'Me want refund', better_en: 'I want a refund' }] } }] },
+      }) }));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await live.flushPendingMessages();
+      assert.equal(collector.isFinalized(), true);
+      assert.equal(collector.getIssues().length, 2);
+      assert.equal(socket.sent.at(-1).toolResponse.functionResponses[0].response.scheduling, 'SILENT');
+      collector.clear();
+    } else assert.equal(setup.tools, undefined);
     assert.equal(setup.realtimeInputConfig.automaticActivityDetection.silenceDurationMs, expectedSilence);
     live.endAudioStream();
     assert.deepEqual(socket.sent.at(-1), { realtimeInput: { audioStreamEnd: true } });
     live.close();
   }
+});
+
+test('Otti introductory audio is grounded in authored scenario and sample, review only in confirmed tool notes', () => {
+  const draft = practiceMissionContractBySlug('a2-order-with-preferences');
+  const before = briefingNarration(draft, 'ar');
+  assert.match(before.text, /Coffee or Tea/);
+  assert.match(before.text, /Staff: Hi. What would you like/);
+  assert.match(before.instruction, /SAMPLE/);
+  const none = reviewNarration(draft, 'en', []);
+  assert.match(none.text, /NO CONFIDENT LANGUAGE ISSUES/);
+  assert.doesNotMatch(none.text, /you made a mistake/i);
+  const issues = [{
+    beatId: 'order_drink', originalEn: 'I want small one', betterEn: 'I want a small one',
+    feedbackAr: 'ناقص a', feedbackEn: 'Add the article a', requiresRetry: false,
+  }];
+  const spoken = reviewNarration(draft, 'ar', issues);
+  assert.match(spoken.text, /I want small one/);
+  assert.match(spoken.text, /I want a small one/);
+  assert.match(spoken.instruction, /Do not invent errors/);
+});
+
+test('non-blocking goal checklist records flexible authored goals without forcing beat order or mastery', () => {
+  const draft = practiceMissionContractBySlug('a2-order-with-preferences');
+  let snapshots = [];
+  const collector = createSilentIssueCollector(draft, (ids) => snapshots.push(ids));
+  assert.deepEqual(collector.progressTool.handle({ goal_ids: ['close', 'unrecognized'] }), { saved: false, issues: 0, goals: 0 });
+  assert.deepEqual(collector.progressTool.handle({ goal_ids: [] }), { saved: false, issues: 0, goals: 0 });
+  assert.deepEqual(collector.progressTool.handle({ goal_ids: 'order_drink' }), { saved: false, issues: 0, goals: 0 });
+  // Learner can give drink, size and heat preference in ONE free-form answer.
+  assert.deepEqual(collector.progressTool.handle({ goal_ids: ['choose_temperature', 'order_drink', 'choose_size'] }), { saved: true, issues: 0, goals: 3 });
+  assert.deepEqual(collector.getObservedGoalIds(), ['choose_temperature', 'order_drink', 'choose_size']);
+  assert.deepEqual(collector.progressTool.handle({ goal_ids: ['order_drink', 'choose_size'] }), { saved: false, issues: 0, goals: 0 });
+  assert.deepEqual(collector.progressTool.handle({ goal_ids: ['choose_addons', 'close'] }), { saved: true, issues: 0, goals: 1 });
+  assert.deepEqual(collector.getObservedGoalIds(), ['choose_temperature', 'order_drink', 'choose_size', 'choose_addons']);
+  assert.equal(snapshots.length, 2);
+  assert.match(buildConversationPracticePrompt(draft), /NOT a conversation script or gating mechanism/);
+  collector.clear();
+  assert.deepEqual(collector.getObservedGoalIds(), []);
 });

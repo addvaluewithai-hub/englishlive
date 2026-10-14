@@ -121,21 +121,14 @@ try {
 
         await page.goto(`${baseUrl}/practice/mission/a1-ask-someone-to-repeat`);
         boundary = await assertMigratedBoundary(page, locale, experience);
-        await assertPracticeRoot(page, '.practice-start-page', locale);
-        assert.equal(await page.locator('.practice-start-heading h1').getAttribute('lang'), 'ar');
-        assert.equal(await page.locator('.practice-start-heading h1').getAttribute('dir'), 'rtl');
-        assert.equal(await page.locator('.practice-start-heading > div > strong').getAttribute('lang'), 'en');
-        assert.equal(await page.locator('.practice-start-button').textContent().then((value) => value?.includes(locale === 'ar' ? 'ابدأ الـMission' : 'Start mission')), true);
-        if ((width === 390 && locale === 'ar' && experience === 'adult') || (width === 1440 && locale === 'en' && experience === 'teen')) {
-          await page.screenshot({ path: path.join(outputDir, `practice-mission-${locale}-${experience}-${width}.png`), fullPage: true });
-        }
+        assert.equal(await page.locator('[data-englotti-live-ui]').count(), 1);
+        assert.equal(await page.locator('.practice-live .fs-live-character-host').count(), 1);
+        assert.equal(await page.locator('.tutor-action.is-primary').textContent().then((value) => value?.includes(locale === 'ar' ? 'يلا نبدأ الموقف' : 'Start the conversation')), true);
 
         await page.goto(`${baseUrl}/practice/complete/a1-ask-someone-to-repeat`);
-        boundary = await assertMigratedBoundary(page, locale, experience);
-        await assertPracticeRoot(page, '.practice-complete', locale);
-        assert.equal(await page.locator('.practice-complete h1').textContent(), locale === 'ar' ? 'مراجعة محادثتك' : 'Your conversation review');
-        assert.equal(await page.locator('.practice-complete-primary').textContent(), locale === 'ar' ? 'جرّب تاني بطريقتك' : 'Try again in your own words');
-        assert.equal(await page.locator('.practice-complete-secondary').textContent(), locale === 'ar' ? 'موقف تاني' : 'Another situation');
+        await assertMigratedBoundary(page, locale, experience);
+        await assertPracticeRoot(page, '.tutor-missing', locale);
+        assert.equal(await page.locator('.tutor-missing a').count(), 1);
 
         await page.goto(`${baseUrl}/speak`);
         boundary = await assertMigratedBoundary(page, locale, experience);
