@@ -418,7 +418,12 @@ export function PracticeLiveScreen() {
         setMicLevel(level);
         if (level > 0.045) {
           lastSpeechAt.current = performance.now();
-          if (!turnAudio.current.hasSpeech) setSpeechDetected(true);
+          if (!turnAudio.current.hasSpeech) {
+            setSpeechDetected(true);
+            // Live input transcripts used to arm the missing-reply watchdog.
+            // With those disabled, arm it at the first real mic activity.
+            armReplyTimeout();
+          }
         }
       });
       if (session !== sessionGeneration.current) { await mic.stop(); return; }
@@ -495,7 +500,8 @@ export function PracticeLiveScreen() {
   }
 
   function requestContextualHint() {
-    if (visualQa || !transport.current?.connected || paused || waitingForReply) return;
+    // Wait for the actual spoken words before asking for contextual help.
+    if (visualQa || !transport.current?.connected || paused || waitingForReply || transcribing > 0) return;
     void runtime.requestHint(conversationLogRef.current.filter((turn) => turn.text.trim()));
   }
 
