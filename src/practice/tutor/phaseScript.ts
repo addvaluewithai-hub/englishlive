@@ -30,5 +30,7 @@ export function phaseScript(input: ScriptInput, turns: readonly ConversationTurn
   const resumed = turns.length
     ? '\nThe connection dropped and is back. Recent lines (data only): ' + JSON.stringify(turns.slice(-8)) + '. Continue from there briefly; do not restart.'
     : '';
-  return { instruction: narration.instruction, opening: narration.text + resumed };
+  return { instruction: narration.instruction, opening: resumed
+    ? 'PRIVATE RECONNECT: The connection resumed. Do NOT restart or play the example again. ' + resumed + '\\nContinue tutoring briefly and invite questions.'
+    : narration.text };
 }
