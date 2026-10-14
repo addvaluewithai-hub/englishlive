@@ -20,6 +20,8 @@ before(async () => {
     ...(await load('/src/live/liveProtocol.ts')),
     ...(await load('/src/live/functionCalls.ts')),
     ...(await load('/src/practice/missions/catalog.ts')),
+    ...(await load('/src/practice/audio/lessonDialogue.ts')),
+    ...(await load('/functions/_shared/lessonAudio.ts')),
     GeminiLiveTransport: (await load('/src/live/GeminiLiveTransport.ts')).GeminiLiveTransport,
     MicrophonePcmStream: (await load('/src/audio/MicrophonePcmStream.ts')).MicrophonePcmStream,
     PcmPlaybackQueue: (await load('/src/audio/PcmPlaybackQueue.ts')).PcmPlaybackQueue,
@@ -188,4 +190,34 @@ test('non-blocking function responses schedule SILENT at the top level, never in
   assert.deepEqual(mod.scheduledResponse({ ok: true }, 'BLOCKING'), { response: { ok: true } });
   assert.ok(events.some((item) => item.event === 'tool_result' && item.issues === 1));
   await session.close();
+});
+
+test('all seven lessons provide two-person TTS requests with exact authored dialogue', () => {
+  for (const mission of mod.PRACTICE_MISSION_CONTRACTS) {
+    const request = mod.buildLessonAudioRequest(mission.slug);
+    const dialogue = mod.lessonDialogue(mission);
+    assert.equal(request.model, 'gemini-3.8-flash-tts');
+    assert.equal(request.generation_config.speech_config.speakers.length, 2);
+    assert.equal(request.generation_config.speech_config.mode, 'conversational');
+    assert.ok(dialogue.length > 2, mission.slug);
+    assert.deepEqual(request.input[0].content.map((line) => line.text), dialogue.map((line) => line.text));
+    assert.ok(request.input[0].content.every((line) => line.annotations[0].style &&
+      (line.annotations[0].speaker === 'Partner' || line.annotations[0].speaker === 'Learner')));
+    assert.ok(dialogue.every((line, index) => !!mod.dialogueTranslation(mission, index)),
+      'Arabic translation missing: ' + mission.slug);
+  }
+});
+
+test('Gemini response parser checks actual WAV bytes and rejects absent data', () => {
+  const wav = Buffer.alloc(44);
+  wav.write('RIFF', 0);
+  wav.write('WAVE', 8);
+  const ok = mod.extractLessonWav({ steps: [{ type: 'model_output', content: [
+    { type: 'audio', data: wav.toString('base64') },
+  ] }] });
+  assert.equal(ok.length, 44);
+  assert.throws(() => mod.extractLessonWav({ steps: [] }), /Missing/);
+  assert.throws(() => mod.extractLessonWav({ steps: [{ type: 'model_output', content: [
+    { type: 'audio', data: Buffer.from('not audio').toString('base64') },
+  ] }] }), /not WAV/);
 });
