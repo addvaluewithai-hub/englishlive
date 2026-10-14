@@ -95,9 +95,11 @@ export function PracticeIntroduction({ mission, onClose, onStart }: {
       if (audio.src !== url) audio.src = url;
       audio.playbackRate = speed;
       await audio.play();
-    } catch {
-      // On browsers that reject delayed autoplay, the play button remains available.
+      setAudioError(false);
+    } catch (reason) {
+      // Browsers may reject play after a delayed first fetch. The user can tap again.
       setPlaying(false);
+      if (reason instanceof Error && reason.name === 'NotAllowedError') return;
       if (!abortRef.current?.signal.aborted) setAudioError(true);
     }
   }
@@ -177,7 +179,7 @@ export function PracticeIntroduction({ mission, onClose, onStart }: {
             {loading ? '…' : playing ? 'Ⅱ' : '▶'}
           </button>
           <div className="practice-intro-seek">
-            <input aria-label={ar ? 'الانتقال في التسجيل' : 'Seek recording'} type="range"
+            <input dir="ltr" aria-label={ar ? 'الانتقال في التسجيل' : 'Seek recording'} type="range"
               min="0" max={Number.isFinite(duration) && duration > 0 ? duration : 1}
               step="0.1" value={Math.min(at, Number.isFinite(duration) && duration > 0 ? duration : 1)}
               disabled={!duration}
