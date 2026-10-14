@@ -114,7 +114,7 @@ export function createSilentIssueCollector(mission: PracticeMissionContract, onG
     declaration: {
       name: FINAL_REVIEW_TOOL,
       behavior: 'NON_BLOCKING',
-      description: 'Call exactly once for PRIVATE_FINISH_NOTES. Return EVERY clearly heard true English error in issues, with exact heard words and WHY/rule. Put valid-but-more-polite/natural alternatives ONLY in optional improvements. Do not mark already-correct English as wrong.'
+      description: 'Call exactly once for PRIVATE_FINISH_NOTES. Return EVERY clearly heard true English error in issues, with exact heard words and WHY/rule. Put valid-but-more-polite/natural alternatives ONLY in optional improvements. Do not mark already-correct English as wrong.',
       parameters: {
         type: 'OBJECT',
         properties: {
