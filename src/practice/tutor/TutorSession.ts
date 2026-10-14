@@ -117,7 +117,7 @@ export class TutorSession {
     this.serverTurnPending = true;
     this.clearTimers();
     this.setMic(false);
-    this.update({ waiting: true });
+    this.update({ waiting: true, examplePlaying: true });
     const controller = new AbortController();
     this.exampleAbort = controller;
     this.options.diagnostic({ event: 'example_audio_requested' });
@@ -133,6 +133,7 @@ export class TutorSession {
     } finally {
       if (this.exampleAbort === controller) this.exampleAbort = null;
       this.exampleAudioPlaying = false;
+      this.update({ examplePlaying: false });
       if (!this.closed && !this.finishing && !controller.signal.aborted) {
         // Gemini receives the tool result next. Keep the mic closed for Otti's follow-up.
         this.awaitingExampleFollowup = true;
@@ -201,6 +202,7 @@ export class TutorSession {
     if (this.closed) return;
     this.exampleAbort?.abort();
     this.exampleAudioPlaying = false;
+    this.update({ examplePlaying: false });
     this.awaitingExampleFollowup = false;
     this.flushTeacher();
     // Mute only the rest of a reply still being generated; a finished reply must not mute the next one.
