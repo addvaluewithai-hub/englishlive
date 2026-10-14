@@ -106,6 +106,7 @@ export class GeminiLiveTransport implements LiveTransport {
     this.systemInstruction = systemInstruction.trim();
     this.sessionConfig = {
       voiceName: config.voiceName?.trim() || undefined,
+      silenceDurationMs: config.silenceDurationMs === undefined ? undefined : Math.max(500, Math.min(5000, config.silenceDurationMs)),
     };
     this.callbacks.onStatus('connecting');
     const issued = await this.tokenProvider();
@@ -213,7 +214,7 @@ export class GeminiLiveTransport implements LiveTransport {
               prefixPaddingMs: 120,
               // A language learner may pause mid-sentence while searching for words.
               // Keep those pauses inside the same turn rather than rushing to answer.
-              silenceDurationMs: 3600,
+              silenceDurationMs: this.sessionConfig.silenceDurationMs ?? 3600,
             },
             turnCoverage: 'TURN_INCLUDES_ONLY_ACTIVITY',
           },
@@ -348,3 +349,4 @@ export class GeminiLiveTransport implements LiveTransport {
     this.socket.send(JSON.stringify(payload));
   }
 }
+

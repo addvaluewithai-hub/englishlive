@@ -9,6 +9,8 @@ export interface LiveTokenResponse {
 
 export interface LiveSessionConfig {
   voiceName?: string;
+  /** Per-session pause tolerance; other modes retain their existing default. */
+  silenceDurationMs?: number;
 }
 
 export interface LiveCallbacks {
@@ -33,3 +35,4 @@ export interface LiveTransport {
   sendText(text: string): void;
   close(): void;
 }
+
