@@ -18,12 +18,14 @@ import { deriveTutorView } from './tutorView';
 import { usePracticeTutor } from './usePracticeTutor';
 import { useWideLayout } from './useWideLayout';
 import type { PracticeCompletionState, TutorPhase } from './types';
+import type { PracticeCorrectionRecord } from '../runtime';
 
 /** One lesson with Otti in three phases, all on the same animated speaking stage. */
-export function PracticeTutor({ mission, phase, review, onFinish, onClose }: {
+export function PracticeTutor({ mission, phase, review, onFinish, onClose, initialReviewNote }: {
   mission: PracticeMissionContract;
   phase: TutorPhase;
   review?: PracticeCompletionState;
+  initialReviewNote?: PracticeCorrectionRecord;
   onFinish?: (state: PracticeCompletionState, relaxed: boolean) => void;
   onClose: () => void;
 }) {
@@ -36,7 +38,8 @@ export function PracticeTutor({ mission, phase, review, onFinish, onClose }: {
   const [debugCopied, setDebugCopied] = useState(false);
   const showDebugTrace = phase === 'roleplay' && new URLSearchParams(window.location.search).get('debug') === '1';
   const tutor = usePracticeTutor({
-    mission, phase, locale: ar ? 'ar' : 'en', corrections: review?.corrections ?? [],
+    mission, phase, locale: ar ? 'ar' : 'en', corrections: [...(review?.corrections ?? []), ...(review?.improvements ?? [])],
+    initialReviewIssue: initialReviewNote,
     notesIncomplete: review ? notesIncomplete(review) : false,
     silenceDurationMs: relaxed ? 2400 : 1200, onTurn: runtime.invalidateHint,
   });
@@ -70,7 +73,7 @@ export function PracticeTutor({ mission, phase, review, onFinish, onClose }: {
         <strong>{copy.done}</strong></button>
       : <>
         <button type="button" className="fs-help-control tutor-action tutor-notes-toggle" onClick={() => setNotesOpen(true)}>
-          <strong>{copy.notes} ({review?.corrections?.length ?? 0})</strong></button>
+          <strong>{copy.notes} ({(review?.corrections?.length ?? 0) + (review?.improvements?.length ?? 0)})</strong></button>
         <Link className="fs-help-control tutor-action tutor-again-link" to={`/practice/mission/${mission.slug}`}>
           <strong>{copy.again}</strong></Link>
       </>;
