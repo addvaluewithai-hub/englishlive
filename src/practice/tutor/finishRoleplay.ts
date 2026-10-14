@@ -30,6 +30,7 @@ export async function finishRoleplay(session: TutorSession | null, finalized: ()
     session?.options.diagnostic({ event: 'finish_missing', ms: 0 });
     return { outcome: 'offline', waitedMs: 0 };
   }
+  if (session.holding) session.endHold(true);
   session.finishing = true;
   session.clearTimers();
   session.setMic(false);
@@ -37,7 +38,9 @@ export async function finishRoleplay(session: TutorSession | null, finalized: ()
   session.queue?.interrupt();
   session.performer.thinking();
   session.update({ status: 'listening', waiting: true });
-  session.live.endAudioStream();
+  // Manual activity turns were already closed on button release. Sending
+  // audioStreamEnd with manual VAD enabled is invalid per Gemini Live protocol.
+  if (!session.options.pushToTalk) session.live.endAudioStream();
   session.live.sendText(FINISH_NOTES_EVENT);
   session.options.diagnostic({ event: 'finish_requested' });
   const gone = () => session.closed || !session.live?.connected;
