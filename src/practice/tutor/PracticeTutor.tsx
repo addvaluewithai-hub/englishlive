@@ -33,6 +33,8 @@ export function PracticeTutor({ mission, phase, review, onFinish, onClose }: {
   const runtime = useConversationPracticeRuntime(mission.slug);
   const [relaxed, setRelaxed] = useState(new URLSearchParams(window.location.search).get('pace') === 'relaxed');
   const [notesOpen, setNotesOpen] = useState(false);
+  const [debugCopied, setDebugCopied] = useState(false);
+  const showDebugTrace = phase === 'roleplay' && new URLSearchParams(window.location.search).get('debug') === '1';
   const tutor = usePracticeTutor({
     mission, phase, locale: ar ? 'ar' : 'en', corrections: review?.corrections ?? [],
     notesIncomplete: review ? notesIncomplete(review) : false,
@@ -46,6 +48,14 @@ export function PracticeTutor({ mission, phase, review, onFinish, onClose }: {
   async function finish() {
     const result = await tutor.finish();
     if (result) onFinish?.({ ...result, support: runtime.getSupportSummary() }, relaxed);
+  }
+  async function copyLiveDebugTrace() {
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(tutor.getConnectionDiagnostics(), null, 2));
+      setDebugCopied(true);
+    } catch {
+      setDebugCopied(false);
+    }
   }
   function practise(index: number) {
     setNotesOpen(false);
@@ -94,6 +104,10 @@ export function PracticeTutor({ mission, phase, review, onFinish, onClose }: {
           {phase === 'roleplay' ? <PracticeHintCard runtime={runtime} learnerTurn={view.learnerTurn}
             onRequestHint={() => void runtime.requestHint([...tutor.turns.current])} /> : null}
         </TutorDock>
+        {showDebugTrace ? <button type="button" className="tutor-copy-details tutor-live-debug"
+          onClick={() => void copyLiveDebugTrace()}>
+          {debugCopied ? 'Live tool log copied' : 'Copy live tool log'}
+        </button> : null}
       </div>
       {side ? <div className="tutor-side">{side}</div> : null}
     </div>
