@@ -16,6 +16,8 @@ export type PracticeLanguageStatus = 'clean' | 'minor_error' | 'important_error'
 export type PracticeFeedbackKind = 'correction' | 'task_redirect' | 'repair';
 
 export type PracticeCorrectionRecord = {
+  /** Only used for optional suggestions in the review voice prompt. */
+  noteType?: 'error' | 'improvement';
   beatId: string;
   originalEn: string;
   betterEn: string;
