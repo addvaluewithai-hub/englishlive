@@ -29,7 +29,7 @@ export async function answerFunctionCall(call: FunctionCall, tools: readonly Liv
       issues: typeof value.issues === 'number' ? value.issues : undefined,
       goals: typeof value.goals === 'number' ? value.goals : undefined,
     });
-    respond([{ id: call.id, name: call.name, response: scheduledResponse(value, tool.declaration.behavior) }]);
+    respond([{ id: call.id, name: call.name, ...scheduledResponse(value, tool.declaration.behavior) }]);
   } catch (reason) {
     callbacks.onDiagnostic?.({ event: 'tool_error', name: call.name });
     respond([{ id: call.id, name: call.name, response: { error: reason instanceof Error ? reason.message : 'Tool failed.' } }]);
