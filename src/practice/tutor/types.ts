@@ -17,9 +17,11 @@ export const idleTutorState: TutorState = {
   status: 'idle', text: '', micOpen: false, level: 0, paused: false, waiting: false, error: null,
 };
 export type CountedDiagnostic = LiveDiagnostic & { count: number };
+export type TimedDiagnostic = LiveDiagnostic & { elapsedMs: number };
 /** Metadata only: no tokens, audio, learner words or rejected phrases. */
 export type NotebookTrace = {
   transport: CountedDiagnostic[];
+  timeline: TimedDiagnostic[];
   notebook: NotebookDiagnostics;
   finalReview: FinalReviewOutcome;
   finalWaitMs: number;
