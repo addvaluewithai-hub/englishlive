@@ -11,7 +11,10 @@ export async function answerFunctionCall(call: FunctionCall, tools: readonly Liv
   callbacks: LiveCallbacks, respond: (responses: FunctionResponse[]) => void) {
   callbacks.onDiagnostic?.({ event: 'tool_call', name: call.name });
   if (!call.name) return;
-  if (call.id && answered.has(call.id)) return;
+  if (call.id && answered.has(call.id)) {
+    callbacks.onDiagnostic?.({ event: 'duplicate_tool_call', name: call.name });
+    return;
+  }
   if (call.id) answered.add(call.id);
   const tool = tools.find((candidate) => candidate.declaration.name === call.name);
   if (!tool) {
@@ -21,7 +24,11 @@ export async function answerFunctionCall(call: FunctionCall, tools: readonly Liv
   }
   try {
     const value = responseObject(await tool.handle(call.args ?? {}));
-    callbacks.onDiagnostic?.({ event: 'tool_result', name: call.name, saved: value.saved === true });
+    callbacks.onDiagnostic?.({
+      event: 'tool_result', name: call.name, saved: value.saved === true,
+      issues: typeof value.issues === 'number' ? value.issues : undefined,
+      goals: typeof value.goals === 'number' ? value.goals : undefined,
+    });
     respond([{ id: call.id, name: call.name, response: scheduledResponse(value, tool.declaration.behavior) }]);
   } catch (reason) {
     callbacks.onDiagnostic?.({ event: 'tool_error', name: call.name });
