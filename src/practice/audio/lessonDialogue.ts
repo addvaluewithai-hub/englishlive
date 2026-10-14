@@ -19,7 +19,7 @@ export function lessonDialogue(mission: PracticeMissionContract) {
 
 export const LESSON_TTS_MODEL = 'gemini-3.8-flash-tts';
 
-/** Human-reviewed reference translations, index-aligned with canonical dialogue.
+/** Authored draft reference translations, index-aligned with canonical dialogue. Review before launch.
  * A missing translation stays hidden; never fabricate a translation to fill it.
  */
 const arabic: Record<string, string[]> = {
