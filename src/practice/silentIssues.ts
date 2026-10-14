@@ -59,7 +59,7 @@ export function createSilentIssueCollector(mission: PracticeMissionContract, onG
     declaration: {
       name: PROGRESS_TOOL,
       behavior: 'NON_BLOCKING',
-      description: 'Private notebook. After a learner turn, note authored goals they just showed and any clearly heard English mistakes. Never mention it aloud and never wait for it.',
+      description: 'Private notebook. After each learner turn, record clearly heard English mistakes and goals. For each issue explain WHY in Egyptian Arabic and simple English, stating the rule, not just the corrected phrase. Never mention it aloud or wait for it.',
       parameters: {
         type: 'OBJECT',
         properties: {
@@ -87,7 +87,7 @@ export function createSilentIssueCollector(mission: PracticeMissionContract, onG
     declaration: {
       name: FINAL_REVIEW_TOOL,
       behavior: 'NON_BLOCKING',
-      description: 'Call exactly once when the app sends PRIVATE_FINISH_NOTES. List EVERY clearly heard learner English mistake from the whole roleplay, small ones included, even ones already noted. Use the learner exact words.',
+      description: 'Call exactly once for PRIVATE_FINISH_NOTES. Return EVERY clearly heard learner mistake with exact original, corrected sentence and specific WHY/rule in Egyptian Arabic and English. Include small mistakes and ones already noted.',
       parameters: {
         type: 'OBJECT',
         properties: {
