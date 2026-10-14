@@ -183,9 +183,11 @@ try {
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true, `Practice composer ${locale}: horizontal overflow`);
     // Runtime pause/resume is covered by the media state-machine tests, not static visual mode.
     await page.goto(`${baseUrl}/practice/mission/b1-resolve-wrong-order`, { waitUntil: 'networkidle' });
-    const start = page.locator('.tutor-action.is-primary');
-    await page.locator('.tutor-pace-choice input').check();
-    await start.click();
+    const intro = page.locator('.practice-intro');
+    await intro.waitFor();
+    assert.equal(await page.locator('.practice-intro .fs-live-character-host').count(), 0, 'intro must not start Live or mount Otti');
+    await page.locator('.practice-intro-relaxed input').check();
+    await page.locator('.practice-intro-secondary').click();
     assert.equal(new URL(page.url()).search, '?pace=relaxed');
     await page.locator('.practice-live .practice-conversation-goals > span').first().waitFor();
     assert.equal(await page.locator('.practice-conversation-goals > span').count(), 4);
