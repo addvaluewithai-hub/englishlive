@@ -113,6 +113,7 @@ export class TutorSession {
 
   send(text: string) {
     if (!this.state.micOpen || this.state.paused || this.state.waiting) return;
+    this.options.diagnostic({ event: 'text_submitted' });
     this.log('learner', text);
     this.request(text);
   }
@@ -121,6 +122,7 @@ export class TutorSession {
   listen() {
     if (this.closed || this.finishing || this.serverTurnPending || this.state.paused) return;
     this.clearTimers();
+    if (!this.state.micOpen) this.options.diagnostic({ event: 'mic_open' });
     this.setMic(true);
     this.update({ status: 'listening', waiting: false });
     this.performer.listening();
@@ -162,6 +164,7 @@ export class TutorSession {
     this.generationDone = false;
     this.update({ waiting: true });
     this.live.endAudioStream();
+    this.options.diagnostic({ event: 'audio_submitted' });
     this.awaitReply();
   }
 
@@ -197,6 +200,7 @@ export class TutorSession {
   async close() {
     if (this.closed) return;
     this.closed = true;
+    this.options.diagnostic({ event: 'session_closed' });
     this.clearTimers();
     this.live?.close();
     this.performer.close();
