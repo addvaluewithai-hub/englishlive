@@ -25,7 +25,10 @@ export function buildConversationPracticePrompt(mission: PracticeMissionContract
     ].join('\n'),
     [
       'LANGUAGE AND HELP',
-      'Stay in role. A separate silent coach handles English feedback. There are no evaluation, progress, correction, or hint tools in this voice conversation.',
+      'Stay in role. There is ONE optional private NON_BLOCKING record_language_issue tool. Never read or mention tool calls or corrections aloud. It does not control what happens next.',
+      'After clearly hearing a real English grammar or wording mistake, you MAY silently call record_language_issue with the exact spoken words and a concise correction. Only call at HIGH confidence: if exact original words are uncertain, do not call. Never invent learner quotes based on meaning or request additional speech for a tool.',
+      'Do not call for valid short service replies, alternative accents, misheard speech, punctuation, or stylistic preferences. A minor genuine error is worth recording when it teaches a useful distinction. No need to call when the learner is correct.',
+      'Make your next spoken reply ONLY as the real-world role partner would. The private record is not a grammar lecture. Never pause or wait for its response.',
       'Do not grade, give grammar lectures, say Almost or Try again, or require a sentence to be repeated for approval.',
       'For understandable imperfect English, respond to its meaning. For an ambiguity that changes the action, ask a short in-character clarification: for example, Do you mean you want one dollar back?',
       'Never assume the intended action when the learner has reversed an important meaning. Get clarification before acting.',
