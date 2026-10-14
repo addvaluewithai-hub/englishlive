@@ -18,6 +18,8 @@ import { practiceMissionContractBySlug } from '../practice/missions/catalog';
 import { useConversationPracticeRuntime } from '../practice/conversationRuntime';
 import type { ConversationTurn } from '../practice/conversationTypes';
 import { buildConversationOpening } from '../practice/conversationPrompt';
+import { PracticeTurnAudioBuffer } from '../practice/turnAudioBuffer';
+import { transcribePracticeTurn } from '../practice/transcribeClient';
 import { LiveConversationHeader, LiveConversationStatus } from '../ui/product/LiveConversationChrome';
 
 type PracticeConversationTurn = ConversationTurn;
@@ -74,6 +76,13 @@ export function PracticeLiveScreen() {
   const [waitingForReply, setWaitingForReply] = useState(false);
   const conversationLogRef = useRef<PracticeConversationTurn[]>([]);
   const learnerTurnLoggedRef = useRef(false);
+  const turnAudio = useRef(new PracticeTurnAudioBuffer());
+  const micLevelRef = useRef(0);
+  const transcriptionGeneration = useRef(0);
+  const transcriptions = useRef(new Set<Promise<void>>());
+  const [speechDetected, setSpeechDetected] = useState(false);
+  const [transcribing, setTranscribing] = useState(0);
+  const [transcriptionError, setTranscriptionError] = useState(false);
   const copyResetTimerRef = useRef<number | null>(null);
 
   const [status, setStatus] = useState<LiveStatus>('idle');
@@ -106,12 +115,49 @@ export function PracticeLiveScreen() {
     }
   }
 
-  function flushLearnerTurn() {
-    if (learnerTurnLoggedRef.current) return;
-    const value = learnerDraftRef.current.trim();
-    if (!value) return;
-    appendConversationTurn('learner', value);
+  /**
+   * Close the learner's audio BEFORE Otti responds, preserving turn order.
+   * Reserve a blank slot; never send pending/failed audio as fabricated text
+   * to the coach. The independently transcribed words fill the slot later.
+   */
+  function flushCapturedSpeech() {
+    const { audioBase64, overflow } = turnAudio.current.takeWavBase64();
+    if (overflow) {
+      setTranscriptionError(true);
+      setSpeechDetected(false);
+      return;
+    }
+    if (!audioBase64) return;
+    const turn: PracticeConversationTurn = {
+      id: `turn-${conversationLogRef.current.length + 1}`, speaker: 'learner', text: '',
+    };
+    conversationLogRef.current.push(turn);
+    const generation = transcriptionGeneration.current;
+    const position = conversationLogRef.current.length;
     learnerTurnLoggedRef.current = true;
+    firstReplyPending.current = true;
+    replyHasAudio.current = false;
+    setSpeechDetected(false);
+    setTranscribing((n) => n + 1);
+    // Audio is only held by this pending request. No server storage is requested.
+    let task: Promise<void>;
+    task = transcribePracticeTurn(audioBase64).then((text) => {
+      if (generation !== transcriptionGeneration.current) return;
+      turn.text = text;
+      setLearnerDraft(text);
+      setTranscriptionError(false);
+      runtime.invalidateHint();
+      // Review only the conversation prefix ending at THIS learner turn.
+      // Later Otti speech or unresolved future audio cannot bias the coach.
+      const prefix = conversationLogRef.current.slice(0, position).filter((item) => item.text.trim());
+      void runtime.reviewTurn(prefix);
+    }).catch(() => {
+      if (generation === transcriptionGeneration.current) setTranscriptionError(true);
+    }).finally(() => {
+      transcriptions.current.delete(task);
+      if (generation === transcriptionGeneration.current) setTranscribing((n) => Math.max(0, n - 1));
+    });
+    transcriptions.current.add(task);
   }
 
   function flushTeacherTurn() {
@@ -122,9 +168,9 @@ export function PracticeLiveScreen() {
 
   function conversationText() {
     if (!mission) return '';
-    const turns = [...conversationLogRef.current];
-    const pendingLearner = learnerDraftRef.current.trim();
-    if (pendingLearner && !learnerTurnLoggedRef.current) turns.push({ id: 'pending-learner', speaker: 'learner', text: pendingLearner });
+    const turns = conversationLogRef.current.filter((turn) => turn.text.trim());
+    // Live input transcription is disabled; audio is rendered after Flash-Lite returns.
+    // Typed messages were already added when submitted.
     const pendingTeacher = teacherDraftRef.current.trim();
     const last = turns.at(-1);
     if (pendingTeacher && !(last?.speaker === 'otti' && last.text === pendingTeacher)) {
@@ -218,15 +264,18 @@ export function PracticeLiveScreen() {
   async function finishMission(completed: boolean) {
     if (ending || !mission) return;
     setEnding(true);
-    flushLearnerTurn();
+    flushCapturedSpeech();
     flushTeacherTurn();
     const support = runtime.getSupportSummary();
-    const corrections = runtime.getCorrectionSummary();
     await stopTransport();
+    // A bounded 24s request may still be running after voice stops.
+    // Resolve it before building the final transcript for the recap.
+    await Promise.allSettled([...transcriptions.current]);
+    const corrections = runtime.getCorrectionSummary();
     if (completed) {
       navigate(`/practice/complete/${mission.slug}`, {
         replace: true,
-        state: { support, corrections, durationSeconds: durationSeconds(), conversationText: conversationText(), transcript: [...conversationLogRef.current], achievedGoalIds: runtime.achievedGoalIds },
+        state: { support, corrections, durationSeconds: durationSeconds(), conversationText: conversationText(), transcript: conversationLogRef.current.filter((turn) => turn.text.trim()), achievedGoalIds: runtime.achievedGoalIds },
       });
     } else {
       navigate(`/practice/mission/${mission.slug}`, { replace: true });
@@ -243,6 +292,12 @@ export function PracticeLiveScreen() {
     learnerDraftRef.current = '';
     learnerTurnLoggedRef.current = false;
     conversationLogRef.current = [];
+    transcriptionGeneration.current++;
+    turnAudio.current.clear();
+    transcriptions.current.clear();
+    setSpeechDetected(false);
+    setTranscribing(0);
+    setTranscriptionError(false);
     setTeacherText('');
     setLearnerDraft('');
     setConversationCopied(false);
@@ -267,6 +322,7 @@ export function PracticeLiveScreen() {
       const queue = new PcmPlaybackQueue({
         onMouthPose: (pose) => characterPerformance.setMouth(pose),
         onSpeechStart: () => {
+          flushCapturedSpeech();
           learnerDraftRef.current = '';
           setLearnerDraft('');
           setLearnerMicEnabled(false);
@@ -285,17 +341,13 @@ export function PracticeLiveScreen() {
 
       const live = new GeminiLiveTransport({
         onStatus: setStatus,
-        onInputTranscript: (text) => {
-          armReplyTimeout();
-          if (!learnerDraftRef.current.trim()) learnerTurnLoggedRef.current = false;
-          const next = appendTranscript(learnerDraftRef.current, text);
-          learnerDraftRef.current = next;
-          setLearnerDraft(next);
-        },
+        // Practice deliberately disables Live input transcription; this callback
+        // is defensive only if the provider sends unexpected text.
+        onInputTranscript: () => undefined,
         onOutputTranscript: (text) => {
           if (pausedRef.current) { repeatAfterPause.current = true; return; }
           if (manualInterrupt.current) return;
-          flushLearnerTurn();
+          flushCapturedSpeech();
           setLearnerMicEnabled(false);
           queue.pushTranscript(text);
           const next = appendTranscript(teacherDraftRef.current, text);
@@ -305,7 +357,7 @@ export function PracticeLiveScreen() {
         onAudio: (data, mimeType) => {
           if (pausedRef.current) { repeatAfterPause.current = true; return; }
           if (manualInterrupt.current) return;
-          flushLearnerTurn();
+          flushCapturedSpeech();
           clearReplyTimeout();
           replyHasAudio.current = true;
           setLearnerMicEnabled(false);
@@ -353,13 +405,21 @@ export function PracticeLiveScreen() {
 
       await queue.unlock();
       if (session !== sessionGeneration.current) { await queue.close(); return; }
-      await live.connect(prompt, { voiceName: characterConfig.voiceName ?? undefined, silenceDurationMs });
+      await live.connect(prompt, { voiceName: characterConfig.voiceName ?? undefined, silenceDurationMs, disableInputTranscription: true });
       if (session !== sessionGeneration.current) { live.close(); await queue.close(); return; }
       startedAtMs.current = Date.now();
       setElapsedSeconds(0);
-      await mic.start((chunk) => live.sendAudio(chunk), (level) => {
+      await mic.start((chunk) => {
+        // Feed EXACT same mic PCM into both Otti and the bounded local recorder.
+        live.sendAudio(chunk);
+        turnAudio.current.push(chunk, micLevelRef.current);
+      }, (level) => {
+        micLevelRef.current = level;
         setMicLevel(level);
-        if (level > 0.045) lastSpeechAt.current = performance.now();
+        if (level > 0.045) {
+          lastSpeechAt.current = performance.now();
+          if (!turnAudio.current.hasSpeech) setSpeechDetected(true);
+        }
       });
       if (session !== sessionGeneration.current) { await mic.stop(); return; }
       setWaitingForReply(true);
@@ -390,6 +450,8 @@ export function PracticeLiveScreen() {
     const clock = window.setInterval(() => setElapsedSeconds(durationSeconds()), 1000);
     return () => {
       sessionGeneration.current++;
+      transcriptionGeneration.current++;
+      turnAudio.current.clear();
       clearReplyTimeout();
       window.clearTimeout(startTimer);
       window.clearInterval(clock);
@@ -434,12 +496,13 @@ export function PracticeLiveScreen() {
 
   function requestContextualHint() {
     if (visualQa || !transport.current?.connected || paused || waitingForReply) return;
-    void runtime.requestHint([...conversationLogRef.current]);
+    void runtime.requestHint(conversationLogRef.current.filter((turn) => turn.text.trim()));
   }
 
   function finishSpeaking() {
-    if (!transport.current?.connected || pausedRef.current || !learnerDraftRef.current.trim()) return;
+    if (!transport.current?.connected || pausedRef.current || !turnAudio.current.hasSpeech) return;
     setLearnerMicEnabled(false);
+    flushCapturedSpeech();
     transport.current.endAudioStream();
     armReplyTimeout();
     setWaitingForReply(true);
@@ -473,6 +536,9 @@ export function PracticeLiveScreen() {
     }
     const live = transport.current;
     if (!live?.connected || status !== 'listening' || !micOpen) return;
+    // Typed input bypasses the audio transcriber; discard idle mic noise.
+    turnAudio.current.clear();
+    setSpeechDetected(false);
     appendConversationTurn('learner', value);
     learnerDraftRef.current = value;
     lastSpeechAt.current = performance.now();
@@ -581,7 +647,7 @@ export function PracticeLiveScreen() {
           <button type="button" onClick={togglePause} disabled={connecting || ending || waitingForReply}>
             {paused ? (locale === 'ar' ? 'نكمل' : 'Resume') : (locale === 'ar' ? 'وقفة للمراجعة' : 'Pause to review')}
           </button>
-          <button type="button" onClick={finishSpeaking} disabled={!learnerTurn || !learnerDraft.trim()}>
+          <button type="button" onClick={finishSpeaking} disabled={!learnerTurn || !speechDetected}>
             {locale === 'ar' ? 'خلصت كلامي' : 'Done speaking'}
           </button>
           <button type="button" onClick={() => void finishMission(true)} disabled={ending}>
@@ -649,6 +715,8 @@ export function PracticeLiveScreen() {
         </div>
 
         <div className="fs-mic-meter" aria-hidden="true"><span style={{ width: `${Math.max(learnerTurn ? 3 : 0, micLevel * 100)}%` }} /></div>
+        {transcribing > 0 ? <p className="practice-coach-status" role="status">{locale === 'ar' ? 'بنكتب كلامك من التسجيل الصوتي…' : 'Transcribing your voice…'}</p> : null}
+        {transcriptionError ? <p className="practice-coach-status" role="alert">{locale === 'ar' ? 'تعذر تفريغ جزء من كلامك. مش هنعمل تصحيح من نص مش موجود.' : 'Some speech could not be transcribed. No correction will be invented.'}</p> : null}
         {runtime.coachError ? <p className="practice-coach-status">{locale === 'ar' ? 'الملاحظات مش متاحة حاليًا. كمل كلامك، ونحاول تاني في المراجعة.' : 'Feedback is unavailable for now. Keep talking; we will retry at review.'}</p> : null}
         {error ? <p className="fs-live-error" role="alert">{error}</p> : null}
       </div>
