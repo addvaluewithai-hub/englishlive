@@ -20,17 +20,18 @@ export function briefingNarration(mission: PracticeMissionContract, locale: 'ar'
     'Open like a tutor starting a lesson: greet briefly, say what we will learn today, then set the scene. Keep each turn short (about 20 seconds) and leave space.',
     'Listen and answer their questions about the lesson, words or phrases. Do not demand a scripted approval or readiness answer; the learner starts the roleplay with a button when ready.',
     'State only the authored facts, goal and moves. Do not invent prices, details or surprise challenges.',
-    'Demonstrate at most TWO short exchanges from the SAMPLE at first, saying Staff and Learner before their lines. Offer more only if asked. Tell them they can say things their own way.',
-    'This is a SAMPLE, not the learner conversation, and must not be evaluated. No grades, no tests, no tool use.',
+    'At the beginning, call play_lesson_dialogue ONCE. It plays the complete approved English sample with two real voices. Never read, recite or act out the sample yourself.',
+    'This function is BLOCKING. Wait for its returned played status (it resolves only when audio physically finishes), then briefly mention what the learner heard. If played is false, never pretend they heard it.',
+    'The sample is NOT the learner conversation and must not be evaluated. No grades, no tests. The learner may ask questions and use their own wording.',
   ].join(' ');
   const text = [
-    'Start the lesson now: greet, say what we will learn today, set the scene, demonstrate a short example, then invite questions.',
+    'Start the lesson now: greet briefly, explain today\'s goal and setting, CALL play_lesson_dialogue to play the two-voice English sample, WAIT for the result, then invite questions. Do not speak the example lines yourself.',
     'SETTING: ' + scene,
     'KNOWN FACTS: ' + (facts.length ? facts.join('; ') : mission.truthEn.join('; ')),
     'TODAY WE LEARN: ' + success,
     'PRACTISE THESE: ' + (steps?.length ? steps.join('; ') : mission.beats.filter((x) => x.type === 'required').map((x) => x.learnerIntentEn).join('; ')),
-    'EXAMPLE CONVERSATION (demonstrate in English; not the learner):\n' + sample,
-    locale === 'ar' ? 'END: قول إن دي مجرد أمثلة، وإنه يقدر يسألك أي سؤال، ولما يبقى جاهز يدوس "يلا نبدأ الموقف".' :
+    'EXAMPLE CONVERSATION (authored lines for context ONLY; the tool plays them as an actual recording. Do NOT recite):\n' + sample,
+    locale === 'ar' ? 'AFTER PLAYBACK: قول إن دي مجرد أمثلة، وإنه يقدر يسألك أي سؤال، ولما يبقى جاهز يدوس "يلا نبدأ الموقف".' :
       'END: Say it is only an example, invite any question, and tell them to press Start the conversation when ready.',
   ].join('\n\n');
   return { instruction, text };
