@@ -53,8 +53,6 @@ export function App() {
     || matchPath('/progress', location.pathname)
     || matchPath('/practice', location.pathname)
     || matchPath('/practice/:levelId/world/:worldId', location.pathname)
-    || matchPath('/practice/mission/:missionId', location.pathname)
-    || matchPath('/practice/complete/:missionId', location.pathname)
     || matchPath('/speak', location.pathname),
   );
 
@@ -79,6 +77,8 @@ export function App() {
 
   const usesLiveConversationLayout = Boolean(
     matchPath('/practice/live/:missionId', location.pathname)
+    || matchPath('/practice/mission/:missionId', location.pathname)
+    || matchPath('/practice/complete/:missionId', location.pathname)
     || matchPath('/speak/live/:scenarioId', location.pathname)
     || isFreeSpeakSessionPath,
   );
@@ -87,6 +87,8 @@ export function App() {
     return (
       <LiveConversationLayout>
         <Routes>
+          <Route path="/practice/mission/:missionId" element={<RequireAuth><PracticeMissionScreen /></RequireAuth>} />
+          <Route path="/practice/complete/:missionId" element={<RequireAuth><PracticeCompleteScreen /></RequireAuth>} />
           <Route path="/practice/live/:missionId" element={<RequireAuth><PracticeLiveScreen /></RequireAuth>} />
           <Route path="/speak/live/:scenarioId" element={<RequireAuth><SpeakingLiveEntryScreen /></RequireAuth>} />
           <Route path="/speak/:modeId" element={<RequireAuth><FreeSpeakSessionScreen /></RequireAuth>} />

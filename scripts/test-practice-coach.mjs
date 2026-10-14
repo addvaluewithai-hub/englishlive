@@ -142,7 +142,7 @@ test('authenticated HTTP flow verifies a JWT, validates input, and returns norma
 
 test('Practice Live declares NON_BLOCKING silent language and progress tools, other modes stay tool-free', async (t) => {
   const { createServer } = await import('vite');
-  const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' });
+  const server = await createServer({ server: { middlewareMode: true, hmr: false }, optimizeDeps: { noDiscovery: true, include: [] }, appType: 'custom' });
   const previousWindow = globalThis.window;
   const PreviousWebSocket = globalThis.WebSocket;
   const sockets = [];
@@ -166,7 +166,9 @@ test('Practice Live declares NON_BLOCKING silent language and progress tools, ot
     await server.close();
   });
   const { GeminiLiveTransport } = await server.ssrLoadModule('/src/live/GeminiLiveTransport.ts');
-  const callbacks = { onStatus() {}, onInputTranscript() {}, onOutputTranscript() {}, onAudio() {}, onInterrupted() {}, onTurnComplete() {}, onError(message) { throw new Error(message); } };
+  const diagnostics = [];
+  let audioFrames = 0;
+  const callbacks = { onDiagnostic(event) { diagnostics.push(event); }, onStatus() {}, onInputTranscript() {}, onOutputTranscript() {}, onAudio() { audioFrames++; }, onInterrupted() {}, onTurnComplete() {}, onError(message) { throw new Error(message); } };
   const collector = createSilentIssueCollector(mission);
   for (const [config, expectedSilence] of [[{ silenceDurationMs: 1200, disableInputTranscription: true }, 1200], [{ silenceDurationMs: 2400, disableInputTranscription: true }, 2400], [{}, 3600]]) {
     const enabled = config.disableInputTranscription === true;
@@ -183,6 +185,7 @@ test('Practice Live declares NON_BLOCKING silent language and progress tools, ot
       assert.equal(setup.tools[0].functionDeclarations[1].behavior, 'NON_BLOCKING');
       // Fake provider emits the tool request while audio can keep streaming.
       socket.dispatchEvent(new MessageEvent('message', { data: JSON.stringify({
+        serverContent: { modelTurn: { parts: [{ inlineData: { data: 'AAAA', mimeType: 'audio/pcm;rate=24000' } }] } },
         toolCall: { functionCalls: [{ id: 'error-1', name: 'record_language_issue', args: {
           original_en: 'I want small one', better_en: 'I want a small one',
           explanation_ar: 'ناقص a', explanation_en: 'Add a before small one',
@@ -190,6 +193,10 @@ test('Practice Live declares NON_BLOCKING silent language and progress tools, ot
         } }] },
       }) }));
       await new Promise((resolve) => setTimeout(resolve, 0));
+      await live.flushPendingMessages();
+      assert.ok(audioFrames > 0, 'audio in the same frame as a tool call must still flow');
+      assert.ok(diagnostics.some((event) => event.event === 'setup_accepted'));
+      assert.ok(diagnostics.some((event) => event.event === 'tool_result' && event.name === 'record_language_issue'));
       assert.equal(collector.getIssues().length, 1);
       assert.equal(socket.sent.at(-1).toolResponse.functionResponses[0].response.scheduling, 'SILENT');
       socket.dispatchEvent(new MessageEvent('message', { data: JSON.stringify({

@@ -2,7 +2,6 @@ import type { LiveClientTool } from '../live/tools';
 import type { PracticeCorrectionRecord } from './runtime';
 import type { PracticeMissionContract } from './types';
 
-const MAX_ISSUES = 12;
 const LIMIT = 240;
 
 function clean(value: unknown, max = LIMIT) {
@@ -17,6 +16,13 @@ function clean(value: unknown, max = LIMIT) {
 export function createSilentIssueCollector(mission: PracticeMissionContract, onGoalChange?: (observedGoalIds: string[]) => void) {
   const issues: PracticeCorrectionRecord[] = [];
   let rejected = 0;
+  let calls = 0;
+  const reasons: Record<string, number> = {};
+  const reject = (reason: string) => {
+    rejected++;
+    reasons[reason] = (reasons[reason] ?? 0) + 1;
+    return { saved: false };
+  };
   const validBeats = new Set(mission.beats.map((beat) => beat.id));
   const allowedGoals = new Set(mission.beats.filter((beat) => beat.type === 'required').map((beat) => beat.id));
   const observedGoals = new Set<string>();
@@ -40,6 +46,7 @@ export function createSilentIssueCollector(mission: PracticeMissionContract, onG
       },
     },
     handle(args) {
+      calls++;
       const originalEn = clean(args.original_en, 220);
       const betterEn = clean(args.better_en, 220);
       const feedbackAr = clean(args.explanation_ar, 260);
@@ -47,12 +54,13 @@ export function createSilentIssueCollector(mission: PracticeMissionContract, onG
       const confidence = clean(args.confidence, 20).toLowerCase();
       const beat = clean(args.beat_id, 80);
       const beatId = validBeats.has(beat) ? beat : 'conversation';
-      const key = originalEn.toLowerCase().replace(/[^a-z0-9]+/g, '');
-      if (confidence !== 'high' || !originalEn || !betterEn || !feedbackAr || !feedbackEn ||
-          originalEn.toLowerCase() === betterEn.toLowerCase() || !key || issues.length >= MAX_ISSUES ||
-          issues.some((entry) => entry.originalEn.toLowerCase().replace(/[^a-z0-9]+/g, '') === key)) {
-        rejected++;
-        return { saved: false };
+      const normalize = (text: string) => text.toLowerCase().replace(/\s+/g, ' ').trim();
+      const key = normalize(originalEn) + '→' + normalize(betterEn);
+      if (confidence !== 'high') return reject('confidence');
+      if (!originalEn || !betterEn || !feedbackAr || !feedbackEn) return reject('missing_fields');
+      if (originalEn.toLowerCase() === betterEn.toLowerCase()) return reject('unchanged');
+      if (issues.some((entry) => normalize(entry.originalEn) + '→' + normalize(entry.betterEn) === key)) {
+        return reject('repeat');
       }
       issues.push({ beatId, originalEn, betterEn, feedbackAr, feedbackEn, requiresRetry: false });
       return { saved: true };
@@ -98,6 +106,7 @@ export function createSilentIssueCollector(mission: PracticeMissionContract, onG
     getIssues: () => issues.map((issue) => ({ ...issue })),
     getObservedGoalIds: () => [...observedGoals],
     getRejectedCount: () => rejected,
-    clear() { issues.length = 0; observedGoals.clear(); rejected = 0; onGoalChange?.([]); },
+    getDiagnostics: () => ({ calls, saved: issues.length, rejected, reasons: { ...reasons } }),
+    clear() { issues.length = 0; observedGoals.clear(); rejected = 0; calls = 0; for (const key of Object.keys(reasons)) delete reasons[key]; onGoalChange?.([]); },
   };
 }

@@ -1,30 +1,21 @@
 import { useState } from 'react';
-import { Link, useLocation, useParams } from 'react-router-dom';
+import { Link, useLocation, useParams, useNavigate } from 'react-router-dom';
 import { OttiMark } from '../character/otti/OttiMark';
 import { useI18n } from '../i18n/LocaleProvider';
 import { practiceJourneyCopy } from '../practice/journeyCopy';
 import { practiceMissionContractBySlug } from '../practice/missions/catalog';
-import { PracticeOttiNarrator } from '../practice/PracticeOttiNarrator';
-import { reviewNarration } from '../practice/ottiNarration';
-import type { PracticeCorrectionRecord, PracticeSupportSummary } from '../practice/runtime';
+import { PracticeTutor } from '../practice/tutor/PracticeTutor';
+import type { PracticeCompletionState } from '../practice/tutor/types';
 import styles from './PracticeJourney.module.css';
 
-type CompletionState = {
-  support?: PracticeSupportSummary;
-  corrections?: PracticeCorrectionRecord[];
-  achievedGoalIds?: string[];
-  durationSeconds?: number;
-  conversationText?: string;
-  recordedByOtti?: boolean;
-};
-
 export function PracticeCompleteScreen() {
+  const navigate = useNavigate();
   const { locale, number } = useI18n();
   const copy = practiceJourneyCopy[locale].complete;
   const { missionId } = useParams();
   const mission = practiceMissionContractBySlug(missionId);
   const { state: navigationState } = useLocation();
-  const state = (navigationState ?? {}) as CompletionState;
+  const state = (navigationState ?? {}) as PracticeCompletionState;
   const support = state.support ?? { intentHints: 0, usefulLanguageReveals: 0, fullHelpReveals: 0 };
   // Only high-confidence Live tool observations appear. No separate Coach API call.
   const corrections = state.recordedByOtti && Array.isArray(state.corrections) ? state.corrections : [];
@@ -49,6 +40,7 @@ export function PracticeCompleteScreen() {
       ]),
       ...(corrections.length ? [] : ['No confident language issues were recorded. This does not mean the speech was error-free.']),
       'Help opened: ' + support.intentHints,
+      'Notebook diagnostics: ' + JSON.stringify(state.diagnostics ?? 'unavailable'),
     ].join('\n');
     try {
       await navigator.clipboard.writeText(report);
@@ -57,17 +49,25 @@ export function PracticeCompleteScreen() {
   }
 
   if (!mission) return <section className={styles.root}><h1>{copy.missingTitle}</h1><Link to="/practice">{copy.backPractice}</Link></section>;
-  const narration = reviewNarration(mission, locale === 'ar' ? 'ar' : 'en', corrections);
   return (
+    <>
+      {state.recordedByOtti ? <PracticeTutor key={mission.slug} mission={mission} phase="review"
+        corrections={corrections} observedGoalIds={achievedGoalIds}
+        onClose={() => navigate(`/practice/${mission.level}/world/${mission.worldId}`)} /> : null}
     <section className={styles.root + ' practice-complete'}>
       <div className="practice-complete-mark"><OttiMark /></div>
       <span className="practice-eyebrow">{locale === 'ar' ? 'Otti معاك بعد المحادثة' : 'Otti after your conversation'}</span>
       <h1>{locale === 'ar' ? 'نراجع كلامك سوا' : 'Your speaking review'}</h1>
-      <p>{locale === 'ar' ? 'اسمع Otti بيشرح الملاحظات اللي سجّلها وقت الحوار، وشوف التقرير المكتوب تحت.' :
-        'Hear Otti explain the mistakes he noted during the conversation and read the written report below.'}</p>
+      <p>{locale === 'ar' ? 'ناقش الملاحظات مع Otti واسأله وجرّب الجمل الصح. التقرير المكتوب موجود تحت.' :
+        'Discuss the saved notes with Otti, ask questions, and practise corrected phrases. Your written report is below.'}</p>
       {state.recordedByOtti ? (
         <>
-          <PracticeOttiNarrator purpose="review" instruction={narration.instruction} message={narration.text} />
+          {state.diagnostics ? <details className="practice-review-evidence-note">
+            <summary>{locale === 'ar' ? 'تفاصيل تسجيل الملاحظات' : 'Notebook diagnostics'}</summary>
+            <pre dir="ltr">{JSON.stringify(state.diagnostics, null, 2)}</pre>
+            {!state.diagnostics.collector.calls ? <p>{locale === 'ar' ? 'موصلناش استدعاءات تسجيل أخطاء من Otti. ده مش معناه إن الكلام من غير أخطاء.' :
+              'No issue tool calls reached the notebook. This does not mean the speech was error-free.'}</p> : null}
+          </details> : null}
           <div className="practice-conversation-goals is-recap" aria-label={locale === 'ar' ? 'فرص الكلام اللي ظهرت' : 'Observed speaking opportunities'}>
             {goals.map((goal) => <span key={goal.id} className={achievedGoalIds.includes(goal.id) ? 'is-observed' : ''}>
               <span aria-hidden="true">{achievedGoalIds.includes(goal.id) ? '✓' : '○'}</span>{' '}
@@ -111,5 +111,6 @@ export function PracticeCompleteScreen() {
         <Link className="practice-complete-secondary" to={'/practice/' + mission.level + '/world/' + mission.worldId}>{copy.another}</Link>
       </div>
     </section>
+    </>
   );
 }

@@ -1,0 +1,90 @@
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import { createServer } from 'vite';
+
+// Exercise the actual session/callback state machine with fake media, not a real provider.
+test('animated tutor runtime: interactive turns, pause, interruption, drain, retry notes and cancellation', async (t) => {
+  const server = await createServer({ server: { middlewareMode: true, hmr: false }, optimizeDeps: { noDiscovery: true, include: [] }, appType: 'custom' });
+  t.after(() => server.close());
+  const { TutorSession } = await server.ssrLoadModule('/src/practice/tutor/TutorSession.ts');
+  const { GeminiLiveTransport } = await server.ssrLoadModule('/src/live/GeminiLiveTransport.ts');
+  const { MicrophonePcmStream } = await server.ssrLoadModule('/src/audio/MicrophonePcmStream.ts');
+  const { PcmPlaybackQueue } = await server.ssrLoadModule('/src/audio/PcmPlaybackQueue.ts');
+  const { createSilentIssueCollector } = await server.ssrLoadModule('/src/practice/silentIssues.ts');
+  const { practiceMissionContractBySlug } = await server.ssrLoadModule('/src/practice/missions/catalog.ts');
+  const priorWindow = globalThis.window;
+  globalThis.window = { setTimeout, clearTimeout };
+  t.after(() => { if (priorWindow === undefined) delete globalThis.window; else globalThis.window = priorWindow; });
+  t.mock.method(globalThis, 'fetch', async () => Response.json({ source: 'neon', character: {
+    slug: 'otti', revisionId: 'published-voice', content: { voiceName: 'Puck' },
+  } }));
+  const connects = [];
+  const texts = [];
+  let stopCount = 0;
+  let closeCount = 0;
+  t.mock.method(GeminiLiveTransport.prototype, 'connect', async function (instruction, config) {
+    connects.push({ instruction, config }); this.callbacks.onStatus('listening');
+  });
+  const connectedDescriptor = Object.getOwnPropertyDescriptor(GeminiLiveTransport.prototype, 'connected');
+  Object.defineProperty(GeminiLiveTransport.prototype, 'connected', { configurable: true, get: () => true });
+  t.after(() => Object.defineProperty(GeminiLiveTransport.prototype, 'connected', connectedDescriptor));
+  t.mock.method(GeminiLiveTransport.prototype, 'sendText', (text) => texts.push(text));
+  t.mock.method(GeminiLiveTransport.prototype, 'endAudioStream', () => {});
+  t.mock.method(GeminiLiveTransport.prototype, 'close', () => { closeCount++; });
+  t.mock.method(MicrophonePcmStream.prototype, 'start', async () => {});
+  t.mock.method(MicrophonePcmStream.prototype, 'stop', async () => { stopCount++; });
+  t.mock.method(PcmPlaybackQueue.prototype, 'unlock', async () => {});
+  t.mock.method(PcmPlaybackQueue.prototype, 'close', async () => {});
+  t.mock.method(PcmPlaybackQueue.prototype, 'interrupt', () => {});
+  t.mock.method(PcmPlaybackQueue.prototype, 'enqueue', async () => {});
+  t.mock.method(PcmPlaybackQueue.prototype, 'markTurnComplete', () => {});
+  const collector = createSilentIssueCollector(practiceMissionContractBySlug('a2-order-with-preferences'));
+  const turns = [];
+  const make = () => new TutorSession({ host: () => null, update() {}, turns, onTurn() {},
+    diagnostic() {}, tools: [collector.tool, collector.progressTool] });
+  const session = make();
+  await session.start('review instructions', 'explain one correction', 2400);
+  assert.equal(connects[0].config.voiceName, 'Charon', 'use the same published-character normalization as Speaking');
+  assert.equal(connects[0].config.disableInputTranscription, true);
+  const callbacks = session.live.callbacks;
+  callbacks.onOutputTranscript('Try: I want a small one.');
+  callbacks.onAudio('AAAA', 'audio/pcm;rate=24000');
+  callbacks.onTurnComplete();
+  assert.equal(session.state.micOpen, false, 'server completion must not open mic before audible playback finishes');
+  session.queue.callbacks.onTurnComplete();
+  assert.equal(session.state.micOpen, true);
+  session.send('Why do I need a?');
+  assert.equal(texts.at(-1), 'Why do I need a?');
+  callbacks.onOutputTranscript('Because one is countable.');
+  callbacks.onTurnComplete();
+  assert.equal(session.state.micOpen, true, 'text-only response must not deadlock');
+  session.togglePause();
+  assert.equal(session.state.micOpen, false);
+  session.togglePause();
+  assert.equal(session.state.micOpen, true);
+  session.update({ status: 'speaking' });
+  session.interrupt();
+  assert.equal(session.state.micOpen, true);
+  callbacks.onInterrupted();
+  collector.tool.handle({ original_en: 'I want small one', better_en: 'I want a small one',
+    explanation_en: 'Use an article.', explanation_ar: 'ناقص a', confidence: 'high' });
+  session.serverTurnPending = true;
+  const finish = session.settle();
+  setTimeout(() => callbacks.onTurnComplete(), 10);
+  assert.equal(await finish, false);
+  assert.equal(session.state.micOpen, false, 'finish cannot reopen mic');
+  await session.close();
+  callbacks.onOutputTranscript('late frame');
+  assert.notEqual(session.state.text, 'late frame');
+  const retry = make();
+  await retry.start('retry', 'resume', 1200);
+  assert.equal(collector.getIssues().length, 1, 'connection retry retains the external notebook');
+  await retry.close();
+  assert.equal(stopCount, 2);
+  assert.equal(closeCount, 2);
+  const cancelled = make();
+  const starting = cancelled.start('intro', 'introduce', 1200);
+  await cancelled.close();
+  await starting;
+  assert.equal(connects.length, 2, 'cancel during initial await must not open a new socket');
+});

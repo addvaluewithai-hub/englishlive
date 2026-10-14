@@ -1,3 +1,5 @@
+import type { FunctionCall, FunctionResponse, ServerMessage } from './liveProtocol';
+import { decodeSocketMessage, responseObject, scheduledResponse, buildLiveSetup } from './liveProtocol';
 import { apiUrl } from '../config/api';
 import { DEFAULT_LIVE_MODEL, isLiveModel, type LiveModel } from './models';
 import type { LiveClientTool } from './tools';
@@ -6,65 +8,6 @@ import type { LiveCallbacks, LiveSessionConfig, LiveTokenResponse, LiveTransport
 const LIVE_ENDPOINT =
   'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContentConstrained';
 const SETUP_TIMEOUT_MS = 12_000;
-
-interface FunctionCall {
-  id?: string;
-  name: string;
-  args?: Record<string, unknown>;
-}
-
-interface ServerMessage {
-  error?: { message?: string };
-  setupComplete?: Record<string, never>;
-  serverContent?: {
-    interrupted?: boolean;
-    generationComplete?: boolean;
-    turnComplete?: boolean;
-    inputTranscription?: { text?: string };
-    outputTranscription?: { text?: string };
-    modelTurn?: {
-      parts?: Array<{
-        inlineData?: { data?: string; mimeType?: string };
-        text?: string;
-      }>;
-    };
-  };
-  toolCall?: { functionCalls?: FunctionCall[] };
-  sessionResumptionUpdate?: { newHandle?: string; resumable?: boolean };
-  goAway?: { timeLeft?: string };
-}
-
-interface FunctionResponse {
-  id?: string;
-  name: string;
-  response: Record<string, unknown>;
-}
-
-async function decodeSocketMessage(data: unknown): Promise<string> {
-  if (typeof data === 'string') return data;
-  if (data instanceof Blob) return data.text();
-  if (data instanceof ArrayBuffer) return new TextDecoder().decode(data);
-  if (ArrayBuffer.isView(data)) {
-    return new TextDecoder().decode(new Uint8Array(data.buffer, data.byteOffset, data.byteLength));
-  }
-  throw new Error(`Unsupported Gemini Live message: ${Object.prototype.toString.call(data)}`);
-}
-
-function responseObject(value: unknown): Record<string, unknown> {
-  if (value && typeof value === 'object' && !Array.isArray(value)) {
-    return value as Record<string, unknown>;
-  }
-  return { result: value == null ? 'ok' : String(value) };
-}
-
-function scheduledResponse(
-  value: Record<string, unknown>,
-  behavior: 'BLOCKING' | 'NON_BLOCKING' | undefined,
-) {
-  return behavior === 'NON_BLOCKING'
-    ? { ...value, scheduling: 'SILENT' }
-    : value;
-}
 
 export class GeminiLiveTransport implements LiveTransport {
   private model: LiveModel = DEFAULT_LIVE_MODEL;
@@ -184,50 +127,8 @@ export class GeminiLiveTransport implements LiveTransport {
           socket.close(1000, 'setup timeout');
         }, SETUP_TIMEOUT_MS);
 
-        const functionDeclarations = this.toolDeclarations();
-        const generationConfig: Record<string, unknown> = {
-          responseModalities: ['AUDIO'],
-        };
-        if (this.sessionConfig.voiceName) {
-          generationConfig.speechConfig = {
-            voiceConfig: {
-              prebuiltVoiceConfig: {
-                voiceName: this.sessionConfig.voiceName,
-              },
-            },
-          };
-        }
-
-        const setup: Record<string, unknown> = {
-          model: `models/${this.model}`,
-          generationConfig,
-          systemInstruction: {
-            parts: [{
-              text: this.systemInstruction || 'You are a warm English conversation partner. Keep the conversation natural and concise.',
-            }],
-          },
-          realtimeInputConfig: {
-            activityHandling: 'START_OF_ACTIVITY_INTERRUPTS',
-            automaticActivityDetection: {
-              disabled: false,
-              startOfSpeechSensitivity: 'START_SENSITIVITY_HIGH',
-              endOfSpeechSensitivity: 'END_SENSITIVITY_LOW',
-              prefixPaddingMs: 120,
-              // A language learner may pause mid-sentence while searching for words.
-              // Keep those pauses inside the same turn rather than rushing to answer.
-              silenceDurationMs: this.sessionConfig.silenceDurationMs ?? 3600,
-            },
-            turnCoverage: 'TURN_INCLUDES_ONLY_ACTIVITY',
-          },
-          ...(!this.sessionConfig.disableInputTranscription ? { inputAudioTranscription: { languageCodes: ['en-US', 'ar-EG'] } } : {}),
-          outputAudioTranscription: {},
-          contextWindowCompression: { slidingWindow: {} },
-          sessionResumption: this.resumptionHandle ? { handle: this.resumptionHandle } : {},
-        };
-        if (functionDeclarations.length) {
-          setup.tools = [{ functionDeclarations }];
-        }
-
+        const setup = buildLiveSetup(this.model, this.systemInstruction, this.sessionConfig, this.toolDeclarations(), this.resumptionHandle);
+        this.callbacks.onDiagnostic?.({ event: 'setup_sent', model: this.model, apiVersion: 'v1beta', tools: this.customTools.map((tool) => tool.declaration.name) });
         this.send({ setup });
       });
 
@@ -239,6 +140,7 @@ export class GeminiLiveTransport implements LiveTransport {
             if (message.error) throw new Error(message.error.message || 'Gemini Live returned an error.');
 
             if (message.setupComplete !== undefined) {
+              this.callbacks.onDiagnostic?.({ event: 'setup_accepted' });
               this.setupComplete = true;
               this.callbacks.onStatus('listening');
               resolveSetup();
@@ -298,25 +200,33 @@ export class GeminiLiveTransport implements LiveTransport {
   }
 
   private async handleFunctionCall(call: FunctionCall) {
+    this.callbacks.onDiagnostic?.({ event: 'tool_call', name: call.name });
     if (!call.name) return;
     if (call.id && this.acknowledgedCallIds.has(call.id)) return;
     if (call.id) this.acknowledgedCallIds.add(call.id);
     const tool = this.customTools.find((candidate) => candidate.declaration.name === call.name);
     if (!tool) {
+      this.callbacks.onDiagnostic?.({ event: 'unknown_tool', name: call.name });
       this.sendFunctionResponses([{ id: call.id, name: call.name, response: { error: `Unknown tool: ${call.name}` } }]);
       return;
     }
     try {
       const value = responseObject(await tool.handle(call.args ?? {}));
+      this.callbacks.onDiagnostic?.({ event: 'tool_result', name: call.name, saved: value.saved === true });
       this.sendFunctionResponses([{
         id: call.id,
         name: call.name,
         response: scheduledResponse(value, tool.declaration.behavior),
       }]);
     } catch (reason) {
+      this.callbacks.onDiagnostic?.({ event: 'tool_error', name: call.name });
       const message = reason instanceof Error ? reason.message : 'Tool failed.';
       this.sendFunctionResponses([{ id: call.id, name: call.name, response: { error: message } }]);
     }
+  }
+
+  async flushPendingMessages() {
+    await this.messageChain;
   }
 
   private sendFunctionResponses(functionResponses: FunctionResponse[]) {
@@ -329,14 +239,18 @@ export class GeminiLiveTransport implements LiveTransport {
     this.callbacks.onStatus('reconnecting');
     const oldSocket = this.socket;
     oldSocket.close(1000, 'session resume');
+    const generation = this.connectGeneration;
     window.setTimeout(async () => {
+      if (generation !== this.connectGeneration) return;
       try {
         const issued = await this.tokenProvider();
+        if (generation !== this.connectGeneration) return;
         if (!isLiveModel(issued.model)) throw new Error(`Unexpected Live model: ${issued.model}`);
         this.model = issued.model;
         await this.openSocket(issued.token);
         this.reconnecting = false;
       } catch (reason) {
+        if (generation !== this.connectGeneration) return;
         this.reconnecting = false;
         const message = reason instanceof Error ? reason.message : 'Could not resume Live session.';
         this.callbacks.onError(message);

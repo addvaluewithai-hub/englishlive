@@ -20,7 +20,7 @@
     "cap:add:android": "cap add android",
     "cap:open:ios": "cap open ios",
     "cap:open:android": "cap open android",
-    "test:practice": "node --import tsx --test scripts/test-practice-coach.mjs"
+    "test:practice": "node --import tsx --test scripts/test-practice-coach.mjs scripts/test-practice-notebook.mjs scripts/test-practice-tutor.mjs"
   },
   "dependencies": {
     "@capacitor/core": "8.5.2",

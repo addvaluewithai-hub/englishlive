@@ -15,7 +15,14 @@ export interface LiveSessionConfig {
   disableInputTranscription?: boolean;
 }
 
+export type LiveDiagnostic = {
+  event: 'setup_sent' | 'setup_accepted' | 'tool_call' | 'tool_result' | 'unknown_tool' | 'tool_error';
+  model?: string; apiVersion?: string; tools?: string[]; name?: string; saved?: boolean;
+};
+
 export interface LiveCallbacks {
+  /** Metadata only: never tokens, audio, or tool arguments. */
+  onDiagnostic?(event: LiveDiagnostic): void;
   onStatus(status: LiveStatus): void;
   onInputTranscript(text: string): void;
   onOutputTranscript(text: string): void;
