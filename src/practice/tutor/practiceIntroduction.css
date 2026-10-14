@@ -1,0 +1,184 @@
+/* Session 1: independent scenario and listening screens. No Live session or Otti avatar. */
+.practice-intro {
+  --intro-ink: #122d3d;
+  --intro-muted: #667a85;
+  --intro-teal: #006b66;
+  --intro-line: #dcebe9;
+  width: min(100%, 800px);
+  margin-inline: auto;
+  padding: 0 14px 22px;
+  min-height: min(100dvh, 950px);
+  display: flex;
+  flex-direction: column;
+  color: var(--intro-ink);
+  background: #fbfdfc;
+  text-align: start;
+  font-family: inherit;
+}
+.practice-intro * { box-sizing: border-box; }
+.practice-intro-header {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 52px;
+  align-items: center;
+  gap: 10px;
+  min-height: 58px;
+  padding: 8px 0;
+}
+.practice-intro-header > strong { text-align: center; font-size: 15px; line-height: 1.4; }
+.practice-intro-close {
+  width: 42px; height: 42px; border: 0; background: none; cursor: pointer;
+  font-size: 30px; line-height: 1; color: var(--intro-ink);
+}
+.practice-intro-level {
+  display: grid; place-items: center; height: 39px; border-radius: 20px;
+  color: var(--intro-teal); background: #e2f3ef; font-weight: 900; font-size: 14px;
+}
+.practice-intro-scene, .practice-intro-listening { display: grid; align-content: start; gap: 12px; }
+.practice-intro-hero, .practice-intro-objectives, .practice-intro-player-card, .practice-intro-transcript {
+  background: #fff; border: 1px solid #e1eeeb; border-radius: 22px;
+  box-shadow: 0 8px 28px rgba(8, 64, 62, .045);
+  padding: 15px;
+}
+.practice-intro-hero { text-align: center; }
+.practice-intro-illustration {
+  height: clamp(130px, 27vh, 220px); margin-bottom: 13px;
+  display: flex; align-items: center; justify-content: center;
+  position: relative; overflow: hidden; border-radius: 16px;
+  background: radial-gradient(circle at 72% 35%, #e3fff0, transparent 30%),
+    linear-gradient(145deg, #e9f7f2 0%, #d6eae4 60%, #e6f1ed 100%);
+}
+.practice-intro-illustration::before, .practice-intro-illustration::after {
+  content: ''; position: absolute; background: rgba(255,255,255,.35);
+  border: 1px solid rgba(255,255,255,.7); border-radius: 28px;
+  width: 180px; height: 100px; transform: rotate(-19deg);
+  inset-inline-start: -35px; bottom: -45px;
+}
+.practice-intro-illustration::after {
+  inset-inline-start: auto; inset-inline-end: -50px; bottom: auto; top: -50px; transform: rotate(24deg);
+}
+.practice-intro-illustration-icon { z-index: 1; font-size: clamp(65px, 13vw, 98px); filter: drop-shadow(0 12px 12px rgba(1,82,70,.12)); }
+.practice-intro-illustration-chat {
+  position: absolute; z-index: 1; inset-inline-end: 24%; top: 23%;
+  font-weight: 900; letter-spacing: 3px; padding: 0px 12px 8px;
+  border-radius: 15px; font-size: 25px; line-height: 1;
+  color: #0b857d; background: #fff; box-shadow: 0 6px 16px rgba(0,60,50,.08);
+}
+.practice-intro h1 { margin: 0; font-size: clamp(20px, 4vw, 27px); line-height: 1.35; }
+.practice-intro-hero > p, .practice-intro-player-card > p {
+  max-width: 590px; margin: 7px auto 16px; color: var(--intro-muted);
+  line-height: 1.75; font-size: 14px;
+}
+.practice-intro-details {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px;
+}
+.practice-intro-details > div {
+  display: grid; gap: 6px; align-content: center; padding: 9px 7px;
+  border: 1px solid var(--intro-line); border-radius: 15px; background: #f6fbf9;
+  font-size: 12px; min-height: 69px;
+}
+.practice-intro-details small, .practice-intro-cast small { color: var(--intro-teal); font-size: 11px; font-weight: 800; }
+.practice-intro-details b { font-size: 11.5px; line-height: 1.45; }
+.practice-intro-section-heading { display: flex; align-items: start; gap: 10px; }
+.practice-intro-section-heading > span {
+  font-size: 19px; width: 36px; height: 36px; display: grid; place-items: center;
+  border-radius: 12px; background: #e4f5f1; color: var(--intro-teal);
+}
+.practice-intro h2 { margin: 0; font-size: 17px; line-height: 1.45; }
+.practice-intro-section-heading p, .practice-intro-transcript header p {
+  color: var(--intro-muted); margin: 2px 0 0; font-size: 11.5px; line-height: 1.5;
+}
+.practice-intro-objectives ol { display: grid; gap: 7px; list-style: none; padding: 0; margin: 12px 0; }
+.practice-intro-objectives li {
+  display: flex; align-items: center; gap: 10px;
+  min-height: 32px; background: #f4f8f7; color: #455a62;
+  padding: 6px 9px; font-size: 12px; border-radius: 11px;
+}
+.practice-intro-objectives li > span {
+  display: grid; place-items: center; flex: 0 0 24px; height: 24px;
+  background: #e0f3ef; color: var(--intro-teal); font-size: 12px; font-weight: 900; border-radius: 50%;
+}
+.practice-intro-relaxed {
+  display: flex; align-items: center; gap: 8px; margin-top: 10px;
+  color: var(--intro-muted); font-size: 12px;
+}
+.practice-intro-relaxed input, .practice-intro-translation-toggle input { accent-color: var(--intro-teal); }
+.practice-intro-actions {
+  position: sticky; bottom: 0; z-index: 10; display: grid; gap: 7px;
+  padding: 14px 0 max(10px, env(safe-area-inset-bottom));
+  background: linear-gradient(0deg, #fbfdfc 84%, rgba(251,253,252,0));
+  margin-top: auto;
+}
+.practice-intro-actions button {
+  min-height: 49px; border-radius: 27px; cursor: pointer;
+  font: inherit; font-size: 14px; font-weight: 900;
+}
+.practice-intro-primary { background: var(--intro-teal); color: #fff; border: 1px solid var(--intro-teal); }
+.practice-intro-secondary { background: #fff; color: var(--intro-teal); border: 1.5px solid var(--intro-teal); }
+.practice-intro-player-card { text-align: center; padding: 22px 15px 15px; }
+.practice-intro-round-icon {
+  display: grid; place-items: center; background: #e0f4f0; color: var(--intro-teal);
+  width: 44px; height: 44px; border-radius: 50%; font-size: 22px; margin: 0 auto 9px;
+}
+.practice-intro-player-card > p { margin-bottom: 12px; }
+.practice-intro-cast {
+  display: flex; align-items: center; justify-content: space-evenly;
+  gap: 9px; padding: 12px; margin: 11px 0;
+  background: #f4f9f8; border-radius: 14px;
+}
+.practice-intro-cast > div { display: flex; gap: 8px; align-items: center; min-width: 0; text-align: start; }
+.practice-intro-avatar { font-size: 27px; }
+.practice-intro-cast b, .practice-intro-cast small { display: block; }
+.practice-intro-cast b { font-size: 11px; }
+.practice-intro-cast small { margin-top: 2px; font-size: 10px; }
+.practice-intro-cast-separator { align-self: stretch; width: 1px; background: var(--intro-line); }
+.practice-intro-player {
+  display: flex; align-items: center; gap: 12px; padding: 10px;
+  border: 1px solid var(--intro-line); border-radius: 16px;
+}
+.practice-intro-play { flex: 0 0 43px; height: 43px; border: 0; border-radius: 50%; background: var(--intro-teal); color: #fff; font-size: 17px; cursor: pointer; }
+.practice-intro-play:disabled { opacity: .6; }
+.practice-intro-seek { flex: 1; min-width: 0; }
+.practice-intro-seek input { display: block; width: 100%; accent-color: var(--intro-teal); cursor: pointer; }
+.practice-intro-time { display: flex; justify-content: space-between; font-size: 10px; color: var(--intro-muted); }
+.practice-intro-speed { flex: 0 0 43px; min-height: 34px; border: 0; border-radius: 11px; background: #e4f6f3; color: var(--intro-teal); font-weight: 800; cursor: pointer; }
+.practice-intro-loading, .practice-intro-audio-error {
+  font-size: 12px; line-height: 1.6; margin: 8px 0 0 !important;
+}
+.practice-intro-audio-error { color: #ab484a; }
+.practice-intro-audio-error p { margin: 0; }
+.practice-intro-audio-error button {
+  background: transparent; border: 1px solid #caa; border-radius: 12px;
+  color: inherit; padding: 5px 14px; margin: 8px; cursor: pointer;
+}
+.practice-intro-transcript > header { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.practice-intro-translation-toggle {
+  display: flex; align-items: center; gap: 5px; font-size: 11px; cursor: pointer;
+  color: var(--intro-teal); white-space: nowrap;
+}
+.practice-intro-transcript ol { display: grid; gap: 7px; padding: 0; margin: 14px 0 0; list-style: none; }
+.practice-intro-transcript li {
+  padding: 9px 11px; border-radius: 13px; background: #f5f9f8; border: 1px solid transparent;
+}
+.practice-intro-transcript li.is-learner { background: #f1fbf9; border-color: #e5f2ef; }
+.practice-intro-transcript-label { display: flex; align-items: center; gap: 7px; font-size: 11px; color: var(--intro-teal); }
+.practice-intro-mini-avatar { font-size: 18px; }
+.practice-intro-transcript li > p {
+  font-size: 13px; line-height: 1.6; color: var(--intro-ink);
+  text-align: left; margin: 5px 0 0; unicode-bidi: plaintext;
+}
+.practice-intro-transcript li > small { display: block; color: var(--intro-muted); margin-top: 5px; font-size: 12px; line-height: 1.65; }
+.practice-intro :is(button, input):focus-visible { outline: 3px solid #2db8a8; outline-offset: 3px; }
+@media (min-width: 760px) {
+  .practice-intro { padding-inline: 20px; }
+  .practice-intro-scene { grid-template-columns: 1fr 1fr; align-items: start; }
+  .practice-intro-hero, .practice-intro-objectives { height: 100%; }
+  .practice-intro-listening { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+  .practice-intro-player-card { position: sticky; top: 12px; }
+}
+@media (max-width: 380px) {
+  .practice-intro-details { grid-template-columns: 1fr 1fr; }
+  .practice-intro-details > div:last-child { grid-column: 1 / -1; }
+  .practice-intro-player { gap: 6px; }
+  .practice-intro-hero, .practice-intro-objectives, .practice-intro-player-card, .practice-intro-transcript { padding: 11px; }
+}
+@media (prefers-reduced-motion: reduce) { .practice-intro * { scroll-behavior: auto !important; } }
