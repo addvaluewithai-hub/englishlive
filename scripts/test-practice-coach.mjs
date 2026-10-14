@@ -4,6 +4,9 @@ import { parseCoachInput, normalizeCoachResult, analyzePractice } from '../funct
 import { onRequestPost } from '../functions/api/practice/coach.ts';
 import { PRACTICE_MISSION_CONTRACTS, practiceMissionContractBySlug } from '../src/practice/missions/catalog.ts';
 import { buildConversationPracticePrompt, buildConversationOpening } from '../src/practice/conversationPrompt.ts';
+import { PracticeTurnAudioBuffer } from '../src/practice/turnAudioBuffer.ts';
+import { MAX_WAV_BYTES, VERBATIM_PROMPT, parsePracticeWav, transcribePracticeAudio } from '../functions/_shared/practiceTranscribe.ts';
+import { onRequestPost as onTranscribeRequestPost } from '../functions/api/practice/transcribe.ts';
 
 const mission = practiceMissionContractBySlug('b1-resolve-wrong-order');
 const transcript = [
@@ -165,15 +168,128 @@ test('Live wire setup has zero Practice tools, preserves other modes, and accept
   });
   const { GeminiLiveTransport } = await server.ssrLoadModule('/src/live/GeminiLiveTransport.ts');
   const callbacks = { onStatus() {}, onInputTranscript() {}, onOutputTranscript() {}, onAudio() {}, onInterrupted() {}, onTurnComplete() {}, onError(message) { throw new Error(message); } };
-  for (const [config, expectedSilence] of [[{ silenceDurationMs: 1200 }, 1200], [{ silenceDurationMs: 2400 }, 2400], [{}, 3600]]) {
+  for (const [config, expectedSilence] of [[{ silenceDurationMs: 1200, disableInputTranscription: true }, 1200], [{ silenceDurationMs: 2400, disableInputTranscription: true }, 2400], [{}, 3600]]) {
     const live = new GeminiLiveTransport(callbacks, [], async () => ({ token: 'test-ephemeral-token', model: 'gemini-3.8-live' }));
     await live.connect(buildConversationPracticePrompt(mission), config);
     const socket = sockets.at(-1);
     const setup = socket.sent[0].setup;
     assert.equal(setup.tools, undefined);
     assert.equal(setup.realtimeInputConfig.automaticActivityDetection.silenceDurationMs, expectedSilence);
+    assert.equal(setup.inputAudioTranscription === undefined, config.disableInputTranscription === true);
+    assert.deepEqual(setup.outputAudioTranscription, {});
     live.endAudioStream();
     assert.deepEqual(socket.sent.at(-1), { realtimeInput: { audioStreamEnd: true } });
     live.close();
   }
+});
+
+test('Practice turns retain original PCM bytes in a bounded WAV, not a transcript guess', () => {
+  const audio = new PracticeTurnAudioBuffer();
+  const frame = Buffer.alloc(320);
+  frame.writeInt16LE(4000, 0);
+  audio.push(frame.toString('base64'), 0.01);
+  assert.equal(audio.hasSpeech, false);
+  audio.push(frame.toString('base64'), 0.06);
+  assert.equal(audio.hasSpeech, true);
+  const { audioBase64, overflow } = audio.takeWavBase64();
+  assert.equal(overflow, false);
+  const wav = Buffer.from(audioBase64, 'base64');
+  assert.equal(wav.toString('ascii', 0, 4), 'RIFF');
+  assert.equal(wav.toString('ascii', 8, 12), 'WAVE');
+  assert.equal(wav.readUInt32LE(24), 16_000);
+  assert.equal(wav.readUInt16LE(22), 1);
+  assert.equal(wav.readUInt16LE(34), 16);
+  assert.deepEqual(wav.subarray(44), Buffer.concat([frame, frame]));
+  assert.equal(parsePracticeWav(audioBase64), audioBase64);
+  assert.equal(audio.hasSpeech, false);
+  assert.equal(audio.takeWavBase64().audioBase64, null);
+});
+
+test('Practice audio limits reject malformed, tampered, or clipped data', () => {
+  const audio = new PracticeTurnAudioBuffer();
+  const oneSecond = Buffer.alloc(32_000);
+  for (let i = 0; i < 35; i++) audio.push(oneSecond.toString('base64'), 0.1);
+  assert.deepEqual(audio.takeWavBase64(), { audioBase64: null, overflow: true });
+  assert.throws(() => parsePracticeWav('not-base64!!'), /Invalid audio/);
+  const fresh = new PracticeTurnAudioBuffer();
+  fresh.push(Buffer.alloc(600).toString('base64'), 0.08);
+  const valid = Buffer.from(fresh.takeWavBase64().audioBase64, 'base64');
+  assert.ok(valid.length < MAX_WAV_BYTES);
+  valid.writeUInt32LE(22_050, 24);
+  assert.throws(() => parsePracticeWav(valid.toString('base64')), /Expected 16 kHz/);
+});
+
+test('Flash-Lite receives actual 16 kHz audio and a literal no-correction prompt', async (t) => {
+  let seen;
+  t.mock.method(globalThis, 'fetch', async (url, init) => {
+    seen = { url, init, body: JSON.parse(init.body) };
+    return Response.json({ candidates: [{ content: { parts: [{ text: 'I want small one please' }] } }] });
+  });
+  const value = await transcribePracticeAudio({ GEMINI_API_KEY: 'test-key' }, 'fake-pcm-for-mocked-provider');
+  assert.equal(value, 'I want small one please');
+  assert.match(seen.url, /gemini-3\.1-flash-lite:generateContent/);
+  assert.equal(seen.body.contents[0].parts[1].inline_data.mime_type, 'audio/wav');
+  assert.equal(seen.body.generationConfig.temperature, 0);
+  assert.match(seen.body.contents[0].parts[0].text, /grammatical mistakes/);
+  assert.match(VERBATIM_PROMPT, /Do NOT correct/);
+  assert.ok(seen.init.signal instanceof AbortSignal);
+});
+
+test('Flash-Lite error or empty reply does not invent a transcript', async (t) => {
+  let calls = 0;
+  t.mock.method(globalThis, 'fetch', async () => {
+    calls++;
+    return Response.json({ candidates: [{ content: { parts: [] } }] });
+  });
+  await assert.rejects(transcribePracticeAudio({}, 'anything'), /unavailable/);
+  assert.equal(calls, 0);
+  await assert.rejects(transcribePracticeAudio({ GEMINI_API_KEY: 'test-key' }, 'anything'), /No reliable transcript/);
+});
+
+test('verbatim transcription endpoint authenticates first and validates the WAV', async (t) => {
+  let providerCalls = 0;
+  t.mock.method(globalThis, 'fetch', async () => {
+    providerCalls++;
+    throw new Error('No provider request should run');
+  });
+  const unauth = await onTranscribeRequestPost({
+    request: new Request('https://test.local/api/practice/transcribe', { method: 'POST', body: '{}' }),
+    env: { GEMINI_API_KEY: 'test-key' },
+  });
+  assert.equal(unauth.status, 401);
+  assert.equal(providerCalls, 0);
+  const tooLarge = await onTranscribeRequestPost({
+    request: new Request('https://test.local/api/practice/transcribe', { method: 'POST', headers: { 'content-length': '1400001' } }),
+    env: {},
+  });
+  assert.equal(tooLarge.status, 413);
+});
+
+test('Flash-Lite route verifies signed-in learner and returns original spoken mistakes', async (t) => {
+  const keyPair = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
+  const publicKey = await crypto.subtle.exportKey('jwk', keyPair.publicKey);
+  const encode = (value) => Buffer.from(JSON.stringify(value)).toString('base64url');
+  const signed = encode({ alg: 'ES256', kid: 'stt-test-key' }) + '.' + encode({ sub: 'test-learner-stt', exp: Math.floor(Date.now() / 1000) + 60 });
+  const signature = await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, keyPair.privateKey, new TextEncoder().encode(signed));
+  const token = signed + '.' + Buffer.from(signature).toString('base64url');
+  const turn = new PracticeTurnAudioBuffer();
+  turn.push(Buffer.alloc(600).toString('base64'), 0.08);
+  const wav = turn.takeWavBase64().audioBase64;
+  let providerCalls = 0;
+  t.mock.method(globalThis, 'fetch', async (url) => {
+    if (url === 'https://test.local/stt-jwks') return Response.json({ keys: [{ ...publicKey, kid: 'stt-test-key', alg: 'ES256' }] });
+    providerCalls++;
+    return Response.json({ candidates: [{ content: { parts: [{ text: 'I want small one please' }] } }] });
+  });
+  const res = await onTranscribeRequestPost({
+    request: new Request('https://test.local/api/practice/transcribe', {
+      method: 'POST',
+      headers: { authorization: 'Bearer ' + token, 'content-type': 'application/json' },
+      body: JSON.stringify({ audioBase64: wav }),
+    }),
+    env: { GEMINI_API_KEY: 'test-provider-key', NEON_AUTH_JWKS_URL: 'https://test.local/stt-jwks' },
+  });
+  assert.equal(res.status, 200);
+  assert.deepEqual(await res.json(), { transcript: 'I want small one please' });
+  assert.equal(providerCalls, 1);
 });
