@@ -12,6 +12,7 @@ export const VERBATIM_PROMPT = [
   'Do NOT correct, improve, paraphrase, translate, normalize, summarize, or complete an unfinished sentence.',
   'Use Latin letters for audible English speech. If the person actually speaks Arabic, use Arabic script for those Arabic words. Never use Hindi/Devanagari for English words.',
   'Do not infer unheard words from the scenario. If unintelligible, use [inaudible] for that fragment, never guess.',
+  'If the recording contains only silence or ambient noise and no actual spoken words, return exactly [no speech]. Do not invent a conversation.',
   'Return ONLY the transcript text. No label, quotation marks, comments, Markdown, or feedback.',
 ].join(' ');
 
