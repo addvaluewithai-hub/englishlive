@@ -17,6 +17,8 @@ before(async () => {
     ...(await load('/src/practice/tutor/TutorSession.ts')),
     ...(await load('/src/practice/tutor/finishRoleplay.ts')),
     ...(await load('/src/practice/silentIssues.ts')),
+    ...(await load('/src/live/liveProtocol.ts')),
+    ...(await load('/src/live/functionCalls.ts')),
     ...(await load('/src/practice/missions/catalog.ts')),
     GeminiLiveTransport: (await load('/src/live/GeminiLiveTransport.ts')).GeminiLiveTransport,
     MicrophonePcmStream: (await load('/src/audio/MicrophonePcmStream.ts')).MicrophonePcmStream,
@@ -165,4 +167,25 @@ test('cancel during the initial await never opens a socket', async () => {
   await session.close();
   await starting;
   assert.equal(connects.length, before);
+});
+
+test('non-blocking function responses schedule SILENT at the top level, never inside the result', async () => {
+  const { session } = make();
+  const tools = [{
+    declaration: { name: 'record_practice_progress', behavior: 'NON_BLOCKING', parameters: {} },
+    handle: () => ({ saved: true, issues: 1, goals: 0 }),
+  }];
+  const events = [];
+  const responses = [];
+  await mod.answerFunctionCall({ id: 'call-1', name: 'record_practice_progress', args: {} }, tools, new Set(),
+    { onDiagnostic: (item) => events.push(item), onStatus() {}, onInputTranscript() {}, onOutputTranscript() {},
+      onAudio() {}, onInterrupted() {}, onTurnComplete() {}, onError() {} },
+    (items) => responses.push(...items));
+  assert.equal(responses.length, 1);
+  assert.equal(responses[0].scheduling, 'SILENT');
+  assert.deepEqual(responses[0].response, { saved: true, issues: 1, goals: 0 });
+  assert.equal('scheduling' in responses[0].response, false);
+  assert.deepEqual(mod.scheduledResponse({ ok: true }, 'BLOCKING'), { response: { ok: true } });
+  assert.ok(events.some((item) => item.event === 'tool_result' && item.issues === 1));
+  await session.close();
 });

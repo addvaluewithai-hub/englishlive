@@ -19,6 +19,8 @@ export function buildReviewReport(mission: PracticeMissionContract, review: Prac
     `Final review: ${trace?.finalReview ?? 'unknown'} after ${trace?.finalWaitMs ?? 0} ms`,
     'Notebook: ' + JSON.stringify(trace?.notebook ?? {}),
     'Roleplay connection: ' + JSON.stringify(trace?.transport ?? []),
+    'Roleplay timeline (elapsedMs from session start; metadata only):',
+    ...(trace?.timeline?.length ? trace.timeline.map((event) => JSON.stringify(event)) : ['No timeline recorded.']),
     'Review connection: ' + JSON.stringify(reviewConnection),
   ].join('\n\n');
 }

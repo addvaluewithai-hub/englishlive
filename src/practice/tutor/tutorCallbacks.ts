@@ -54,6 +54,7 @@ export function tutorCallbacks(session: TutorSession): LiveCallbacks {
     onGenerationComplete: () => {
       if (session.closed) return;
       session.noteServerActivity();
+      session.options.diagnostic({ event: 'provider_generation_complete' });
       session.generationDone = true;
       // Text-only or tool-only generations have nothing to play: hand the turn back now.
       if (!session.hasAudio && !session.queue?.isPlaying) { session.serverTurnPending = false; session.flushTeacher(); session.listen(); }
@@ -61,6 +62,7 @@ export function tutorCallbacks(session: TutorSession): LiveCallbacks {
     onTurnComplete: () => {
       if (session.closed) return;
       session.noteServerActivity();
+      session.options.diagnostic({ event: 'provider_turn_complete' });
       session.serverTurnPending = false;
       session.suppressOutput = session.finishing;
       session.flushTeacher();

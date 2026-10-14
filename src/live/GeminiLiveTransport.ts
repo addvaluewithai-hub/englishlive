@@ -153,6 +153,7 @@ export class GeminiLiveTransport implements LiveTransport {
 
       socket.addEventListener('close', (event) => {
         if (this.socket === socket) {
+          this.callbacks.onDiagnostic?.({ event: 'socket_closed' });
           this.socket = null;
           this.setupComplete = false;
         }
@@ -167,7 +168,16 @@ export class GeminiLiveTransport implements LiveTransport {
   }
 
   private sendFunctionResponses(functionResponses: FunctionResponse[]) {
+    if (this.socket?.readyState !== WebSocket.OPEN) {
+      for (const response of functionResponses) {
+        this.callbacks.onDiagnostic?.({ event: 'tool_response_dropped', name: response.name });
+      }
+      return;
+    }
     this.send({ toolResponse: { functionResponses } });
+    for (const response of functionResponses) {
+      this.callbacks.onDiagnostic?.({ event: 'tool_response_sent', name: response.name });
+    }
   }
 
   private resumeSession() {

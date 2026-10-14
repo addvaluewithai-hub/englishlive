@@ -8,7 +8,7 @@ import type { PracticeCorrectionRecord } from '../runtime';
 import { finishRoleplay, type FinalReviewOutcome } from './finishRoleplay';
 import { phaseScript } from './phaseScript';
 import { TutorSession } from './TutorSession';
-import { idleTutorState, type CountedDiagnostic, type PracticeCompletionState, type TutorPhase } from './types';
+import { idleTutorState, type CountedDiagnostic, type TimedDiagnostic, type PracticeCompletionState, type TutorPhase } from './types';
 
 export function usePracticeTutor(options: {
   mission: PracticeMissionContract;
@@ -23,6 +23,7 @@ export function usePracticeTutor(options: {
   const session = useRef<TutorSession | null>(null);
   const turns = useRef<ConversationTurn[]>([]);
   const diagnostics = useRef<CountedDiagnostic[]>([]);
+  const timeline = useRef<TimedDiagnostic[]>([]);
   const startedAt = useRef(0);
   const [state, setState] = useState(idleTutorState);
   const [goalIds, setGoalIds] = useState<string[]>([]);
@@ -37,6 +38,12 @@ export function usePracticeTutor(options: {
     const old = diagnostics.current.find((item) => item.event === event.event && item.name === event.name && item.saved === event.saved);
     if (old) old.count++;
     else diagnostics.current.push({ ...event, count: 1 });
+    // Only metadata. Never log audio, API credentials, tool arguments or learner text.
+    timeline.current.push({ ...event, elapsedMs: Math.max(0, Date.now() - (startedAt.current || Date.now())) });
+    if (timeline.current.length > 500) timeline.current.shift();
+    if (import.meta.env.DEV && new URLSearchParams(window.location.search).get('debug') === '1') {
+      console.debug('[Otti Live]', timeline.current.at(-1));
+    }
   }
 
   async function start(controlMessage?: string) {
@@ -74,7 +81,8 @@ export function usePracticeTutor(options: {
       corrections: collector.getIssues(), achievedGoalIds: collector.getObservedGoalIds(), recordedByOtti: true,
       durationSeconds: startedAt.current ? Math.round((Date.now() - startedAt.current) / 1000) : 0,
       conversationText: turns.current.map((turn) => `${turn.speaker}: ${turn.text}`).join('\n'),
-      diagnostics: { transport: diagnostics.current.map((item) => ({ ...item })), notebook: collector.getDiagnostics(),
+      diagnostics: { transport: diagnostics.current.map((item) => ({ ...item })),
+        timeline: timeline.current.map((item) => ({ ...item })), notebook: collector.getDiagnostics(),
         finalReview: finalReview.outcome, finalWaitMs: finalReview.waitedMs },
     };
   }
@@ -106,6 +114,11 @@ export function usePracticeTutor(options: {
       : 'Let us look at your first note together. Want to try the better sentence?' };
   return {
     host, state: visualQa ? qaState : state, goalIds, ending, start, stop, finish, session, turns, discussCorrection,
-    getConnectionDiagnostics: () => ({ phase: options.phase, status: session.current?.state.status ?? 'idle', transport: diagnostics.current }),
+    getConnectionDiagnostics: () => ({
+      phase: options.phase, status: session.current?.state.status ?? 'idle',
+      transport: diagnostics.current.map((item) => ({ ...item })),
+      timeline: timeline.current.map((item) => ({ ...item })),
+      notebook: collector.getDiagnostics(),
+    }),
   };
 }

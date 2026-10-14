@@ -50,9 +50,16 @@ export function ReviewNotesPanel({ mission, review, ar, copy, open, onClose, onP
         <Link to={`/practice/${mission.level}/world/${mission.worldId}`}>{copy.another}</Link>
         <button type="button" onClick={() => setDetails((value) => !value)} aria-expanded={details}>{copy.details}</button>
       </footer>
-      {details ? <button type="button" className="tutor-copy-details" onClick={() => void copyReport()}>
-        {copied ? copy.copied : copy.copy}
-      </button> : null}
+      {details ? <section className="tutor-debug-trace" aria-label="Live tool diagnostic log">
+        <pre>{JSON.stringify({
+          finalReview: review.diagnostics?.finalReview ?? 'unknown',
+          notebook: review.diagnostics?.notebook ?? {},
+          timeline: review.diagnostics?.timeline ?? [],
+        }, null, 2)}</pre>
+        <button type="button" className="tutor-copy-details" onClick={() => void copyReport()}>
+          {copied ? copy.copied : copy.copy}
+        </button>
+      </section> : null}
     </aside>
   </>;
 }

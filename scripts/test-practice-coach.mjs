@@ -196,7 +196,8 @@ test('Practice Live declares NON_BLOCKING silent notebook and final-review tools
       assert.equal(collector.getIssues().length, 1);
       assert.deepEqual(collector.getObservedGoalIds(), ['report_problem', 'agree_solution'].filter((id) => mission.beats.some((beat) => beat.id === id && beat.type === 'required')));
       const response = socket.sent.at(-1).toolResponse.functionResponses[0];
-      assert.deepEqual([response.id, response.name, response.response.scheduling], ['note-1', 'record_practice_progress', 'SILENT']);
+      assert.deepEqual([response.id, response.name, response.scheduling], ['note-1', 'record_practice_progress', 'SILENT']);
+      assert.equal(response.response.scheduling, undefined, 'scheduling belongs to the response envelope');
       collector.beginFinalReview();
       socket.dispatchEvent(new MessageEvent('message', { data: JSON.stringify({
         toolCall: { functionCalls: [{ id: 'final-1', name: 'submit_final_review', args: { status: 'issues',
@@ -206,7 +207,7 @@ test('Practice Live declares NON_BLOCKING silent notebook and final-review tools
       await live.flushPendingMessages();
       assert.equal(collector.isFinalized(), true);
       assert.equal(collector.getIssues().length, 2);
-      assert.equal(socket.sent.at(-1).toolResponse.functionResponses[0].response.scheduling, 'SILENT');
+      assert.equal(socket.sent.at(-1).toolResponse.functionResponses[0].scheduling, 'SILENT');
       collector.clear();
     } else assert.equal(setup.tools, undefined);
     assert.equal(setup.realtimeInputConfig.automaticActivityDetection.silenceDurationMs, expectedSilence);
