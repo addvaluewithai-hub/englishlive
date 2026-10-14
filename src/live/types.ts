@@ -21,7 +21,7 @@ export type LiveDiagnostic = {
     | 'mic_open' | 'audio_submitted' | 'text_submitted' | 'provider_turn_complete' | 'provider_generation_complete'
     | 'socket_closed' | 'session_closed' | 'tool_response_sent' | 'tool_response_dropped' | 'duplicate_tool_call';
   model?: string; apiVersion?: string; tools?: string[]; name?: string; saved?: boolean; ms?: number;
-  issues?: number; goals?: number;
+  issues?: number; goals?: number; frames?: number;
 };
 
 export interface LiveCallbacks {
