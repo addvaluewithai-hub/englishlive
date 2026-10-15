@@ -137,7 +137,7 @@ STRICT READ MODE:
 - Learner microphone stays closed while narrated lines play. Once the narrated scene ends, wait for learner speech or their board choice.
 - After a learner responds, you may give very concise targeted feedback, clarify their misunderstanding or ask ONE changed follow-up in the current language. Avoid long unscripted monologues.
 - Do not give away a board answer before the learner chooses. After the application reports BOARD_CHECK correct, it will send an authored follow-up line. Wait for that line instead of inventing your own task.
-- Only call complete_scene when the application has finished narrating the current scene AND the learner demonstrates the actual scene goal by speaking. Correct board selection alone is not spoken success.
+- In QUIZ scenes call complete_scene after the authored feedback (right or wrong), using the result as receptive-comprehension evidence, NOT proof of speaking mastery. In FINAL speaking, complete only when the learner genuinely sustains meaningful conversation.
 - After complete_scene returns, say nothing; the application will send the next authored narration line. Do not call show_board.
 - In the final fresh-transfer scene, you can converse freely AFTER reading its one written opening, but stay in the given coworker situation and respond naturally to the learner without introducing new lesson language.
 - If the learner says they do not know, explain the last teaching idea briefly with one supporting example; never demand that they produce language that has not been explained.
@@ -243,6 +243,9 @@ ${JSON.stringify(this.scenePayload(this.currentScene), null, 2)}
       scenes[scene.id] = {
         status: met ? 'met' : 'pending',
         activityPassed: previous?.activityPassed === true,
+        activityAnswered: previous?.activityAnswered === true,
+        activityFeedbackPlayed: previous?.activityFeedbackPlayed === true,
+        activityChoiceId: previous?.activityChoiceId,
         evidence: met ? clone(previous?.evidence ?? []) : [],
         metAt: met ? previous?.metAt : undefined,
       };
@@ -301,15 +304,26 @@ ${JSON.stringify(this.scenePayload(this.currentScene), null, 2)}
     if (!activity || !activity.options.some((option) => option.id === optionId)) {
       return { accepted: false, correct: false, error: 'Unknown board activity or choice.' };
     }
-    const correct = optionId === activity.correctOptionId;
-    if (correct && !this.state.scenes[sceneId].activityPassed) {
-      this.state.scenes[sceneId].activityPassed = true;
-      // An earlier spoken attempt cannot certify the *new* post-board transfer.
-      this.learnerAudioObserved = false;
-      delete this.state.scenes[sceneId].automaticTranscript;
-      this.persistAndEmit();
+    if (!this.preview || !this.narrationComplete || this.state.scenes[sceneId].activityAnswered) {
+      return { accepted: false, correct: false, error: 'The question is not ready or was already answered.' };
     }
+    const correct = optionId === activity.correctOptionId;
+    const state = this.state.scenes[sceneId];
+    state.activityAnswered = true;
+    state.activityPassed = correct;
+    state.activityChoiceId = optionId;
+    state.activityFeedbackPlayed = false;
+    this.persistAndEmit();
     return { accepted: true, correct };
+  }
+
+  /** A quiz may advance only AFTER Otti's authored right/wrong explanation finishes audibly. */
+  markQuizFeedbackPlayed(sceneId: string) {
+    const state = this.state.scenes[sceneId];
+    if (!this.preview || this.currentScene.id !== sceneId || !state?.activityAnswered) return false;
+    state.activityFeedbackPlayed = true;
+    this.persistAndEmit();
+    return true;
   }
 
   private persistAndEmit() {
@@ -391,14 +405,16 @@ ${JSON.stringify(this.scenePayload(this.currentScene), null, 2)}
             nextAction: 'Wait for the application to finish reading all authored lines and then ask for learner evidence.',
           };
         }
-        if (this.currentScene.activity && !this.state.scenes[this.currentScene.id].activityPassed) {
-          return {
-            error: 'The required board comprehension check has not passed.',
-            nextAction: 'Please let the learner choose a correct option on the board before asking for a fresh spoken example.',
-            currentScene: this.scenePayload(this.currentScene),
-          };
+        if (this.preview && this.currentScene.activity) {
+          const quiz = this.state.scenes[this.currentScene.id];
+          if (!quiz.activityAnswered || !quiz.activityFeedbackPlayed) {
+            return {
+              error: 'The quiz has not been answered and explained yet.',
+              nextAction: 'Wait for the board choice AND audible authored feedback before completing the scene.',
+            };
+          }
         }
-        if (!this.learnerAudioObserved) {
+        if ((!this.preview || !this.currentScene.activity) && !this.learnerAudioObserved) {
           return {
             error: 'No real learner voice activity has been observed in this scene.',
             nextAction: 'Please invite a spoken attempt on the current scene target, listen, support if needed, and then make the pedagogical decision.',
@@ -439,6 +455,14 @@ ${JSON.stringify(this.scenePayload(this.currentScene), null, 2)}
           recordedAt: new Date().toISOString(),
         };
         const current = this.state.scenes[scene.id];
+        // Never mislabel a wrong multiple-choice answer as mastery.
+        if (this.preview && scene.activity) {
+          evidence.summary = current.activityPassed
+            ? 'Board quiz answered correctly; Otti explained the answer.'
+            : 'Board quiz answered incorrectly; Otti explained why and continued. Review needed.';
+          evidence.evidenceType = 'receptive_comprehension';
+          evidence.learnerTurnsObserved = 0;
+        }
         current.evidence = [...current.evidence, evidence].slice(-3);
         current.status = 'met';
         current.metAt ??= new Date().toISOString();
