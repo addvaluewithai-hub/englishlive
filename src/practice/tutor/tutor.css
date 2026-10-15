@@ -294,3 +294,24 @@
     transform: translateY(-56px);
   }
 }
+
+/* Mobile review #3: keep contextual help adjacent to the observed goals,
+   not separated by the flexible blank stage/dock gap. */
+.tutor-live.is-roleplay .tutor-stage-extra {
+  display: grid;
+  gap: 9px;
+  align-content: start;
+}
+.tutor-live.is-roleplay .tutor-stage-extra > .practice-hint-toggle {
+  margin: 0;
+}
+@media (max-width: 620px) {
+  .tutor-live.is-roleplay .tutor-stage-extra {
+    width: min(640px, calc(100% - 22px));
+    margin-top: 9px;
+    gap: 9px;
+  }
+  .tutor-live.is-roleplay .tutor-stage .practice-hint-toggle {
+    min-height: 56px;
+  }
+}
