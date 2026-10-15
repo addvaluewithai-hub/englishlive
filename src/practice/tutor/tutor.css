@@ -228,3 +228,43 @@
 @media (prefers-reduced-motion: reduce) {
   .tutor-live .tutor-hold-control { transition: none; }
 }
+
+/* Real mobile screenshot review — only one Otti speech card below the character. */
+.tutor-a11y-transcript {
+  position: absolute !important;
+  width: 1px !important; height: 1px !important;
+  padding: 0 !important; border: 0 !important;
+  margin: -1px !important; overflow: hidden !important;
+  clip-path: inset(50%) !important; white-space: nowrap !important;
+}
+.tutor-live .tutor-phase-meta {
+  display: grid; place-items: center;
+  min-width: 52px; min-height: 37px; padding: 3px 9px;
+  border-radius: 24px; background: #e4f4f0;
+  color: #006b66; font-size: 15px;
+}
+.tutor-live .tutor-phase-meta b { color: #006b66; font-size: 15px; font-weight: 900; }
+.is-roleplay .tutor-stage.practice-live-stage,
+.is-review .tutor-stage.practice-live-stage {
+  min-height: min(49dvh, 415px);
+  grid-template-rows: minmax(150px, 1fr) auto auto;
+}
+.is-roleplay .tutor-stage .fs-live-status,
+.is-review .tutor-stage .fs-live-status {
+  border: 1px solid #b8ddda;
+  border-radius: 19px;
+  background: #f5fcfa;
+  max-width: min(570px, calc(100% - 22px));
+}
+.is-roleplay .tutor-live .tutor-hold-control small { font-size: 12px; }
+@media (max-width: 620px) {
+  .is-roleplay .tutor-stage.practice-live-stage,
+  .is-review .tutor-stage.practice-live-stage {
+    min-height: min(45dvh, 385px);
+    grid-template-rows: minmax(140px, 1fr) auto auto;
+  }
+  .is-roleplay .tutor-stage .sp-scenario-character,
+  .is-review .tutor-stage .sp-scenario-character {
+    max-height: 245px;
+  }
+}
