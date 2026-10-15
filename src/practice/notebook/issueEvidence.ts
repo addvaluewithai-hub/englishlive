@@ -30,6 +30,10 @@ export type IssueRejection = 'not_object' | 'missing_fields' | 'unchanged' | 'no
 const text = (value: unknown, max: number) => (typeof value === 'string' ? value.trim().slice(0, max) : '');
 const comparable = (value: string) => value.toLowerCase().replace(/[^\p{L}\p{N}']+/gu, ' ').trim();
 
+export function originalKey(issue: Pick<PracticeCorrectionRecord, 'originalEn'>) {
+  return comparable(issue.originalEn);
+}
+
 export function issueKey(issue: Pick<PracticeCorrectionRecord, 'originalEn' | 'betterEn'>) {
   return `${comparable(issue.originalEn)}→${comparable(issue.betterEn)}`;
 }
