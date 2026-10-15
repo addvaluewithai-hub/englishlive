@@ -22,7 +22,7 @@ export const B1_TEACHER_LAB_SCRIPT: Record<string, readonly TeachingBeat[]> = {
     },
     {
       id: 'follow-up',
-      line: 'الخطوة التانية: Pick a detail, then continue. امسك كلمة club واسأل: What do you do there? لاحظ إن السؤال جه من الخبر نفسه، مش من سكريبت محفوظ. يلا جرّب: أنا هقول الخبر تاني وإنت رد واسأل سؤال واحد. I joined a photography club last week.',
+      line: 'الخطوة التانية: Pick a detail, then continue. امسك كلمة club واسأل: What do you do there? السؤال جه من الخبر نفسه. بص على البورد واختار أحسن رد يكمل الكلام.',
       board: { type: 'steps', title: 'React → Pick → Continue', items: [{ title: 'React', body: 'Really?' }, { title: 'Pick', body: 'photography club' }, { title: 'Continue', body: 'What do you do there?' }] },
     },
   ],
@@ -39,7 +39,7 @@ export const B1_TEACHER_LAB_SCRIPT: Record<string, readonly TeachingBeat[]> = {
     },
     {
       id: 'choice',
-      line: 'بص على البورد. قدامك جملتين. اختار الجملة اللي معناها إني لسه بتعرف على Lina. مش محتاج تتكلم دلوقتي؛ اختار بس، وبعدها هنستخدم التعبير في موقف جديد.',
+      line: 'بص على البورد. قدامك جملتين. اختار اللي معناها إني لسه بتعرف على Lina. هنشوف مع بعض ليه الإجابة صح أو غلط.',
       board: { type: 'examples', title: 'get to know = new connection', items: [{ title: 'get to know', body: 'a relationship is beginning' }] },
     },
   ],
@@ -56,7 +56,7 @@ export const B1_TEACHER_LAB_SCRIPT: Record<string, readonly TeachingBeat[]> = {
     },
     {
       id: 'choice',
-      line: 'دلوقتي اختار من البورد: لو Lina سافرت لكن لسه بتكلمها كل أسبوع، أنهي جملة أنسب؟ بعد الاختيار، هنجرب موقف مختلف بصوتك.',
+      line: 'دلوقتي اختار من البورد: لو Lina سافرت لكن لسه بتكلمها كل أسبوع، أنهي جملة أنسب؟ Otti هيشرح اختيارك وبعدها نكمل.',
       board: { type: 'note', title: 'keep in touch', body: 'continue communicating after being apart' },
     },
   ],
@@ -68,7 +68,7 @@ export const B1_TEACHER_LAB_SCRIPT: Record<string, readonly TeachingBeat[]> = {
     },
     {
       id: 'ask',
-      line: 'عندك موقفين: زميل جديد بدأت تعرفه في الشغل، وصاحب قديم من المدرسة لسه بتكلمه. قول جملة بالإنجليزي عن كل واحد. حاول تستخدم المعنى المناسب، مش مجرد تكرر الأمثلة اللي سمعتها.',
+      line: 'قدامك موقفين: زميل جديد في الشغل، وصاحب قديم من المدرسة لسه بتكلمه. اختار الجملتين اللي يناسبوا الموقفين. وبعد شرح الاختيار هنروح لمحادثة Speaking حقيقية.',
       board: { type: 'compare', title: 'Which moment?', left: { title: 'New coworker', body: 'get to know' }, right: { title: 'Old school friend', body: 'keep in touch' } },
     },
   ],
@@ -81,8 +81,22 @@ export const B1_TEACHER_LAB_SCRIPT: Record<string, readonly TeachingBeat[]> = {
   ],
 };
 
-/** Visible instruction after a correct choice is authored too, not a generated follow-up. */
-export const B1_TEACHER_LAB_AFTER_CHOICE: Record<string, string> = {
-  'get-to-know': 'اختيار ممتاز! بس الفهم على البورد حاجة، واستخدامك للجملة حاجة تانية. تخيل إنك انضمّيت لشغل جديد وبقيت بتتعرف على زميل اسمه Karim. احكيلي عنه بجملة إنجليزي من عندك.',
-  'keep-in-touch': 'بالضبط. دلوقتي فكر في حد كنت معاه في المدرسة ولسه بتكلمه من وقت للتاني. إزاي توصف إنكم لسه على تواصل؟ قولها بالإنجليزي بطريقتك.',
+/** The correct key is graded by the app. Otti READS one of these exact feedback lines. */
+export const B1_TEACHER_LAB_QUIZ_FEEDBACK: Record<string, { correct: string; wrong: string }> = {
+  'warm-up': {
+    correct: 'برافو! Really? بتبين اهتمامك، و What do you do there? سؤال عن الخبر نفسه. كده المحادثة بتكمل.',
+    wrong: 'خلينا نفهمها: Okay لوحدها بتقفّل الموضوع، والكلام عن البيتزا بعيد عن الخبر. الأفضل نقول Really? What do you do there? لأننا بنتفاعل وبنسأل عن النادي.',
+  },
+  'get-to-know': {
+    correct: 'ممتاز! I am getting to know Lina معناها إن المعرفة بتتكوّن بالتدريج، مش إنكم كنتم أصحاب من زمان.',
+    wrong: 'مش الاختيار المناسب هنا. We keep in touch للعلاقة اللي موجودة وبنكمل التواصل فيها. لكن Lina شخص لسه بنتعرف عليه، فالأصح: I am getting to know Lina.',
+  },
+  'keep-in-touch': {
+    correct: 'صح جدًا! We still keep in touch لأن Lina سافرت، بس التواصل بينكم مستمر.',
+    wrong: 'بما إنك عارف Lina من قبل وبتكلمها بعد السفر، مش بنتعرف عليها لأول مرة. التعبير اللي يصف استمرار التواصل هو: We still keep in touch.',
+  },
+  'compare-and-use': {
+    correct: 'إجابة ممتازة! Getting to know للشخص الجديد، و keep in touch للصديق القديم. المعنى اللي بيحكم اختيار التعبير.',
+    wrong: 'خلينا نثبت الفرق: الشخص الجديد بنقول عنه I am getting to know my coworker. أما الصديق القديم اللي لسه بنتواصل معاه بنقول I keep in touch with my old friend. اختيار التعبير بيتحدد من سياق العلاقة.',
+  },
 };
