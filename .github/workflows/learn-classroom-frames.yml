@@ -34,6 +34,8 @@ jobs:
       - name: Install Playwright in ephemeral CI runner
         run: npm install --no-save --package-lock=false playwright@1.62.1
       - run: npx playwright install --with-deps chromium
+      - name: Verify registry completeness for any authored lesson
+        run: npm run test:learn-qa-registry
       - name: Capture ALL classroom beats, quiz branches and Speaking states
         run: npm run qa:learn:frames
       - uses: actions/upload-artifact@v4
