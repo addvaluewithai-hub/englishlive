@@ -221,3 +221,11 @@
     padding-bottom: 58px;
   }
 }
+
+/* Real responsive illustration compositions, not just zooming 16:9 art. */
+.teacher-lab-portrait { display: none; }
+.teacher-lab-landscape { display: block; }
+@media (max-width: 620px) {
+  .teacher-lab-portrait { display: block; }
+  .teacher-lab-landscape { display: none; }
+}
