@@ -6,9 +6,9 @@ import { fetchLessonAudio } from '../audio/fetchLessonAudio';
 import './practiceIntroduction.css';
 
 type Page = 'scene' | 'listen';
-// Scenario photography (Pexels / Emre Akyol, free-use license), mirrored into
+// Scenario photography (Pexels / Tim Samuel, free-use license), mirrored into
 // our existing Cloudinary media library so the app owns a stable, optimized URL.
-const CAFE_SCENE_PHOTO = 'https://res.cloudinary.com/as9o12al/image/upload/f_auto,q_auto,w_960/v1792043829/lesson-b1-wrong-order-cafe.jpg';
+const CAFE_SCENE_PHOTO = 'https://res.cloudinary.com/as9o12al/image/upload/f_auto,q_auto,w_960/v1792050740/englishlive/practice/b1-wrong-order-counter-cup.jpg';
 
 function SpeakerPortrait({ staff = false, small = false }: { staff?: boolean; small?: boolean }) {
   return <svg aria-hidden="true" focusable="false"
