@@ -31,12 +31,25 @@ try {
       await page.locator(item.selector).first().waitFor({ state: 'visible' });
       if (item.id === 'scenario') {
         assert.equal(await page.locator('.fs-live-character-host').count(), 0, 'No Otti during intro');
+        const photo = await page.locator('.practice-intro-scene-photo').evaluate((img) => ({ done: img.complete, width: img.naturalWidth }));
+        assert.ok(photo.done && photo.width > 0, 'Cafe scenario must load real image, not an emoji placeholder');
+        const close = await page.locator('.practice-intro-close').boundingBox();
+        const level = await page.locator('.practice-intro-level').boundingBox();
+        assert.ok(close && level && close.x < level.x, 'Scenario RTL header: close left, CEFR level right');
       }
       if (item.id === 'hold-voice') {
         assert.equal(await page.locator('.tutor-hold-control').count(), 1);
         assert.equal(await page.locator('.tutor-goals[open]').count(), 0, 'Goals collapsed by default');
+        assert.equal(await page.locator('.tutor-phase-meta b').innerText(), 'B1',
+          'Roleplay header must show the CEFR level, not the obsolete 2/3 counter');
+        const character = await page.locator('.fs-live-character-host').boundingBox();
+        const status = await page.locator('.fs-live-status').boundingBox();
+        assert.ok(character && status && character.y < status.y, 'Otti status bubble should appear below avatar');
       }
       if (item.id === 'review') {
+        const close = await page.locator('.practice-recap-top button').boundingBox();
+        const level = await page.locator('.practice-recap-level').boundingBox();
+        assert.ok(close && level && close.x < level.x, 'Review RTL header: close left, CEFR right');
         assert.equal(await page.locator('.practice-recap-note.is-error').count(), 1);
         assert.equal(await page.locator('.practice-recap-note.is-improvement').count(), 1);
         assert.equal(await page.locator('.practice-recap-note.is-improvement .practice-recap-comparison > div:first-child p')
@@ -47,9 +60,9 @@ try {
       assert.ok(overflow <= 1, `${viewport.id}/${item.id}: horizontal overflow ${overflow}px`);
       assert.deepEqual(errors, [], `${viewport.id}/${item.id}: page errors`);
 
-      // The screenshot artifact quota is full. Log a small QA-only JPG preview
-      // in bounded 3KB chunks, never user content or authenticated sessions.
-      const jpeg = await page.screenshot({ type: 'jpeg', quality: 40, fullPage: false });
+      // The screenshot artifact quota is full. Emit a small QA-only JPEG in
+      // bounded 3KB chunks, never real learner data or authenticated sessions.
+      const jpeg = await page.screenshot({ type: 'jpeg', quality: 55, fullPage: false });
       const b64 = jpeg.toString('base64');
       const name = `${viewport.id}--${item.id}`;
       console.log(`QA_SHOT_BEGIN:${name}`);
