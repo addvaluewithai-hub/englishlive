@@ -37,8 +37,9 @@ a second authoring pass, **not** silently deleted from the official lesson.
 ## Safety and progress semantics
 
 - The content uses a unique `-teacher-board-lab` lesson ID.
-- `SceneLessonRuntime({ preview: true })` suppresses official course
-  completion and cloud progress reporting.
+- `loadTeachingBundle({ preview: true })` bypasses published lesson loading
+  and cloud session creation. `SceneLessonRuntime({ preview: true })`
+  suppresses official course completion and cloud progress reporting.
 - The preview does not create a resumable scene checkpoint.
 - The application grades board choices against an authored answer key;
   the Live model cannot decide what the correct click was.
