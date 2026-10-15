@@ -13,6 +13,7 @@
     "test:ui": "node --import tsx --test scripts/test-ui-foundation.mjs",
     "test:learn-pilot": "node --import tsx --test scripts/test-learn-teacher-board.mjs",
     "qa:learn:frames": "node --import tsx scripts/capture-learn-frame-sheets.mjs",
+    "test:learn-qa-registry": "node --import tsx --test scripts/test-learn-qa-registry.mjs",
     "preview": "vite preview",
     "cf:dev": "npm run build && wrangler pages dev dist",
     "cf:deploy": "npm run build && wrangler pages deploy dist",
