@@ -45,6 +45,9 @@ export function assertQaRegistration(record: LessonQaRegistration): void {
     const beatIds = authored.map(beat => beat.id);
     if (new Set(beatIds).size !== beatIds.length) throw new Error(scene.id + ': duplicate beat');
     for (const beat of authored) if (!beat.line?.trim()) throw new Error(scene.id + '/' + beat.id + ': empty narration');
+    if (scene.id !== finalSpeakingSceneId && !scene.activity) {
+      throw new Error(scene.id + ': this classroom QA version requires an authored MC checkpoint for each teaching scene; split or extend the renderer explicitly');
+    }
     if (scene.activity) {
       const choices=scene.activity.options;
       if (choices.length < 2 || !choices.some(x=>x.id===scene.activity?.correctOptionId))
