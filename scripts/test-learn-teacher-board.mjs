@@ -47,6 +47,8 @@ test('a correct board choice alone cannot complete a scene without real micropho
   runtime.recordLearnerAudioLevel(0.5);
   assert.match(complete.handle(validAudit).error, /board comprehension check/);
   assert.equal(runtime.submitBoardChoice(current.id, 'old').correct, false);
+  const boardTool = runtime.tools.find((tool) => tool.declaration.name === 'show_board');
+  assert.match(boardTool.handle({ mode: 'note', title: 'Override', items: ['Should not appear'] }).error, /interactive board/);
   assert.match(complete.handle(validAudit).error, /board comprehension check/);
   assert.equal(runtime.snapshot.scenes[current.id].activityPassed, false);
 
