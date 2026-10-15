@@ -42,9 +42,11 @@ try {
         assert.equal(await page.locator('.tutor-goals[open]').count(), 0, 'Goals collapsed by default');
         assert.equal(await page.locator('.tutor-phase-meta b').innerText(), 'B1',
           'Roleplay header must show the CEFR level, not the obsolete 2/3 counter');
-        const character = await page.locator('.fs-live-character-host').boundingBox();
+        const character = await page.locator('.tutor-stage .sp-scenario-character').boundingBox();
         const status = await page.locator('.fs-live-status').boundingBox();
         assert.ok(character && status && character.y < status.y, 'Otti status bubble should appear below avatar');
+        if (viewport.id === 'mobile') assert.ok(character.y + character.height + 10 <= status.y,
+          'Otti tentacles must not collide with the speech bubble');
       }
       if (item.id === 'review') {
         const close = await page.locator('.practice-recap-top button').boundingBox();
