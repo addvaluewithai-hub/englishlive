@@ -25,6 +25,8 @@ import {
 import { getRequiredSceneLesson } from '../lessonScenes/catalog';
 import { B1_L02_TEACHER_BOARD_PILOT } from '../lessonScenes/b1/teacherBoardPilot';
 import { TeacherBoardActivity } from '../lessonScenes/TeacherBoardActivity';
+import { ScriptedNarrationDirector } from '../lessonScenes/ScriptedNarrationDirector';
+import { B1_TEACHER_LAB_SCRIPT, B1_TEACHER_LAB_AFTER_CHOICE, type TeachingBeat } from '../lessonScenes/b1/teacherLabScript';
 import '../lessonScenes/teacherBoardPilot.css';
 import { SceneLessonRuntime } from '../lessonScenes/SceneLessonRuntime';
 import type { SceneLessonState } from '../lessonScenes/types';
@@ -187,6 +189,11 @@ export function SceneLessonScreen() {
   const performer = useRef<CharacterPerformanceController | null>(null);
   const runtime = useRef<SceneLessonRuntime | null>(null);
   const compactLog = useRef<CompactLogEntry[]>([]);
+  const scripted = useRef(new ScriptedNarrationDirector());
+  const pendingScriptBoard = useRef<{ sceneId: string; board: SupportBoard | null } | null>(null);
+  const scriptNextTimer = useRef<number | null>(null);
+  const scriptWatchdog = useRef<number | null>(null);
+  const [scriptPaused, setScriptPaused] = useState(false);
   const welcomePlayed = useRef(false);
   const manualInterrupt = useRef(false);
   const holdMicForTeacherContinuation = useRef(false);
@@ -213,6 +220,56 @@ export function SceneLessonScreen() {
   const [knownItemIds, setKnownItemIds] = useState<string[]>(initialCheckpoint.current?.knownItemIds ?? []);
   const [pace, setPace] = useState<LessonSpeakingPace>(initialCheckpoint.current?.pace ?? 'relaxed');
   const [preflightReady, setPreflightReady] = useState(knownItems.length === 0 && !initialCheckpoint.current);
+
+  function clearScriptTimers() {
+    if (scriptNextTimer.current !== null) window.clearTimeout(scriptNextTimer.current);
+    if (scriptWatchdog.current !== null) window.clearTimeout(scriptWatchdog.current);
+    scriptNextTimer.current = null;
+    scriptWatchdog.current = null;
+  }
+
+  function readAuthoredBeat(sceneId: string, beat: TeachingBeat) {
+    const live = transport.current;
+    if (!live?.connected || runtime.current?.currentScene.id !== sceneId) return;
+    pendingScriptBoard.current = { sceneId, board: beat.board };
+    holdMicForTeacherContinuation.current = true;
+    setLearnerMicEnabled(false);
+    appendQuickActionLog(`[authored] ${sceneId}/${beat.id}`);
+    live.sendText(`[READ AUTHORED LINE — SAY ONLY THE TEXT BETWEEN MARKERS]
+BEGIN LINE
+${beat.line}
+END LINE
+Do not speak beyond the written line; stop after END LINE.`);
+    if (scriptWatchdog.current !== null) window.clearTimeout(scriptWatchdog.current);
+    scriptWatchdog.current = window.setTimeout(() => {
+      if (!scripted.current.isReading || scripted.current.currentSceneId !== sceneId) return;
+      scripted.current.pause();
+      pendingScriptBoard.current = null;
+      setScriptPaused(true);
+      setError('ما سمعناش نهاية السطر. تقدر تضغط «كمّل الشرح» عشان نعيده من غير ما نتخطّاه.');
+    }, 30_000);
+  }
+
+  function startScriptScene(sceneId: string) {
+    const beats = B1_TEACHER_LAB_SCRIPT[sceneId];
+    if (!beats || !transport.current?.connected || runtime.current?.currentScene.id !== sceneId) return;
+    clearScriptTimers();
+    setScriptPaused(false);
+    const first = scripted.current.start(sceneId, beats);
+    readAuthoredBeat(sceneId, first);
+  }
+
+  function resumeScript() {
+    if (!teacherLab || !transport.current?.connected || scripted.current.isReading) return;
+    try {
+      const line = scripted.current.resume();
+      const sceneId = scripted.current.currentSceneId;
+      if (!sceneId) return;
+      setScriptPaused(false);
+      setError(null);
+      readAuthoredBeat(sceneId, line);
+    } catch { /* There is no interrupted narration to resume. */ }
+  }
 
   function clearDecisionNudge() {
     if (decisionNudgeTimer.current !== null) window.clearTimeout(decisionNudgeTimer.current);
@@ -258,6 +315,15 @@ export function SceneLessonScreen() {
             if (!response?.error) {
               learnerSceneAfterSpeech.current = null;
               clearDecisionNudge();
+              if (teacherLab) {
+                // NON_BLOCKING + SILENT tool response goes out before the next authored line.
+                const next = readRecord(response?.nextScene);
+                const sceneId = typeof next?.id === 'string' ? next.id : null;
+                if (sceneId) {
+                  if (scriptNextTimer.current !== null) window.clearTimeout(scriptNextTimer.current);
+                  scriptNextTimer.current = window.setTimeout(() => startScriptScene(sceneId), 400);
+                }
+              }
             }
           }
           return result;
@@ -355,7 +421,17 @@ export function SceneLessonScreen() {
     const answer = sceneRuntime.submitBoardChoice(sceneId, optionId);
     if (answer.accepted && answer.correct) {
       appendQuickActionLog('[board] correct comprehension choice');
-      live.sendText('[BOARD_CHECK: correct] The learner passed the application-graded on-board comprehension choice in the CURRENT SCENE. This is NOT voice evidence. Briefly acknowledge it, then ask for a fresh meaningful SPOKEN sentence in a changed context before using complete_scene. Do not repeat the same example.');
+      learnerSceneAfterSpeech.current = null;
+      const authoredFollowUp = B1_TEACHER_LAB_AFTER_CHOICE[sceneId];
+      if (authoredFollowUp) {
+        holdMicForTeacherContinuation.current = true;
+        setLearnerMicEnabled(false);
+        live.sendText(`[READ AUTHORED LINE — SAY ONLY THE TEXT BETWEEN MARKERS]
+BEGIN LINE
+${authoredFollowUp}
+END LINE
+Do not speak beyond the written line; stop after END LINE.`);
+      }
     }
     return answer;
   }
@@ -383,6 +459,9 @@ export function SceneLessonScreen() {
   }
 
   async function closeLive() {
+    clearScriptTimers();
+    pendingScriptBoard.current = null;
+    setScriptPaused(false);
     clearDecisionNudge();
     transport.current?.endAudioStream();
     transport.current?.close();
@@ -411,6 +490,7 @@ export function SceneLessonScreen() {
   useEffect(() => {
     return () => {
       clearDecisionNudge();
+      clearScriptTimers();
       transport.current?.close();
       void microphone.current?.stop();
       void playback.current?.close();
@@ -444,6 +524,10 @@ export function SceneLessonScreen() {
     lastTeacherText.current = '';
     clearDecisionNudge();
     compactLog.current = [];
+    clearScriptTimers();
+    scripted.current = new ScriptedNarrationDirector();
+    pendingScriptBoard.current = null;
+    setScriptPaused(false);
 
     const bundle = await loadTeachingBundle(localLesson, character, { preview: teacherLab });
     const sessionLesson = teacherLab ? localLesson : adaptLessonForKnownItems(bundle.lesson, knownItemIds);
@@ -477,19 +561,37 @@ export function SceneLessonScreen() {
       onMouthPose: (pose) => characterPerformance.setMouth(pose),
       onSpeechStart: () => {
         clearDecisionNudge();
-        holdMicForTeacherContinuation.current = false;
+        if (teacherLab && pendingScriptBoard.current) {
+          const next = pendingScriptBoard.current;
+          pendingScriptBoard.current = null;
+          sceneRuntime.showScriptedBoard(next.sceneId, next.board);
+        }
+        if (!teacherLab || !scripted.current.isReading) holdMicForTeacherContinuation.current = false;
         setLearnerMicEnabled(false);
         setStatus('speaking');
         characterPerformance.speechStart();
       },
       onSpeechEnd: () => {
-        const shouldHold = holdMicForTeacherContinuation.current;
+        const shouldHold = holdMicForTeacherContinuation.current || (teacherLab && scripted.current.isReading);
         setLearnerMicEnabled(!shouldHold);
-        setStatus((current) => current === 'idle' || current === 'error' ? current : 'listening');
+        setStatus((current) => current === 'idle' || current === 'error' ? current : shouldHold ? 'speaking' : 'listening');
         characterPerformance.speechEnd();
       },
       onTurnComplete: () => {
         sceneRuntime.markPartnerTurnComplete();
+        if (teacherLab && scripted.current.isReading) {
+          if (scriptWatchdog.current !== null) window.clearTimeout(scriptWatchdog.current);
+          scriptWatchdog.current = null;
+          const step = scripted.current.audioFinished();
+          if (step.next && step.finishedSceneId === null) {
+            readAuthoredBeat(sceneRuntime.currentScene.id, step.next);
+          } else if (step.finishedSceneId) {
+            sceneRuntime.markScriptedNarrationComplete(step.finishedSceneId);
+            holdMicForTeacherContinuation.current = false;
+          }
+          return;
+        }
+        if (teacherLab) return;
         if (!welcomePlayed.current) {
           welcomePlayed.current = true;
           holdMicForTeacherContinuation.current = true;
@@ -542,6 +644,12 @@ export function SceneLessonScreen() {
           void queue.enqueue(data, pcmSampleRate(mimeType));
         },
         onInterrupted: () => {
+          if (teacherLab && scripted.current.isReading) {
+            scripted.current.pause();
+            clearScriptTimers();
+            pendingScriptBoard.current = null;
+            setScriptPaused(true);
+          }
           manualInterrupt.current = false;
           queue.interrupt();
           characterPerformance.interrupt();
@@ -593,6 +701,13 @@ export function SceneLessonScreen() {
           sceneRuntime.recordLearnerAudioLevel(level);
         },
       );
+      if (teacherLab) {
+        welcomePlayed.current = true;
+        sceneRuntime.markLessonOpeningComplete();
+        setWelcomeComplete(true);
+        startScriptScene(sceneRuntime.currentScene.id);
+        return;
+      }
       const opening = sceneRuntime.isResuming
         ? 'Resume the interrupted lesson with ONLY the brief resume opening described in your instructions. Do not repeat the original welcome or earlier scenes. Stop after the short reconnection.'
         : bundle.teachingPolicy.openingPrompt
@@ -760,6 +875,9 @@ export function SceneLessonScreen() {
       </main>
 
       <footer className="premium-lesson-footer">
+        {teacherLab && scriptPaused && status === 'listening' ? (
+          <button type="button" className="teacher-pilot-resume" onClick={resumeScript}>كمّل الشرح من السطر اللي وقفنا عنده</button>
+        ) : null}
         <div className="premium-live-status" aria-live="polite">
           <span className={`premium-status-dot status-${status}`} />
           <div>
