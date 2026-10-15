@@ -110,3 +110,22 @@
   .practice-recap-stats strong { font-size: 24px; }
 }
 @media (prefers-reduced-motion: reduce) { .practice-recap * { scroll-behavior: auto !important; } }
+
+/* RTL placement matches the approved screenshots: close left, level on right. */
+.practice-recap-top { direction: ltr; }
+.practice-recap-top > strong { direction: rtl; unicode-bidi: plaintext; }
+.practice-recap-top button, .practice-recap-level { direction: ltr; }
+.practice-recap-notes h2 { font-size: 22px; }
+.practice-recap-hero h1 { font-size: clamp(23px, 5vw, 29px); }
+.practice-recap-hero p { font-size: 14px; }
+.practice-recap-comparison p { font-size: 16px; line-height: 1.7; }
+.practice-recap-label { font-size: 12px; }
+.practice-recap-explanation p { font-size: 14px; }
+.practice-recap-note { gap: 11px; padding: 17px 16px; }
+.practice-recap-note-heading .practice-recap-type { font-size: 12px; }
+.practice-recap-stats span { font-size: 12px; }
+.practice-recap-success { height: 76px; width: 76px; }
+@media (max-width: 390px) {
+  .practice-recap-comparison p { font-size: 15px; }
+  .practice-recap-note { padding: 14px 13px; }
+}
