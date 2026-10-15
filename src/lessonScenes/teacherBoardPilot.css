@@ -76,3 +76,19 @@
 @media (prefers-reduced-motion: reduce) {
   .premium-board-layer.has-teacher-activity * { scroll-behavior: auto; }
 }
+
+.teacher-pilot-resume {
+  display: block;
+  width: min(100%, 460px);
+  min-height: 44px;
+  margin: 0 auto 8px;
+  padding: 9px 12px;
+  border: 1px solid #207269;
+  border-radius: 14px;
+  color: #075c54;
+  background: #eaf6f2;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+.teacher-pilot-resume:focus-visible { outline: 3px solid #087d75; outline-offset: 2px; }
