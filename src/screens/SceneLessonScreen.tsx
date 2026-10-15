@@ -26,7 +26,7 @@ import { getRequiredSceneLesson } from '../lessonScenes/catalog';
 import { B1_L02_TEACHER_BOARD_PILOT } from '../lessonScenes/b1/teacherBoardPilot';
 import { TeacherBoardActivity } from '../lessonScenes/TeacherBoardActivity';
 import { ScriptedNarrationDirector } from '../lessonScenes/ScriptedNarrationDirector';
-import { B1_TEACHER_LAB_SCRIPT, B1_TEACHER_LAB_AFTER_CHOICE, type TeachingBeat } from '../lessonScenes/b1/teacherLabScript';
+import { B1_TEACHER_LAB_SCRIPT, B1_TEACHER_LAB_QUIZ_FEEDBACK, type TeachingBeat } from '../lessonScenes/b1/teacherLabScript';
 import '../lessonScenes/teacherBoardPilot.css';
 import { SceneLessonRuntime } from '../lessonScenes/SceneLessonRuntime';
 import type { SceneLessonState } from '../lessonScenes/types';
@@ -190,7 +190,9 @@ export function SceneLessonScreen() {
   const runtime = useRef<SceneLessonRuntime | null>(null);
   const compactLog = useRef<CompactLogEntry[]>([]);
   const scripted = useRef(new ScriptedNarrationDirector());
-  const pendingScriptBoard = useRef<{ sceneId: string; board: SupportBoard | null } | null>(null);
+  const pendingScriptBoard = useRef<{ sceneId: string; beatId: string; board: SupportBoard | null } | null>(null);
+  const pendingQuizFeedback = useRef<{ sceneId: string; correct: boolean } | null>(null);
+  const [visibleBeatId, setVisibleBeatId] = useState('');
   const scriptNextTimer = useRef<number | null>(null);
   const scriptWatchdog = useRef<number | null>(null);
   const [scriptPaused, setScriptPaused] = useState(false);
@@ -231,7 +233,7 @@ export function SceneLessonScreen() {
   function readAuthoredBeat(sceneId: string, beat: TeachingBeat) {
     const live = transport.current;
     if (!live?.connected || runtime.current?.currentScene.id !== sceneId) return;
-    pendingScriptBoard.current = { sceneId, board: beat.board };
+    pendingScriptBoard.current = { sceneId, beatId: beat.id, board: beat.board };
     holdMicForTeacherContinuation.current = true;
     setLearnerMicEnabled(false);
     compactLog.current.push({ role: 'SCRIPT', text: `[${sceneId}/${beat.id}] ${beat.line}` });
@@ -258,6 +260,8 @@ export function SceneLessonScreen() {
     }
     clearScriptTimers();
     setScriptPaused(false);
+    setVisibleBeatId('');
+    pendingQuizFeedback.current = null;
     const first = scripted.current.start(sceneId, beats);
     readAuthoredBeat(sceneId, first);
   }
@@ -418,19 +422,21 @@ export function SceneLessonScreen() {
   function chooseBoardActivity(sceneId: string, optionId: string) {
     const sceneRuntime = runtime.current;
     const live = transport.current;
-    if (!teacherLab || !sceneRuntime || !live?.connected || status !== 'listening' || !micOpen) {
+    if (!teacherLab || !sceneRuntime || !live?.connected || status !== 'listening' ||
+      !sceneRuntime.scriptedNarrationComplete || scripted.current.isReading) {
       return { accepted: false, correct: false, error: 'استنى لحد ما Otti يخلص الشرح.' };
     }
     const answer = sceneRuntime.submitBoardChoice(sceneId, optionId);
-    if (answer.accepted && answer.correct) {
-      appendQuickActionLog('[board] correct comprehension choice');
+    if (answer.accepted) {
+      appendQuickActionLog(`[board] ${sceneId} choice=${optionId} ${answer.correct ? 'correct' : 'incorrect'}`);
       learnerSceneAfterSpeech.current = null;
-      const authoredFollowUp = B1_TEACHER_LAB_AFTER_CHOICE[sceneId];
-      if (authoredFollowUp) {
-        compactLog.current.push({ role: 'SCRIPT', text: `[${sceneId}/after-choice] ${authoredFollowUp}` });
+      const authoredFeedback = B1_TEACHER_LAB_QUIZ_FEEDBACK[sceneId]?.[answer.correct ? 'correct' : 'wrong'];
+      if (authoredFeedback) {
+        pendingQuizFeedback.current = { sceneId, correct: answer.correct };
+        compactLog.current.push({ role: 'SCRIPT', text: `[${sceneId}/quiz-${answer.correct ? 'correct' : 'wrong'}] ${authoredFeedback}` });
         holdMicForTeacherContinuation.current = true;
         setLearnerMicEnabled(false);
-        live.sendText(`READ:\n${authoredFollowUp}`);
+        live.sendText(`READ:\n${authoredFeedback}`);
       }
     }
     return answer;
@@ -467,6 +473,7 @@ export function SceneLessonScreen() {
   async function closeLive() {
     clearScriptTimers();
     pendingScriptBoard.current = null;
+    pendingQuizFeedback.current = null;
     setScriptPaused(false);
     clearDecisionNudge();
     transport.current?.endAudioStream();
@@ -533,6 +540,8 @@ export function SceneLessonScreen() {
     clearScriptTimers();
     scripted.current = new ScriptedNarrationDirector();
     pendingScriptBoard.current = null;
+    pendingQuizFeedback.current = null;
+    setVisibleBeatId('');
     setScriptPaused(false);
 
     const bundle = await loadTeachingBundle(localLesson, character, { preview: teacherLab });
@@ -571,6 +580,7 @@ export function SceneLessonScreen() {
           const next = pendingScriptBoard.current;
           pendingScriptBoard.current = null;
           sceneRuntime.showScriptedBoard(next.sceneId, next.board);
+          setVisibleBeatId(next.beatId);
         }
         if (!teacherLab || !scripted.current.isReading) holdMicForTeacherContinuation.current = false;
         setLearnerMicEnabled(false);
@@ -579,7 +589,9 @@ export function SceneLessonScreen() {
       },
       onSpeechEnd: () => {
         const shouldHold = holdMicForTeacherContinuation.current || (teacherLab && scripted.current.isReading);
-        setLearnerMicEnabled(!shouldHold);
+        // MC questions are touch-only; the mic opens again for the final speaking scene.
+        const quizScene = teacherLab && Boolean(sceneRuntime.currentScene.activity);
+        setLearnerMicEnabled(!shouldHold && !quizScene);
         setStatus((current) => current === 'idle' || current === 'error' ? current : shouldHold ? 'speaking' : 'listening');
         characterPerformance.speechEnd();
       },
@@ -594,6 +606,15 @@ export function SceneLessonScreen() {
           } else if (step.finishedSceneId) {
             sceneRuntime.markScriptedNarrationComplete(step.finishedSceneId);
             holdMicForTeacherContinuation.current = false;
+          }
+          return;
+        }
+        if (teacherLab && pendingQuizFeedback.current) {
+          const result = pendingQuizFeedback.current;
+          pendingQuizFeedback.current = null;
+          holdMicForTeacherContinuation.current = false;
+          if (sceneRuntime.markQuizFeedbackPlayed(result.sceneId)) {
+            live.sendText(`[QUIZ_FEEDBACK_FINISHED] The app graded the authored MC answer as ${result.correct ? 'CORRECT' : 'INCORRECT'}. You have audibly read the authored explanation. NOW call complete_scene, learnerTurnsObserved=0, evidenceType=receptive_comprehension, supportUsed=none, freshIndependentRetry=false. Summary: ${result.correct ? 'Correct board comprehension' : 'Incorrect comprehension; explained correct answer; needs later review'}. This is NOT speaking mastery. Do not speak anything else before the tool call.`);
           }
           return;
         }
@@ -659,7 +680,7 @@ export function SceneLessonScreen() {
           manualInterrupt.current = false;
           queue.interrupt();
           characterPerformance.interrupt();
-          setLearnerMicEnabled(true);
+          setLearnerMicEnabled(!teacherLab || !sceneRuntime.currentScene.activity);
           setStatus('listening');
           setPerformanceLabel('audio-driven locally');
         },
@@ -748,6 +769,9 @@ export function SceneLessonScreen() {
   const lessonComplete = Boolean(lessonState?.completedAt);
   const quickActionsEnabled = welcomeComplete && learnerTurn && Boolean(transport.current?.connected);
   const board = welcomeComplete ? activeBoard : null;
+  const quizState = lessonState?.scenes[currentScene.id];
+  const quizReady = teacherLab && Boolean(currentScene.activity) &&
+    Boolean(runtime.current?.scriptedNarrationComplete) && !scripted.current.isReading;
   const checkpointGroups = checkpointGroupsForLesson(activeLesson);
   const preflightVisible = !preflightReady && !liveLesson && !connecting;
 
@@ -788,7 +812,7 @@ export function SceneLessonScreen() {
         ))}
       </div>
 
-      <main className={`premium-lesson-stage${board ? ' has-board' : ''}${preflightVisible ? ' has-preflight' : ''}`}>
+      <main className={`premium-lesson-stage${board ? ' has-board' : ''}${preflightVisible ? ' has-preflight' : ''}${teacherLab ? ' is-teacher-lab' : ''}`}>
         <div className="premium-scene-caption">
           <small>{teacherLab ? 'تجربة تعليمية · بدون تسجيل تقدّم' : welcomeComplete ? `الخطوة ${sceneIndex + 1} من ${activeLesson.scenes.length}` : preflightVisible ? 'قبل ما نبدأ' : 'بداية الدرس'}</small>
           <strong>{welcomeComplete ? currentScene.title : `مع ${character.name}`}</strong>
@@ -867,10 +891,11 @@ export function SceneLessonScreen() {
               <TeacherBoardActivity
                 key={currentScene.id}
                 sceneId={currentScene.id}
-                board={board}
+                beatId={visibleBeatId}
                 activity={currentScene.activity}
-                passed={lessonState?.scenes[currentScene.id]?.activityPassed === true}
-                canAnswer={learnerTurn && Boolean(transport.current?.connected)}
+                answered={quizState?.activityAnswered === true}
+                choiceId={quizState?.activityChoiceId}
+                questionReady={quizReady && status === 'listening' && Boolean(transport.current?.connected)}
                 onChoose={chooseBoardActivity}
               />
             ) : <ConversationBoard board={board} />}
@@ -887,8 +912,8 @@ export function SceneLessonScreen() {
         <div className="premium-live-status" aria-live="polite">
           <span className={`premium-status-dot status-${status}`} />
           <div>
-            <strong>{lessonComplete ? 'الدرس خلص' : preflightVisible ? 'اختار اللي عارفه الأول' : learnerTurn ? 'دورك تتكلم' : statusCopy[status]}</strong>
-            <small>{preflightVisible ? `Otti · ${paceCopy[pace].label}` : learnerTurn ? 'المايك مفتوح تلقائيًا' : teacherSpeaking ? 'لو محتاج توقفه اضغط مقاطعة' : character.name}</small>
+            <strong>{lessonComplete ? 'الدرس خلص' : preflightVisible ? 'اختار اللي عارفه الأول' : teacherLab && currentScene.activity && quizReady ? 'اختار إجابتك من البورد' : learnerTurn ? 'دورك تتكلم' : statusCopy[status]}</strong>
+            <small>{preflightVisible ? `Otti · ${paceCopy[pace].label}` : teacherLab && currentScene.activity ? 'Otti هيشرح اختيارك بصوته' : learnerTurn ? 'المايك مفتوح تلقائيًا' : teacherSpeaking ? 'لو محتاج توقفه اضغط مقاطعة' : character.name}</small>
           </div>
         </div>
 
