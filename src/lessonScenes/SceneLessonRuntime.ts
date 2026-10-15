@@ -53,12 +53,14 @@ export class SceneLessonRuntime {
   private state: SceneLessonState;
   private learnerAudioObserved = false;
   private lessonOpeningComplete = false;
+  private narrationComplete = false;
   private activeBoard: SupportBoard | null = null;
   private readonly listeners = new Set<(state: SceneLessonState) => void>();
   private readonly onBoardChange?: (board: SupportBoard | null) => void;
   private readonly policyPrompt: string;
   private readonly adaptiveContext: string;
   private readonly resumedFromCheckpoint: boolean;
+  private readonly preview: boolean;
 
   constructor(
     readonly lesson: SceneLessonDefinition,
@@ -68,9 +70,11 @@ export class SceneLessonRuntime {
       policyPrompt?: string;
       adaptiveContext?: string;
       restoredState?: SceneLessonState | null;
+      preview?: boolean;
     } = {},
   ) {
     if (!lesson.scenes.length) throw new Error('Scene lesson requires at least one scene.');
+    this.preview = options.preview === true;
     this.state = this.createInitialState(options.restoredState ?? null);
     this.resumedFromCheckpoint = Boolean(
       options.restoredState
@@ -80,7 +84,7 @@ export class SceneLessonRuntime {
     this.onBoardChange = options.onBoardChange;
     this.policyPrompt = options.policyPrompt?.trim() ?? '';
     this.adaptiveContext = options.adaptiveContext?.trim() ?? '';
-    markProductLessonStarted(lesson.id);
+    if (!this.preview) markProductLessonStarted(lesson.id);
     this.tools = [this.completeSceneTool(), this.showBoardTool()];
   }
 
@@ -101,11 +105,47 @@ export class SceneLessonRuntime {
     return this.resumedFromCheckpoint;
   }
 
+  get scriptedNarrationComplete() { return this.narrationComplete; }
+
+  /** Preview-only authored visual: exactly the board for the line being read. */
+  showScriptedBoard(sceneId: string, board: SupportBoard | null) {
+    if (!this.preview || this.currentScene.id !== sceneId || this.state.completedAt) return false;
+    this.activeBoard = board ? clone(board) : null;
+    this.onBoardChange?.(this.activeBoard ? clone(this.activeBoard) : null);
+    return true;
+  }
+
+  markScriptedNarrationComplete(sceneId: string) {
+    if (!this.preview || this.currentScene.id !== sceneId || this.narrationComplete) return false;
+    this.narrationComplete = true;
+    this.learnerAudioObserved = false;
+    this.persistAndEmit();
+    return true;
+  }
+
   get completedSceneCount() {
     return this.lesson.scenes.filter((scene) => this.state.scenes[scene.id]?.status === 'met').length;
   }
 
   get systemPrompt() {
+    if (this.preview) {
+      return `You are Otti, an Egyptian-Arabic speaking English teacher in a PREWRITTEN narrated lesson. The application owns the teaching sequence, board transitions and questions.
+
+STRICT READ MODE:
+- Whenever the application sends READ: followed by a line, voice ONLY the text after READ:, in a warm expressive teacher voice. Do not read the READ: header aloud; do not paraphrase, add an introduction, anticipate future lines, or ask additional questions.
+- Do not spontaneously begin a scene, lecture, or choose the next teaching line. The application sends each line after the previous line's audio actually finishes.
+- Keep the microphone closed in the four multiple-choice scenes. After each narrated scene ends, wait for the application-graded board choice; do not request speech. The microphone is used in the FINAL fresh-transfer scene.
+- In the FINAL speaking scene, after the learner speaks, give concise appropriate feedback, clarification or ONE meaningful next question. Do not improvise extra quiz explanations.
+- Do not give away a board answer before the learner chooses. On BOTH correct and incorrect choices the application sends an authored READ feedback line. Read it and then wait for QUIZ_FEEDBACK_FINISHED before calling complete_scene.
+- In QUIZ scenes call complete_scene after the authored feedback (right or wrong), using the result as receptive-comprehension evidence, NOT proof of speaking mastery. In FINAL speaking, complete only when the learner genuinely sustains meaningful conversation.
+- After complete_scene returns, say nothing; the application will send the next authored narration line. Do not call show_board.
+- In the final fresh-transfer scene, you can converse freely AFTER reading its one written opening, but stay in the given coworker situation and respond naturally to the learner without introducing new lesson language. Do not count polite goodbyes, generic acknowledgements, or repeating your questions as independent conversation progress.
+- If the learner says they do not know, explain the last teaching idea briefly with one supporting example; never demand that they produce language that has not been explained.
+
+LESSON: ${this.lesson.title}
+CURRENT SCENE:
+${JSON.stringify(this.scenePayload(this.currentScene), null, 2)}`;
+    }
     const publishedPolicy = this.policyPrompt
       ? `\nPUBLISHED TEACHING POLICY\n${this.policyPrompt}\n`
       : '';
@@ -156,7 +196,7 @@ SCENE COMPLETION — TEACHER JUDGEMENT
 - If the tool says lessonComplete=true, one short warm closing is enough.
 
 BOARD
-- The authored board for the CURRENT SCENE appears automatically, so you do not need a tool simply to reveal it.
+- The authored board for the CURRENT SCENE appears automatically, so you do not need a tool simply to reveal it.\n- If the current scene includes boardActivity, ask the learner to make that selection before you seek a new spoken use. The app grades the selection and will send an internal BOARD_CHECK result. Do not reveal the correct option before the learner attempts. A correct board click is not independent spoken evidence; request a changed meaningful spoken sentence afterwards.
 - The board is support rather than a completion gate.
 - If another visual would genuinely help, show_board can replace the current board with one small note, example set, or comparison that stays inside the current scene language.
 - The authored board is usually preferable unless the learner really needs a simpler example or tiny comparison.
@@ -202,6 +242,10 @@ ${JSON.stringify(this.scenePayload(this.currentScene), null, 2)}
       const met = previous?.status === 'met';
       scenes[scene.id] = {
         status: met ? 'met' : 'pending',
+        activityPassed: previous?.activityPassed === true,
+        activityAnswered: previous?.activityAnswered === true,
+        activityFeedbackPlayed: previous?.activityFeedbackPlayed === true,
+        activityChoiceId: previous?.activityChoiceId,
         evidence: met ? clone(previous?.evidence ?? []) : [],
         metAt: met ? previous?.metAt : undefined,
       };
@@ -234,14 +278,54 @@ ${JSON.stringify(this.scenePayload(this.currentScene), null, 2)}
       goal: scene.goal,
       teaching: scene.teaching,
       interaction: scene.interaction,
-      verification: sceneVerificationContract(this.lesson.id, scene.id, scene.interaction.kind),
+      verification: this.preview && scene.activity
+        ? { kind: 'application-graded-multiple-choice', completion: 'wait for the authored feedback audio, then call complete_scene even if incorrect; not speaking evidence' }
+        : sceneVerificationContract(this.lesson.id, scene.id, scene.interaction.kind),
       authoredBoard: scene.board ?? null,
+      boardActivity: scene.activity
+        ? {
+            promptAr: scene.activity.promptAr,
+            options: scene.activity.options,
+            requiredBeforeCompletion: true,
+          }
+        : null,
     };
   }
 
   private showAuthoredBoard() {
-    this.activeBoard = this.currentScene.board ?? null;
+    this.activeBoard = this.preview ? null : this.currentScene.board ?? null;
     this.onBoardChange?.(this.activeBoard ? clone(this.activeBoard) : null);
+  }
+
+  /** A board tap is client-graded comprehension evidence, never microphone evidence. */
+  submitBoardChoice(sceneId: string, optionId: string) {
+    if (this.state.completedAt || this.currentScene.id !== sceneId) {
+      return { accepted: false, correct: false, error: 'This scene is no longer active.' };
+    }
+    const activity = this.currentScene.activity;
+    if (!activity || !activity.options.some((option) => option.id === optionId)) {
+      return { accepted: false, correct: false, error: 'Unknown board activity or choice.' };
+    }
+    if (!this.preview || !this.narrationComplete || this.state.scenes[sceneId].activityAnswered) {
+      return { accepted: false, correct: false, error: 'The question is not ready or was already answered.' };
+    }
+    const correct = optionId === activity.correctOptionId;
+    const state = this.state.scenes[sceneId];
+    state.activityAnswered = true;
+    state.activityPassed = correct;
+    state.activityChoiceId = optionId;
+    state.activityFeedbackPlayed = false;
+    this.persistAndEmit();
+    return { accepted: true, correct };
+  }
+
+  /** A quiz may advance only AFTER Otti's authored right/wrong explanation finishes audibly. */
+  markQuizFeedbackPlayed(sceneId: string) {
+    const state = this.state.scenes[sceneId];
+    if (!this.preview || this.currentScene.id !== sceneId || !state?.activityAnswered) return false;
+    state.activityFeedbackPlayed = true;
+    this.persistAndEmit();
+    return true;
   }
 
   private persistAndEmit() {
@@ -261,6 +345,7 @@ ${JSON.stringify(this.scenePayload(this.currentScene), null, 2)}
       automaticTranscript: '',
     };
     this.learnerAudioObserved = false;
+    this.narrationComplete = false;
     this.showAuthoredBoard();
     return true;
   }
@@ -269,8 +354,8 @@ ${JSON.stringify(this.scenePayload(this.currentScene), null, 2)}
     return {
       declaration: {
         name: 'complete_scene',
-        description: 'Complete the current tiny teaching scene only after your own brief evidence audit says the learner has met the CURRENT SCENE verification contract. The application trusts your pedagogical judgement; these fields help you reflect accurately rather than acting as a semantic grader.',
-        behavior: 'BLOCKING',
+        description: this.preview ? 'In multiple-choice scenes, call ONLY AFTER the app confirms audible answer feedback was delivered, even if wrong. In the final speaking scene call only after meaningful learner interaction. The app owns the authored narration.' : 'Complete the current tiny teaching scene only after your own brief evidence audit says the learner has met the CURRENT SCENE verification contract. The application trusts your pedagogical judgement; these fields help you reflect accurately rather than acting as a semantic grader.',
+        behavior: this.preview ? 'NON_BLOCKING' : 'BLOCKING',
         parameters: {
           type: 'OBJECT',
           properties: {
@@ -316,7 +401,22 @@ ${JSON.stringify(this.scenePayload(this.currentScene), null, 2)}
             nextAction: 'Please finish the short welcome first and assess the scene afterwards.',
           };
         }
-        if (!this.learnerAudioObserved) {
+        if (this.preview && !this.narrationComplete) {
+          return {
+            error: 'The authored narration has not finished.',
+            nextAction: 'Wait for the application to finish reading all authored lines and then ask for learner evidence.',
+          };
+        }
+        if (this.preview && this.currentScene.activity) {
+          const quiz = this.state.scenes[this.currentScene.id];
+          if (!quiz.activityAnswered || !quiz.activityFeedbackPlayed) {
+            return {
+              error: 'The quiz has not been answered and explained yet.',
+              nextAction: 'Wait for the board choice AND audible authored feedback before completing the scene.',
+            };
+          }
+        }
+        if ((!this.preview || !this.currentScene.activity) && !this.learnerAudioObserved) {
           return {
             error: 'No real learner voice activity has been observed in this scene.',
             nextAction: 'Please invite a spoken attempt on the current scene target, listen, support if needed, and then make the pedagogical decision.',
@@ -357,6 +457,14 @@ ${JSON.stringify(this.scenePayload(this.currentScene), null, 2)}
           recordedAt: new Date().toISOString(),
         };
         const current = this.state.scenes[scene.id];
+        // Never mislabel a wrong multiple-choice answer as mastery.
+        if (this.preview && scene.activity) {
+          evidence.summary = current.activityPassed
+            ? 'Board quiz answered correctly; Otti explained the answer.'
+            : 'Board quiz answered incorrectly; Otti explained why and continued. Review needed.';
+          evidence.evidenceType = 'receptive_comprehension';
+          evidence.learnerTurnsObserved = 0;
+        }
         current.evidence = [...current.evidence, evidence].slice(-3);
         current.status = 'met';
         current.metAt ??= new Date().toISOString();
@@ -364,7 +472,7 @@ ${JSON.stringify(this.scenePayload(this.currentScene), null, 2)}
         this.learnerAudioObserved = false;
 
         if (this.advanceFrom(scene.id)) {
-          recordRuntimeSceneCompletion({
+          if (!this.preview) recordRuntimeSceneCompletion({
             lessonId: this.lesson.id,
             sceneId: scene.id,
             sceneIndex,
@@ -383,8 +491,8 @@ ${JSON.stringify(this.scenePayload(this.currentScene), null, 2)}
         this.state.completedAt ??= new Date().toISOString();
         this.activeBoard = null;
         this.onBoardChange?.(null);
-        markProductLessonCompleted(this.lesson.id);
-        recordRuntimeSceneCompletion({
+        if (!this.preview) markProductLessonCompleted(this.lesson.id);
+        if (!this.preview) recordRuntimeSceneCompletion({
           lessonId: this.lesson.id,
           sceneId: scene.id,
           sceneIndex,
@@ -424,6 +532,10 @@ ${JSON.stringify(this.scenePayload(this.currentScene), null, 2)}
       handle: (args) => {
         if (this.state.completedAt) return { error: 'The lesson is already complete.' };
         if (!this.lessonOpeningComplete) return { error: 'Please keep teaching-board content for after the welcome.' };
+        if (this.preview) return { error: 'The authored narrator owns every board in this preview.' };
+        if (this.currentScene.activity && !this.state.scenes[this.currentScene.id].activityPassed) {
+          return { error: 'The authored interactive board must remain visible until the learner completes its check.' };
+        }
 
         const mode = args.mode === 'note' || args.mode === 'examples' || args.mode === 'compare'
           ? args.mode

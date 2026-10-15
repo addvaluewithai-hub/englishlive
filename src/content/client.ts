@@ -187,8 +187,11 @@ export async function loadPublishedCharacter(character: CharacterDefinition): Pr
 export async function loadTeachingBundle(
   lesson: SceneLessonDefinition,
   character: CharacterDefinition,
+  options: { preview?: boolean } = {},
 ): Promise<LoadedTeachingBundle> {
   const fallback = fallbackBundle(lesson, character);
+  // An authored lab must not fetch published content or start a cloud lesson run.
+  if (options.preview) return fallback;
   try {
     const query = new URLSearchParams({ lessonId: lesson.id, characterId: character.id });
     const { response, payload } = await fetchJsonWithTimeout(`/api/content/bundle?${query.toString()}`);
