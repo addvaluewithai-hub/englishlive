@@ -152,3 +152,22 @@ test('no missing explanation can discard a real learner mistake', () => {
   assert.equal(collector.getDiagnostics().saved, 1);
   assert.equal(collector.getImprovements().length, 0);
 });
+
+test('one exact learner original cannot be labeled both correct and incorrect', () => {
+  const collector = createSilentIssueCollector(mission);
+  collector.progressTool.handle({ goal_ids: [], improvements: [
+    { original_en: 'I have a problem with order', better_en: 'I have a problem with my order',
+      explanation_en: 'A different wording.' },
+  ] });
+  assert.equal(collector.getImprovements().length, 1);
+  collector.finalReviewTool.handle({ status: 'issues', issues: [
+    { original_en: 'I have a problem with order', better_en: 'I have a problem with the order',
+      explanation_en: 'The noun needs a determiner in this context.' },
+  ], improvements: [] });
+  assert.equal(collector.getIssues().length, 1);
+  assert.equal(collector.getImprovements().length, 0);
+  collector.progressTool.handle({ goal_ids: [], improvements: [
+    { original_en: 'I have a problem with order', better_en: 'I have a problem with my order' },
+  ] });
+  assert.equal(collector.getImprovements().length, 0, 'late style notes cannot contradict an error');
+});
