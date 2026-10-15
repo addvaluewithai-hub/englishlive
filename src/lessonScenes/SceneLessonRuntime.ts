@@ -134,12 +134,12 @@ export class SceneLessonRuntime {
 STRICT READ MODE:
 - Whenever the application sends READ: followed by a line, voice ONLY the text after READ:, in a warm expressive teacher voice. Do not read the READ: header aloud; do not paraphrase, add an introduction, anticipate future lines, or ask additional questions.
 - Do not spontaneously begin a scene, lecture, or choose the next teaching line. The application sends each line after the previous line's audio actually finishes.
-- Learner microphone stays closed while narrated lines play. Once the narrated scene ends, wait for learner speech or their board choice.
-- After a learner responds, you may give very concise targeted feedback, clarify their misunderstanding or ask ONE changed follow-up in the current language. Avoid long unscripted monologues.
-- Do not give away a board answer before the learner chooses. After the application reports BOARD_CHECK correct, it will send an authored follow-up line. Wait for that line instead of inventing your own task.
+- Keep the microphone closed in the four multiple-choice scenes. After each narrated scene ends, wait for the application-graded board choice; do not request speech. The microphone is used in the FINAL fresh-transfer scene.
+- In the FINAL speaking scene, after the learner speaks, give concise appropriate feedback, clarification or ONE meaningful next question. Do not improvise extra quiz explanations.
+- Do not give away a board answer before the learner chooses. On BOTH correct and incorrect choices the application sends an authored READ feedback line. Read it and then wait for QUIZ_FEEDBACK_FINISHED before calling complete_scene.
 - In QUIZ scenes call complete_scene after the authored feedback (right or wrong), using the result as receptive-comprehension evidence, NOT proof of speaking mastery. In FINAL speaking, complete only when the learner genuinely sustains meaningful conversation.
 - After complete_scene returns, say nothing; the application will send the next authored narration line. Do not call show_board.
-- In the final fresh-transfer scene, you can converse freely AFTER reading its one written opening, but stay in the given coworker situation and respond naturally to the learner without introducing new lesson language.
+- In the final fresh-transfer scene, you can converse freely AFTER reading its one written opening, but stay in the given coworker situation and respond naturally to the learner without introducing new lesson language. Do not count polite goodbyes, generic acknowledgements, or repeating your questions as independent conversation progress.
 - If the learner says they do not know, explain the last teaching idea briefly with one supporting example; never demand that they produce language that has not been explained.
 
 LESSON: ${this.lesson.title}
@@ -278,7 +278,9 @@ ${JSON.stringify(this.scenePayload(this.currentScene), null, 2)}
       goal: scene.goal,
       teaching: scene.teaching,
       interaction: scene.interaction,
-      verification: sceneVerificationContract(this.lesson.id, scene.id, scene.interaction.kind),
+      verification: this.preview && scene.activity
+        ? { kind: 'application-graded-multiple-choice', completion: 'wait for the authored feedback audio, then call complete_scene even if incorrect; not speaking evidence' }
+        : sceneVerificationContract(this.lesson.id, scene.id, scene.interaction.kind),
       authoredBoard: scene.board ?? null,
       boardActivity: scene.activity
         ? {
@@ -352,7 +354,7 @@ ${JSON.stringify(this.scenePayload(this.currentScene), null, 2)}
     return {
       declaration: {
         name: 'complete_scene',
-        description: 'Complete the current tiny teaching scene only after your own brief evidence audit says the learner has met the CURRENT SCENE verification contract. The application trusts your pedagogical judgement; these fields help you reflect accurately rather than acting as a semantic grader.',
+        description: this.preview ? 'In multiple-choice scenes, call ONLY AFTER the app confirms audible answer feedback was delivered, even if wrong. In the final speaking scene call only after meaningful learner interaction. The app owns the authored narration.' : 'Complete the current tiny teaching scene only after your own brief evidence audit says the learner has met the CURRENT SCENE verification contract. The application trusts your pedagogical judgement; these fields help you reflect accurately rather than acting as a semantic grader.',
         behavior: this.preview ? 'NON_BLOCKING' : 'BLOCKING',
         parameters: {
           type: 'OBJECT',
