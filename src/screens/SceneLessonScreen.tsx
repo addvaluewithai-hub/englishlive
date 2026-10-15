@@ -449,6 +449,12 @@ Do not speak beyond the written line; stop after END LINE.`);
   function interruptTeacher() {
     const live = transport.current;
     if (status !== 'speaking' || !live?.connected) return;
+    if (teacherLab && scripted.current.isReading) {
+      scripted.current.pause();
+      clearScriptTimers();
+      pendingScriptBoard.current = null;
+      setScriptPaused(true);
+    }
     manualInterrupt.current = true;
     appendQuickActionLog('مقاطعة');
     playback.current?.interrupt();
