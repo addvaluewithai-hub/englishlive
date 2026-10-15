@@ -155,7 +155,7 @@ export function PracticeIntroduction({ mission, onClose, onStart }: {
                 <span className="practice-intro-warning-mark">⚠</span></>
             : <span className="practice-intro-illustration-chat">···</span>}
         </div>
-        <h1>{ar ? mission.titleAr : mission.titleEn}</h1>
+        <h1>{ar && mission.slug === 'b1-resolve-wrong-order' ? 'هناك مشكلة في طلبك' : (ar ? mission.titleAr : mission.titleEn)}</h1>
         <p>{ar ? mission.briefing?.situationAr || mission.settingAr :
           mission.briefing?.situationEn || mission.titleEn}</p>
         <div className="practice-intro-details">
