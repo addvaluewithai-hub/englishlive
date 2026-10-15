@@ -267,6 +267,9 @@ ${JSON.stringify(this.scenePayload(this.currentScene), null, 2)}
     const correct = optionId === activity.correctOptionId;
     if (correct && !this.state.scenes[sceneId].activityPassed) {
       this.state.scenes[sceneId].activityPassed = true;
+      // An earlier spoken attempt cannot certify the *new* post-board transfer.
+      this.learnerAudioObserved = false;
+      delete this.state.scenes[sceneId].automaticTranscript;
       this.persistAndEmit();
     }
     return { accepted: true, correct };
