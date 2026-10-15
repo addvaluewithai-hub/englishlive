@@ -39,6 +39,14 @@ export interface SceneInteractionPlan {
   supportLadder: readonly string[];
 }
 
+export interface SceneBoardActivity {
+  promptAr: string;
+  options: readonly { id: string; text: string }[];
+  correctOptionId: string;
+  successAr: string;
+  retryAr: string;
+}
+
 export interface SceneLessonScene {
   id: string;
   title: string;
@@ -47,6 +55,8 @@ export interface SceneLessonScene {
   teaching: SceneTeachingPlan;
   /** One small authored visual that appears automatically when this scene starts. */
   board?: SupportBoard;
+  /** Optional application-graded comprehension check before speaking. */
+  activity?: SceneBoardActivity;
   interaction: SceneInteractionPlan;
 }
 
@@ -86,6 +96,7 @@ export interface SceneLessonEvidence {
 export interface SceneLessonSceneState {
   status: 'pending' | 'active' | 'met';
   evidence: SceneLessonEvidence[];
+  activityPassed?: boolean;
   automaticTranscript?: string;
   metAt?: string;
 }
