@@ -59,7 +59,7 @@ try{
         const panel=a('.teacher-pilot-card');
         const quiz=a('.teacher-pilot-task');
         const mascot=a('.premium-lesson-character');
-        const visual=a('.teacher-lab-visual');
+        const visual=[...document.querySelectorAll('.teacher-lab-visual')].find(el=>getComputedStyle(el).display!=='none');
         const buttons=[...(quiz?.querySelectorAll('button')||[])];
         const frame=node=>{if(!node)return null;const x=node.getBoundingClientRect();return {x:Math.round(x.x),y:Math.round(x.y),w:Math.round(x.width),h:Math.round(x.height),bottom:Math.round(x.bottom)}};
         const stageRect=stage?.getBoundingClientRect();
@@ -77,11 +77,12 @@ try{
           stage:frame(stage),board:frame(board),panel:frame(panel),quiz:frame(quiz),visual:frame(visual),mascot:frame(mascot),
           buttonRects:buttons.map(frame),
           optionCount:buttons.length,
+          expectedOptionCount:Number(host?.getAttribute('data-qa-expected-options')||0),
           offstage:overflow,
           sideways:document.documentElement.scrollWidth>innerWidth+1,
           boardScrollable:Boolean(board&&board.scrollHeight>board.clientHeight+2),
           panelScrollable:Boolean(panel&&panel.scrollHeight>panel.clientHeight+2),
-          mascotOverlapsQuiz: Boolean(mascot&&quiz&&(()=>{const x=mascot.getBoundingClientRect(),y=quiz.getBoundingClientRect();return x.left<y.right&&x.right>y.left&&x.top<y.bottom&&x.bottom>y.top})()),
+          mascotOverlapsQuiz: Boolean(mascot&&(()=>{const x=mascot.getBoundingClientRect();return [...(quiz?.querySelectorAll('button,p')||[])].some(n=>{const y=n.getBoundingClientRect();return y.width&&y.height&&x.left<y.right&&x.right>y.left&&x.top<y.bottom&&x.bottom>y.top})})()),
           bodyHeight:document.documentElement.scrollHeight,
         };
       });
@@ -91,8 +92,8 @@ try{
       if(computed.sideways)warnings.push('horizontal overflow');
       if(computed.boardScrollable||computed.panelScrollable)warnings.push('clipped/scrolling board');
       if(computed.offstage.length)warnings.push('quiz items outside board: '+computed.offstage.join('; '));
-      if(entry.state==='question'&&computed.optionCount!==3)warnings.push('question missing options');
-      if(entry.state.includes('feedback')&&computed.optionCount!==3)warnings.push('feedback missing options');
+      if(['question','correct-feedback','wrong-feedback'].includes(entry.state)
+        &&computed.optionCount!==computed.expectedOptionCount)warnings.push('quiz options differ from canonical activity');
       if(computed.mascotOverlapsQuiz)warnings.push('Otti overlaps question area');
       if(computed.buttonRects.some(x=>x&&x.h<40))warnings.push('small option touch targets');
       if(computed.stage?.h<100)warnings.push('lesson stage collapsed');
@@ -104,12 +105,15 @@ try{
       const key=entry.scene+'--'+viewport;
       tiles.set(key,[...(tiles.get(key)||[]),{id,path,warnings}]);
       // Return compact real screenshots for human image inspection from CI logs.
-      if(viewport==='phone'&&[
+      if((viewport==='phone'&&[
         'warm-up--follow-up--question',
         'get-to-know--choice--wrong-feedback',
         'compare-and-use--ask--question',
         'fresh-transfer--new-context--speaking-listening',
-      ].includes(id)){
+      ].includes(id))||(viewport==='compact'&&[
+        'get-to-know--choice--question',
+        'compare-and-use--ask--wrong-feedback'
+      ].includes(id))){
         const jpeg=await page.screenshot({type:'jpeg',quality:48});
         console.log('FRAME_IMAGE|'+id+'|'+jpeg.toString('base64'));
       }
