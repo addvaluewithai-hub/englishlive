@@ -669,7 +669,7 @@ export function SceneLessonScreen() {
 
       <main className={`premium-lesson-stage${board ? ' has-board' : ''}${preflightVisible ? ' has-preflight' : ''}`}>
         <div className="premium-scene-caption">
-          <small>{welcomeComplete ? `الخطوة ${sceneIndex + 1} من ${activeLesson.scenes.length}` : preflightVisible ? 'قبل ما نبدأ' : 'بداية الدرس'}</small>
+          <small>{teacherLab ? 'تجربة تعليمية · بدون تسجيل تقدّم' : welcomeComplete ? `الخطوة ${sceneIndex + 1} من ${activeLesson.scenes.length}` : preflightVisible ? 'قبل ما نبدأ' : 'بداية الدرس'}</small>
           <strong>{welcomeComplete ? currentScene.title : `مع ${character.name}`}</strong>
         </div>
 
