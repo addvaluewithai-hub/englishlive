@@ -53,6 +53,7 @@ export class SceneLessonRuntime {
   private state: SceneLessonState;
   private learnerAudioObserved = false;
   private lessonOpeningComplete = false;
+  private narrationComplete = false;
   private activeBoard: SupportBoard | null = null;
   private readonly listeners = new Set<(state: SceneLessonState) => void>();
   private readonly onBoardChange?: (board: SupportBoard | null) => void;
@@ -104,11 +105,47 @@ export class SceneLessonRuntime {
     return this.resumedFromCheckpoint;
   }
 
+  get scriptedNarrationComplete() { return this.narrationComplete; }
+
+  /** Preview-only authored visual: exactly the board for the line being read. */
+  showScriptedBoard(sceneId: string, board: SupportBoard | null) {
+    if (!this.preview || this.currentScene.id !== sceneId || this.state.completedAt) return false;
+    this.activeBoard = board ? clone(board) : null;
+    this.onBoardChange?.(this.activeBoard ? clone(this.activeBoard) : null);
+    return true;
+  }
+
+  markScriptedNarrationComplete(sceneId: string) {
+    if (!this.preview || this.currentScene.id !== sceneId || this.narrationComplete) return false;
+    this.narrationComplete = true;
+    this.learnerAudioObserved = false;
+    this.persistAndEmit();
+    return true;
+  }
+
   get completedSceneCount() {
     return this.lesson.scenes.filter((scene) => this.state.scenes[scene.id]?.status === 'met').length;
   }
 
   get systemPrompt() {
+    if (this.preview) {
+      return `You are Otti, an Egyptian-Arabic speaking English teacher in a PREWRITTEN narrated lesson. The application owns the teaching sequence, board transitions and questions.
+
+STRICT READ MODE:
+- Whenever the application sends [READ AUTHORED LINE], read ONLY the exact line between its markers, in a warm expressive teacher voice. Do not paraphrase, add an introduction, anticipate future lines, or ask additional questions.
+- Do not spontaneously begin a scene, lecture, or choose the next teaching line. The application sends each line after the previous line's audio actually finishes.
+- Learner microphone stays closed while narrated lines play. Once the narrated scene ends, wait for learner speech or their board choice.
+- After a learner responds, you may give very concise targeted feedback, clarify their misunderstanding or ask ONE changed follow-up in the current language. Avoid long unscripted monologues.
+- Do not give away a board answer before the learner chooses. After the application reports BOARD_CHECK correct, it will send an authored follow-up line. Wait for that line instead of inventing your own task.
+- Only call complete_scene when the application has finished narrating the current scene AND the learner demonstrates the actual scene goal by speaking. Correct board selection alone is not spoken success.
+- After complete_scene returns, say nothing; the application will send the next authored narration line. Do not call show_board.
+- In the final fresh-transfer scene, you can converse freely AFTER reading its one written opening, but stay in the given coworker situation and respond naturally to the learner without introducing new lesson language.
+- If the learner says they do not know, explain the last teaching idea briefly with one supporting example; never demand that they produce language that has not been explained.
+
+LESSON: ${this.lesson.title}
+CURRENT SCENE:
+${JSON.stringify(this.scenePayload(this.currentScene), null, 2)}`;
+    }
     const publishedPolicy = this.policyPrompt
       ? `\nPUBLISHED TEACHING POLICY\n${this.policyPrompt}\n`
       : '';
@@ -251,7 +288,7 @@ ${JSON.stringify(this.scenePayload(this.currentScene), null, 2)}
   }
 
   private showAuthoredBoard() {
-    this.activeBoard = this.currentScene.board ?? null;
+    this.activeBoard = this.preview ? null : this.currentScene.board ?? null;
     this.onBoardChange?.(this.activeBoard ? clone(this.activeBoard) : null);
   }
 
@@ -292,6 +329,7 @@ ${JSON.stringify(this.scenePayload(this.currentScene), null, 2)}
       automaticTranscript: '',
     };
     this.learnerAudioObserved = false;
+    this.narrationComplete = false;
     this.showAuthoredBoard();
     return true;
   }
@@ -301,7 +339,7 @@ ${JSON.stringify(this.scenePayload(this.currentScene), null, 2)}
       declaration: {
         name: 'complete_scene',
         description: 'Complete the current tiny teaching scene only after your own brief evidence audit says the learner has met the CURRENT SCENE verification contract. The application trusts your pedagogical judgement; these fields help you reflect accurately rather than acting as a semantic grader.',
-        behavior: 'BLOCKING',
+        behavior: this.preview ? 'NON_BLOCKING' : 'BLOCKING',
         parameters: {
           type: 'OBJECT',
           properties: {
@@ -345,6 +383,12 @@ ${JSON.stringify(this.scenePayload(this.currentScene), null, 2)}
           return {
             error: 'The spoken lesson opening has not finished yet.',
             nextAction: 'Please finish the short welcome first and assess the scene afterwards.',
+          };
+        }
+        if (this.preview && !this.narrationComplete) {
+          return {
+            error: 'The authored narration has not finished.',
+            nextAction: 'Wait for the application to finish reading all authored lines and then ask for learner evidence.',
           };
         }
         if (this.currentScene.activity && !this.state.scenes[this.currentScene.id].activityPassed) {
@@ -462,6 +506,7 @@ ${JSON.stringify(this.scenePayload(this.currentScene), null, 2)}
       handle: (args) => {
         if (this.state.completedAt) return { error: 'The lesson is already complete.' };
         if (!this.lessonOpeningComplete) return { error: 'Please keep teaching-board content for after the welcome.' };
+        if (this.preview) return { error: 'The authored narrator owns every board in this preview.' };
         if (this.currentScene.activity && !this.state.scenes[this.currentScene.id].activityPassed) {
           return { error: 'The authored interactive board must remain visible until the learner completes its check.' };
         }
