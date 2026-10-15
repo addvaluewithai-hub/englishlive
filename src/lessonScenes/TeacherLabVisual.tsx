@@ -2,7 +2,8 @@ import type { CSSProperties } from 'react';
 
 /** Editorially-authored vector illustrations. Each board is a single fixed canvas. */
 export function TeacherLabVisual({ sceneId, beatId }: { sceneId: string; beatId?: string }) {
-  const common = { fontFamily: "Inter, system-ui, sans-serif" } as CSSProperties;
+  // English teaching labels must not inherit the Arabic RTL direction.
+  const common = { fontFamily: "Inter, system-ui, sans-serif", direction: 'ltr', unicodeBidi: 'isolate' } as CSSProperties;
   return (
     <svg className="teacher-lab-visual" viewBox="0 0 720 360" xmlns="http://www.w3.org/2000/svg"
       preserveAspectRatio="xMidYMid meet" role="img"
@@ -10,7 +11,7 @@ export function TeacherLabVisual({ sceneId, beatId }: { sceneId: string; beatId?
         : sceneId === 'get-to-know' ? 'A timeline from first meeting to becoming familiar'
         : sceneId === 'keep-in-touch' ? 'Two friends in different cities still exchanging messages'
         : 'Compare getting to know a new person with staying in touch with an old friend'}
-      style={common}>
+      style={common} direction="ltr">
       <defs>
         <linearGradient id="lab-paper" x1="0" y1="0" x2="1" y2="1">
           <stop stopColor="#f7fcf8"/><stop offset="1" stopColor="#ebf7f6"/>
