@@ -1,0 +1,77 @@
+/* Teacher lab: one authored activity at a time, not an additional floating panel. */
+.premium-board-layer.has-teacher-activity {
+  max-height: 66%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid #e3e8e6;
+  border-radius: 22px;
+  background: #fffdfa;
+  box-shadow: 0 14px 40px rgb(36 46 43 / 13%);
+  scrollbar-width: thin;
+}
+.teacher-pilot-card { display: grid; gap: 10px; padding: 14px; color: #173938; }
+.teacher-pilot-eyebrow {
+  font-size: 11px;
+  font-weight: 800;
+  color: #527773;
+}
+.premium-board-layer.has-teacher-activity .conversation-board {
+  width: 100%;
+  margin: 0;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 12px;
+  background: #eef5f2;
+  box-shadow: none;
+  overflow: visible;
+  max-height: none;
+}
+.premium-board-layer.has-teacher-activity .conversation-board h2 {
+  font-size: clamp(17px, 4.5vw, 22px);
+  margin: 0 0 4px;
+}
+.premium-board-layer.has-teacher-activity .board-item-list { margin-top: 2px; }
+.premium-board-layer.has-teacher-activity .board-item-list article { padding: 3px 0; }
+.teacher-pilot-task { display: grid; gap: 9px; }
+.teacher-pilot-task > strong { font-size: 14px; line-height: 1.55; }
+.teacher-pilot-options { display: grid; gap: 8px; }
+.teacher-pilot-options button {
+  min-height: 44px;
+  width: 100%;
+  border: 1px solid #d6e1dd;
+  border-radius: 12px;
+  background: #fff;
+  color: #213c3b;
+  padding: 9px 12px;
+  text-align: start;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 720;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.teacher-pilot-options button:focus-visible {
+  outline: 3px solid #087d75;
+  outline-offset: 2px;
+}
+.teacher-pilot-options button.is-right { border-color: #167c66; background: #ecf7ef; }
+.teacher-pilot-options button.is-wrong { border-color: #b26743; background: #fff3ee; }
+.teacher-pilot-options button:disabled { cursor: default; }
+.teacher-pilot-options button:disabled:not(.is-right) { opacity: .63; }
+.teacher-pilot-task small { color: #557371; line-height: 1.4; }
+.teacher-pilot-task p {
+  margin: 0;
+  padding: 9px 11px;
+  border-radius: 10px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.teacher-pilot-right { color: #0b6351; background: #e8f4ec; }
+.teacher-pilot-retry { color: #974f35; background: #fff1e8; }
+@media (max-height: 650px) {
+  .premium-board-layer.has-teacher-activity { max-height: 74%; }
+  .teacher-pilot-card { gap: 7px; padding: 10px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .premium-board-layer.has-teacher-activity * { scroll-behavior: auto; }
+}
