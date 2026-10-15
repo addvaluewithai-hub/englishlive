@@ -158,3 +158,120 @@
 @media (prefers-reduced-motion: reduce) {
   .is-teacher-lab .premium-lesson-character { transition: none; }
 }
+
+/*
+ * Screenshot QA regression fixes. Old v8 scene CSS intentionally overlays a
+ * floating "speak now" pill and a wooden pseudo-board. Those belong to the
+ * legacy conversation UI, never to teacher-lab classroom/MC surfaces.
+ */
+.premium-scene-lesson:has(.is-teacher-lab) .premium-live-status {
+  display: none !important;
+}
+.premium-scene-lesson:has(.is-teacher-lab) .premium-lesson-topbar::before,
+.premium-lesson-stage.is-teacher-lab::before,
+.premium-lesson-stage.is-teacher-lab::after {
+  content: none !important;
+  display: none !important;
+}
+.is-teacher-lab .premium-scene-caption {
+  opacity: 1 !important;
+}
+.is-teacher-lab .premium-lesson-character {
+  /* When no board is shown, Otti owns the stage; don't retain a blank
+     decorative pseudo-board behind the final Speaking conversation. */
+  z-index: 12;
+}
+.is-teacher-lab .teacher-pilot-options button {
+  min-height: 44px;
+  touch-action: manipulation;
+}
+.premium-scene-lesson:has(.is-teacher-lab) .premium-main-control.is-quiz-status {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  min-width: 78px;
+  width: 78px;
+  height: 78px;
+  border: 4px solid #fff;
+  border-radius: 50%;
+  background: #e5f6ee !important;
+  color: #176a5d !important;
+  box-shadow: 0 0 0 7px rgba(31, 133, 112, .07) !important;
+  pointer-events: none;
+}
+.premium-scene-lesson:has(.is-teacher-lab) .premium-main-control.is-quiz-status svg {
+  width: 26px;
+  height: 26px;
+}
+.premium-scene-lesson:has(.is-teacher-lab) .premium-main-control.is-quiz-status span {
+  font-size: 11px;
+  font-weight: 900;
+  color: #176a5d;
+}
+@media (max-height: 680px) {
+  .is-teacher-lab .teacher-pilot-options button { min-height: 44px; }
+  /* A question gets its own interactive slide. The large diagram already
+     taught the idea in the previous authored beat; don't crop the choices. */
+  .is-teacher-lab .teacher-pilot-card:has(.teacher-pilot-task) .teacher-lab-visual {
+    display: none;
+  }
+  .is-teacher-lab .teacher-pilot-card:has(.teacher-pilot-task) {
+    padding-bottom: 58px;
+  }
+}
+
+/* Real responsive illustration compositions, not just zooming 16:9 art. */
+.teacher-lab-portrait { display: none; }
+.teacher-lab-landscape { display: block; }
+@media (max-width: 620px) {
+  .teacher-lab-portrait { display: block; }
+  .teacher-lab-landscape { display: none; }
+}
+
+/* The old caption was bottom-aligned for the wooden whiteboard. Explicitly
+   move it out of question content for the new top-board architecture. */
+.premium-lesson-stage.is-teacher-lab .premium-scene-caption {
+  top: 4px !important;
+  bottom: auto !important;
+  left: 10px !important;
+  right: 10px !important;
+  width: auto;
+  height: 37px;
+  transform: none !important;
+  opacity: 1 !important;
+  display: grid;
+  place-items: center;
+  gap: 1px;
+}
+.premium-lesson-stage.is-teacher-lab .premium-scene-caption strong {
+  font-size: 12px !important;
+  line-height: 1.2;
+  max-width: 96%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.premium-lesson-stage.is-teacher-lab .premium-scene-caption small {
+  font-size: 10px !important;
+  line-height: 1.1;
+  color: #28796e;
+}
+.premium-lesson-stage.is-teacher-lab:not(.has-board) .premium-lesson-character {
+  transform: translate(-50%, 16%) !important;
+}
+@media (max-width: 620px) and (min-height: 681px) {
+  .is-teacher-lab .teacher-pilot-card:has(.teacher-pilot-task) .teacher-lab-visual {
+    height: clamp(184px, 26vh, 220px);
+    max-height: 44%;
+    flex: 0 1 auto;
+  }
+}
+
+/* The feedback text is part of the board; keep it above Otti's safe zone. */
+@media (max-width: 620px) and (min-height: 681px) {
+  .is-teacher-lab .teacher-pilot-card:has(.teacher-pilot-task) {
+    padding-bottom: 105px;
+  }
+}
