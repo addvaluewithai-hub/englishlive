@@ -182,3 +182,17 @@
   .practice-intro-hero, .practice-intro-objectives, .practice-intro-player-card, .practice-intro-transcript { padding: 11px; }
 }
 @media (prefers-reduced-motion: reduce) { .practice-intro * { scroll-behavior: auto !important; } }
+
+/* Screenshot QA polish: shorten the hero and give the long goal room to breathe. */
+@media (max-width: 620px) {
+  .practice-intro-illustration { height: 164px; }
+  .practice-intro-details { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .practice-intro-details > div { min-height: 64px; }
+  .practice-intro-details > div:last-child { grid-column: 1 / -1; min-height: 58px; }
+  .practice-intro-details b { font-size: 12px; }
+}
+@media (min-width: 760px) {
+  .practice-intro { min-height: unset; }
+  .practice-intro-actions { margin-top: 15px; }
+  .practice-intro-transcript { max-height: min(72dvh, 700px); overflow: auto; }
+}
