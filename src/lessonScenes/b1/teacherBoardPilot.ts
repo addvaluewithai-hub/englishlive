@@ -29,16 +29,16 @@ export const B1_L02_TEACHER_BOARD_PILOT: SceneLessonDefinition = {
   scenes: [
     {
       id: 'warm-up',
-      title: 'React, then make a next move',
-      goal: 'Respond to a familiar unexpected update and ask or add a connected next move.',
+      title: 'Learn to react and ask a natural follow-up',
+      goal: 'After seeing one authored example, respond to a familiar update and ask one relevant next question in the learner’s own words.',
       teaching: {
-        explainInArabic: ['ابدأ بخبر عن إنك دخلت نادي تصوير جديد. اسأل الطالب عن رأيه، وبعد ردّه شجّعه يسأل عن تفصيلة واحدة.', 'التجربة الأولانية diagnostic، ما تديش response model قبل ما يحاول.'],
-        englishTargets: ['one reaction', 'one relevant follow-up'],
-        constraints: ['Use one brief update: I joined a photography club last week.', 'Do not teach either target phrase yet.'],
+        explainInArabic: ['ابدأ بالسكريبت المكتوب: اشرح React ثم Pick ثم Continue مع مثال واضح قبل ما الطالب يجرب.', 'ما تحوّلش المقدمة إلى اختبار ارتجالي قبل الشرح.'],
+        englishTargets: ['Really?', 'That sounds interesting.', 'What do you do there?'],
+        constraints: ['The application reads three authored lines with a changing board before inviting a response.', 'Do not introduce either relationship phrase in this scene.'],
       },
       interaction: {
         kind: 'guided_dialogue',
-        setup: 'You are a friend who has just started attending a small photography club. Share this news and let the learner lead a couple of turns.',
+        setup: 'After the authored three-step explanation, let the learner react to a photography-club update and create one relevant follow-up.',
         learnerTask: 'React to the news and ask about one detail.',
         supportLadder: ['فكّر في تفصيلة واحدة تسأل عنها.', 'Give only the function: reaction + follow-up.', 'If a full question must be modelled, change the detail and retry.'],
       },
