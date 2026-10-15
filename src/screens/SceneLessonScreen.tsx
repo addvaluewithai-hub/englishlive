@@ -445,7 +445,7 @@ export function SceneLessonScreen() {
     clearDecisionNudge();
     compactLog.current = [];
 
-    const bundle = await loadTeachingBundle(localLesson, character);
+    const bundle = await loadTeachingBundle(localLesson, character, { preview: teacherLab });
     const sessionLesson = teacherLab ? localLesson : adaptLessonForKnownItems(bundle.lesson, knownItemIds);
     const teacherName = bundle.character.displayName?.trim() || character.name;
     const restoredState = savedCheckpoint?.state && savedCheckpoint.lessonId === localLesson.id
