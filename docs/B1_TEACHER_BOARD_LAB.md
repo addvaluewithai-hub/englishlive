@@ -90,3 +90,11 @@ correct use of `get to know` vs `keep in touch`, and a *changed*
 spoken context before marking a scene complete. If this succeeds,
 extend the same director/board contract to vocabulary and contextual
 grammar (not five separate flashcard scenes).
+
+## Narration fidelity diagnostics
+
+Use **Copy compact log** after the lesson. Each `SCRIPT:` entry shows
+the exact author-written line sent to Live and the neighboring `AI:` entry
+shows the returned speech transcription. Compare their meanings and wording.
+A transcription is not perfect proof of spoken fidelity: listen to the audio,
+especially for Egyptian-Arabic/English mixing, accents and expression.
