@@ -462,6 +462,9 @@ ${JSON.stringify(this.scenePayload(this.currentScene), null, 2)}
       handle: (args) => {
         if (this.state.completedAt) return { error: 'The lesson is already complete.' };
         if (!this.lessonOpeningComplete) return { error: 'Please keep teaching-board content for after the welcome.' };
+        if (this.currentScene.activity && !this.state.scenes[this.currentScene.id].activityPassed) {
+          return { error: 'The authored interactive board must remain visible until the learner completes its check.' };
+        }
 
         const mode = args.mode === 'note' || args.mode === 'examples' || args.mode === 'compare'
           ? args.mode
