@@ -814,7 +814,7 @@ export function SceneLessonScreen() {
 
       <main className={`premium-lesson-stage${board ? ' has-board' : ''}${preflightVisible ? ' has-preflight' : ''}${teacherLab ? ' is-teacher-lab' : ''}`}>
         <div className="premium-scene-caption">
-          <small>{teacherLab ? 'تجربة تعليمية · بدون تسجيل تقدّم' : welcomeComplete ? `الخطوة ${sceneIndex + 1} من ${activeLesson.scenes.length}` : preflightVisible ? 'قبل ما نبدأ' : 'بداية الدرس'}</small>
+          <small>{teacherLab ? (currentScene.activity ? (quizState?.activityAnswered ? 'Otti بيشرح الإجابة' : quizReady ? 'اختار الإجابة من البورد' : 'Otti بيشرح') : 'Speaking · محادثة حقيقية') : welcomeComplete ? `الخطوة ${sceneIndex + 1} من ${activeLesson.scenes.length}` : preflightVisible ? 'قبل ما نبدأ' : 'بداية الدرس'}</small>
           <strong>{welcomeComplete ? currentScene.title : `مع ${character.name}`}</strong>
         </div>
 
@@ -931,6 +931,11 @@ export function SceneLessonScreen() {
               <span className="premium-pause-icon" aria-hidden="true" />
               <span>مقاطعة</span>
             </button>
+          ) : teacherLab && currentScene.activity && liveLesson ? (
+            <div className="premium-main-control is-quiz-status" aria-label="التفاعل بالضغط على اختيار من البورد">
+              <ProductIcon name="check" size={27} />
+              <span>{quizState?.activityAnswered ? 'اسمع' : quizReady ? 'اختار' : 'استنى'}</span>
+            </div>
           ) : liveLesson ? (
             <button type="button" className={`premium-main-control is-mic${learnerTurn ? ' is-open' : ''}`} disabled>
               <ProductIcon name="speak" size={29} />
