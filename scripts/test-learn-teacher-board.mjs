@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { readFile } from 'node:fs/promises';
-import ts from 'typescript';
+import { transform } from 'esbuild';
 
 // Load the actual runtime source with browser persistence adapters replaced by
 // fail-fast stubs. Preview must never call either adapter.
@@ -20,9 +20,7 @@ const isolatedSource = runtimeSource
     "import { sceneVerificationContract } from './verification';",
     'import { sceneVerificationContract } from ' + JSON.stringify(verificationUrl) + ';',
   );
-const code = ts.transpileModule(isolatedSource, {
-  compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
-}).outputText;
+const code = (await transform(isolatedSource, { loader: 'ts', format: 'esm', target: 'es2022' })).code;
 const { SceneLessonRuntime } = await import('data:text/javascript;base64,' + Buffer.from(code).toString('base64'));
 import { B1_L02_TEACHER_BOARD_PILOT as lesson } from '../src/lessonScenes/b1/teacherBoardPilot.ts';
 
