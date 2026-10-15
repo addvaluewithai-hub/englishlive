@@ -48,7 +48,7 @@ test('a correct board choice alone cannot complete a scene without real micropho
   assert.match(complete.handle(validAudit).error, /board comprehension check/);
   assert.equal(runtime.submitBoardChoice(current.id, 'old').correct, false);
   assert.match(complete.handle(validAudit).error, /board comprehension check/);
-  assert.equal(runtime.snapshot.scenes[current.id].activityPassed, undefined);
+  assert.equal(runtime.snapshot.scenes[current.id].activityPassed, false);
 
   assert.deepEqual(runtime.submitBoardChoice(current.id, 'new'), { accepted: true, correct: true });
   assert.equal(runtime.snapshot.scenes[current.id].activityPassed, true);
