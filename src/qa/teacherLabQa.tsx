@@ -83,6 +83,7 @@ function QaClassroom(){
   };
   return <section className="premium-scene-lesson is-teacher-qa" dir="rtl" data-qa-ready="true"
     data-lesson-id={lesson.id} data-scene-id={sceneId} data-beat-id={beatId}
+    data-qa-expected-options={selectedScene?.activity?.options.length ?? 0}
     data-lesson-state={state} style={{'--character-accent':character.accent} as React.CSSProperties}>
       <header className="premium-lesson-topbar">
         <button type="button" className="premium-top-icon" aria-label="الخروج من الدرس"><ProductIcon name="close" size={24}/></button>
@@ -96,7 +97,7 @@ function QaClassroom(){
         {lesson.scenes.map((s,i)=><span key={s.id} className={i<sceneIndex?'is-complete':i===sceneIndex?'is-current':''}/>)}
       </div>
       <main className={'premium-lesson-stage is-teacher-lab'+(showBoard?' has-board':'')}>
-        <div className="premium-scene-caption"><small>تجربة تعليمية · بدون تسجيل تقدّم</small><strong>{selectedScene?.title}</strong></div>
+        <div className="premium-scene-caption"><small>{isSpeaking?'Speaking · محادثة حقيقية':state==='question'?'اختار الإجابة من البورد':answered?'Otti بيشرح الإجابة':'Otti بيشرح'}</small><strong>{selectedScene?.title}</strong></div>
         <CharacterHost character={character} className="premium-lesson-character"/>
         {showBoard&&selectedScene?.activity? <TeacherLabBoardLayer
           sceneId={sceneId} beatId={beatId} activity={selectedScene.activity}
@@ -111,9 +112,10 @@ function QaClassroom(){
         </div>
         <div className="premium-control-row">
           <button type="button" className="premium-secondary-control" aria-label="المساعدة والكتابة"><ProductIcon name="chat" size={22}/><span>مساعدة</span></button>
-          <button type="button" className={'premium-main-control '+(speaking?'is-interrupt':isSpeaking?'is-mic':'is-start')}>
-            <ProductIcon name="speak" size={28}/><span>{isSpeaking?'دورك':'استنى'}</span>
-          </button>
+          {isSpeaking ? <button type="button" className={'premium-main-control '+(speaking?'is-interrupt':'is-mic')}>
+            <ProductIcon name="speak" size={28}/><span>دورك</span></button>
+            : <div className="premium-main-control is-quiz-status">
+              <ProductIcon name="check" size={27}/><span>{answered?'اسمع':state==='question'?'اختار':'استنى'}</span></div>}
           <div className="premium-mic-meter" aria-label="Microphone level 0 percent"><span style={{height:'0%'}}/></div>
         </div>
       </footer>
