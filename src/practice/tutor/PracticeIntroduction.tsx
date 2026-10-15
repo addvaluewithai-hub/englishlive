@@ -6,6 +6,25 @@ import { fetchLessonAudio } from '../audio/fetchLessonAudio';
 import './practiceIntroduction.css';
 
 type Page = 'scene' | 'listen';
+// Scenario photography (Pexels / Emre Akyol, free-use license), mirrored into
+// our existing Cloudinary media library so the app owns a stable, optimized URL.
+const CAFE_SCENE_PHOTO = 'https://res.cloudinary.com/as9o12al/image/upload/f_auto,q_auto,w_960/v1792043829/lesson-b1-wrong-order-cafe.jpg';
+
+function SpeakerPortrait({ staff = false, small = false }: { staff?: boolean; small?: boolean }) {
+  return <svg aria-hidden="true" focusable="false"
+      className={small ? 'practice-intro-portrait is-small' : 'practice-intro-portrait'}
+      viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="24" cy="24" r="23" fill={staff ? '#d8f4ef' : '#e2f0fa'} />
+    <path d="M8 45c2-11 9-15 16-15s14 4 16 15" fill={staff ? '#006c68' : '#347c94'}/>
+    <path d="M13 21c-1-11 4-17 12-17 9 0 13 8 11 17l-4 6H16Z" fill={staff ? '#322d3a' : '#273943'}/>
+    <ellipse cx="24" cy="23" rx="10" ry="12" fill="#dfab8d"/>
+    <path d="M14 20c1-10 8-15 16-11 3 2 4 5 4 8-8 1-14-1-19-5Z" fill={staff ? '#322d3a' : '#273943'}/>
+    <circle cx="20" cy="23" r="1.15" fill="#2b2832"/>
+    <circle cx="28" cy="23" r="1.15" fill="#2b2832"/>
+    <path d="M21 29q3 3 6 0" stroke="#9a4d4b" strokeWidth="1.7" fill="none" strokeLinecap="round"/>
+    {staff ? <path d="M15 34L24 39 33 34" stroke="#fff" strokeWidth="2.2" fill="none"/> : null}
+  </svg>;
+}
 const formatTime = (seconds: number) => {
   if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
   const whole = Math.floor(seconds);
@@ -128,9 +147,12 @@ export function PracticeIntroduction({ mission, onClose, onStart }: {
 
     {page === 'scene' ? <div className="practice-intro-scene">
       <section className="practice-intro-hero">
-        <div className="practice-intro-illustration" aria-hidden="true">
+        <div className={`practice-intro-illustration${mission.worldId === 'food-shopping' ? ' is-photo' : ''}`} aria-hidden="true">
           <span className="practice-intro-illustration-icon">{sceneEmoji[mission.worldId] || '💬'}</span>
-          <span className="practice-intro-illustration-chat">···</span>
+          {mission.worldId === 'food-shopping'
+            ? <><img className="practice-intro-scene-photo" src={CAFE_SCENE_PHOTO} alt="" decoding="async" />
+                <span className="practice-intro-warning-mark">⚠</span></>
+            : <span className="practice-intro-illustration-chat">···</span>}
         </div>
         <h1>{ar ? mission.titleAr : mission.titleEn}</h1>
         <p>{ar ? mission.briefing?.situationAr || mission.settingAr :
@@ -161,11 +183,11 @@ export function PracticeIntroduction({ mission, onClose, onStart }: {
         <p>{ar ? 'مثال تمثيلي بصوتين مختلفين. مش لازم تكرر نفس الكلام.' :
           'A two-person example. You can say things your own way.'}</p>
         <div className="practice-intro-cast">
-          <div><span className="practice-intro-avatar" aria-hidden="true">👩‍💼</span>
-            <div><b>{ar ? 'الطرف الآخر' : 'Partner'}</b><small>{partner}</small></div></div>
+          <div><SpeakerPortrait staff />
+            <div><b>{ar ? 'الموظف' : 'Staff member'}</b><small>{partner}</small></div></div>
           <span className="practice-intro-cast-separator" aria-hidden="true"/>
-          <div><span className="practice-intro-avatar" aria-hidden="true">🧑</span>
-            <div><b>{ar ? 'المتعلّم' : 'Learner'}</b><small>{role}</small></div></div>
+          <div><SpeakerPortrait />
+            <div><b>{ar ? 'إنت' : 'You'}</b><small>{role}</small></div></div>
         </div>
         <audio ref={audioRef} preload="none"
           onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
@@ -212,8 +234,8 @@ export function PracticeIntroduction({ mission, onClose, onStart }: {
         <ol>{script.map((turn, index) => <li key={index} className={turn.speaker === 'Learner'
           ? 'is-learner' : 'is-partner'}>
           <div className="practice-intro-transcript-label">
-            <span className="practice-intro-mini-avatar" aria-hidden="true">{turn.speaker === 'Learner' ? '🧑' : '👩‍💼'}</span>
-            <b>{turn.speaker === 'Learner' ? (ar ? 'المتعلّم' : 'Learner') : (ar ? 'الطرف الآخر' : 'Partner')}</b>
+            <SpeakerPortrait staff={turn.speaker !== 'Learner'} small />
+            <b>{turn.speaker === 'Learner' ? (ar ? 'إنت' : 'You') : (ar ? 'الموظف' : 'Partner')}</b>
           </div>
           <p lang="en" dir="ltr">{turn.text}</p>
           {showTranslation && dialogueTranslation(mission, index)
