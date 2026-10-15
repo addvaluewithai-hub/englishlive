@@ -89,8 +89,8 @@ export function PracticeTutor({ mission, phase, review, onFinish, onClose, initi
   return <section className={`fs-live sp-scenario-live practice-live tutor-live is-${phase}${side && wide ? ' has-side' : ''}`}
     aria-label={copy.phases[step]}>
     <LiveConversationHeader
-      title={<>{mission.level} • {ar ? mission.titleAr : mission.titleEn}</>}
-      meta={<><b>{step + 1}/3</b> {copy.phaseShort[step]}</>}
+      title={ar ? mission.titleAr : mission.titleEn}
+      meta={<b dir="ltr">{mission.level}</b>}
       metaClassName="fs-live-mode tutor-phase-meta"
       brandText="Otti"
       onClose={phase === 'roleplay' ? () => void finish() : onClose}
