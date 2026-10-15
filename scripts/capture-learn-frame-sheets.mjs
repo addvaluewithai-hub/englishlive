@@ -12,6 +12,7 @@ import { LESSON_QA_REGISTRY, getLessonQaRegistration, buildLessonQaCases } from 
 const lessonId=process.argv[2] || Object.keys(LESSON_QA_REGISTRY)[0];
 const {lesson, beats, finalSpeakingSceneId}=getLessonQaRegistration(lessonId);
 const screenshotStates=buildLessonQaCases(getLessonQaRegistration(lessonId));
+const finalBeat=beats[finalSpeakingSceneId].at(-1).id;
 const viewports={
   compact:{width:320,height:640},
   phone:{width:400,height:860},
