@@ -53,3 +53,31 @@ export function assertQaRegistration(record: LessonQaRegistration): void {
   }
   if (Object.keys(beats).some(id=>!ids.includes(id))) throw new Error(lesson.id + ': orphan script scene');
 }
+
+export type QaFrameState = 'teaching' | 'question' | 'correct-feedback' | 'wrong-feedback'
+  | 'speaking-listening' | 'speaking-otti' | 'complete';
+export interface QaFrameCase { scene: string; beat: string; state: QaFrameState; }
+
+/** No handwritten scenario lists in Playwright. This exhausts the actual authored data. */
+export function buildLessonQaCases(record: LessonQaRegistration): QaFrameCase[] {
+  assertQaRegistration(record);
+  const cases:QaFrameCase[]=[];
+  for(const scene of record.lesson.scenes) {
+    const ids=record.beats[scene.id].map(beat=>beat.id);
+    for (const beat of ids) {
+      cases.push({scene:scene.id,beat,state:scene.id===record.finalSpeakingSceneId
+        ? 'speaking-listening' : 'teaching'});
+    }
+    if(scene.activity) {
+      const beat=ids.at(-1)!;
+      for(const state of ['question','correct-feedback','wrong-feedback'] as const)
+        cases.push({scene:scene.id,beat,state});
+    }
+  }
+  const finalBeat=record.beats[record.finalSpeakingSceneId].at(-1)!.id;
+  cases.push({scene:record.finalSpeakingSceneId,beat:finalBeat,state:'speaking-otti'});
+  cases.push({scene:record.finalSpeakingSceneId,beat:finalBeat,state:'complete'});
+  if(new Set(cases.map(x=>[x.scene,x.beat,x.state].join('|'))).size!==cases.length)
+    throw new Error(record.lesson.id+': repeated case in QA fixture');
+  return cases;
+}
