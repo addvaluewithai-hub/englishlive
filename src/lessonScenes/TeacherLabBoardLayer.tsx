@@ -1,11 +1,12 @@
 import { TeacherBoardActivity } from './TeacherBoardActivity';
+import type { ComponentType } from 'react';
 import type { SceneBoardActivity } from './types';
 
 export type TeacherLabChoiceResult = { accepted: boolean; correct: boolean; error?: string };
 
 /** Same production board in Live and fixture: no mock drawing or layout fork. */
 export function TeacherLabBoardLayer({
-  sceneId, beatId, activity, answered, choiceId, questionReady, onChoose,
+  sceneId, beatId, activity, answered, choiceId, questionReady, onChoose, Visual,
 }: {
   sceneId: string;
   beatId: string;
@@ -14,6 +15,7 @@ export function TeacherLabBoardLayer({
   choiceId?: string;
   questionReady: boolean;
   onChoose: (sceneId: string, choiceId: string) => TeacherLabChoiceResult;
+  Visual?: ComponentType<{ sceneId: string; beatId: string }>;
 }) {
   return (
     <div className="premium-board-layer has-teacher-activity"
@@ -23,7 +25,7 @@ export function TeacherLabBoardLayer({
         key={sceneId}
         sceneId={sceneId} beatId={beatId} activity={activity}
         answered={answered} choiceId={choiceId} questionReady={questionReady}
-        onChoose={onChoose}
+        onChoose={onChoose} Visual={Visual}
       />
     </div>
   );
