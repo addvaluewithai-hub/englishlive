@@ -38,7 +38,7 @@ export function TeacherBoardActivity({
     <section className="teacher-pilot-card" dir="rtl" aria-label="تدريب على البورد">
       <div className="teacher-pilot-eyebrow">شوف المثال، وبعدها جرّب</div>
       {board ? <ConversationBoard board={board} /> : null}
-      <div className="teacher-pilot-task">
+      {canAnswer || passed ? <div className="teacher-pilot-task">
         <strong>{activity.promptAr}</strong>
         <div className="teacher-pilot-options" role="group" aria-label="اختار الجملة المناسبة">
           {activity.options.map((option) => (
@@ -63,7 +63,7 @@ export function TeacherBoardActivity({
           <small>{canAnswer ? 'اختار إجابة على البورد؛ وبعدها هنطبّق بصوتك.' : 'استنى لحد ما Otti يخلص كلامه.'}</small>
         )}
         {error ? <p role="alert">{error}</p> : null}
-      </div>
+      </div> : <p className="teacher-pilot-wait">اسمع Otti الأول؛ سؤال البورد هيظهر لما ييجي دورك.</p>}
     </section>
   );
 }
