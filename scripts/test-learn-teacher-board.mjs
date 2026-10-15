@@ -1,6 +1,29 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { SceneLessonRuntime } from '../src/lessonScenes/SceneLessonRuntime.ts';
+import { readFile } from 'node:fs/promises';
+import ts from 'typescript';
+
+// Load the actual runtime source with browser persistence adapters replaced by
+// fail-fast stubs. Preview must never call either adapter.
+const runtimeSource = await readFile(new URL('../src/lessonScenes/SceneLessonRuntime.ts', import.meta.url), 'utf8');
+const verificationUrl = new URL('../src/lessonScenes/verification.ts', import.meta.url).href;
+const isolatedSource = runtimeSource
+  .replace(
+    "import { recordRuntimeSceneCompletion } from '../cloud/sessionBridge';",
+    "const recordRuntimeSceneCompletion = () => { throw new Error('Preview called cloud progress'); };",
+  )
+  .replace(
+    "import { markProductLessonCompleted, markProductLessonStarted } from '../productV2/progress';",
+    "const markProductLessonStarted = () => { throw new Error('Preview marked lesson started'); }; const markProductLessonCompleted = () => { throw new Error('Preview marked lesson completed'); };",
+  )
+  .replace(
+    "import { sceneVerificationContract } from './verification';",
+    'import { sceneVerificationContract } from ' + JSON.stringify(verificationUrl) + ';',
+  );
+const code = ts.transpileModule(isolatedSource, {
+  compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
+}).outputText;
+const { SceneLessonRuntime } = await import('data:text/javascript;base64,' + Buffer.from(code).toString('base64'));
 import { B1_L02_TEACHER_BOARD_PILOT as lesson } from '../src/lessonScenes/b1/teacherBoardPilot.ts';
 
 const validAudit = {
