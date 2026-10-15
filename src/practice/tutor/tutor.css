@@ -285,3 +285,12 @@
     align-self: center;
   }
 }
+
+/* Screenshot regression: the Otti SVG overflows its wrapper visually. Lift the
+   whole character so its tentacles never sit under the status bubble. */
+@media (max-width: 620px) {
+  .tutor-live.is-roleplay .tutor-stage .sp-scenario-character,
+  .tutor-live.is-review .tutor-stage .sp-scenario-character {
+    transform: translateY(-56px);
+  }
+}
