@@ -52,6 +52,8 @@ test('a correct board choice alone cannot complete a scene without real micropho
 
   assert.deepEqual(runtime.submitBoardChoice(current.id, 'new'), { accepted: true, correct: true });
   assert.equal(runtime.snapshot.scenes[current.id].activityPassed, true);
+  assert.match(complete.handle(validAudit).error, /voice activity/);
+  runtime.recordLearnerAudioLevel(0.5);
   assert.equal(complete.handle(validAudit).completedSceneId, current.id);
   assert.equal(runtime.currentScene.id, 'keep-in-touch');
 });
