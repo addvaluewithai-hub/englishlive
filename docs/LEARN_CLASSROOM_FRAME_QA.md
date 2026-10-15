@@ -51,3 +51,5 @@ Baseline browser run: [GitHub Actions #38694479748](https://github.com/addvaluew
 ## Onboarding the next lesson
 
 In the product repo, add its authored `SceneLessonDefinition` and beat map, supply a **bespoke** visual component, and register both in `src/qa/lessonQaRegistry.ts` and `src/qa/lessonQaVisuals.ts`. The QA fixture accepts `/qa.html?lesson=<id>&scene=<id>&beat=<id>&state=<state>`; use `npm run qa:learn:frames -- <id>`. The runner enumerates all beats, quizzes and final speaking states automatically. Registering a lesson for QA does **not** publish it or mark curriculum delivery complete. Existing B1 art remains B1-only; do not display relationship diagrams in A1 by default.
+
+To capture **every registered lesson** for a release PR, run `npm run qa:learn:frames:all` (CI uses this). This currently runs lessons sequentially; when the registry becomes large, split the jobs by lesson ID in a CI matrix to keep execution bounded rather than removing per-lesson inspection. For a scoped agent developing just one new lesson, `npm run qa:learn:frames -- <id>` is faster but must be repeated for every affected lesson before acceptance.
