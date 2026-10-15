@@ -1,5 +1,5 @@
 import type { LiveClientTool } from '../live/tools';
-import { issueKey, issueListSchema, improvementListSchema, parseIssue, parseImprovement } from './notebook/issueEvidence';
+import { issueKey, originalKey, issueListSchema, improvementListSchema, parseIssue, parseImprovement } from './notebook/issueEvidence';
 import type { PracticeCorrectionRecord } from './runtime';
 import type { PracticeMissionContract } from './types';
 
@@ -44,7 +44,8 @@ export function createSilentIssueCollector(mission: PracticeMissionContract, onG
       const parsed = parseImprovement(value, validBeats);
       if (!parsed.ok) continue;
       const key = issueKey(parsed.issue);
-      if (improvementKeys.has(key) || keys.has(key)) continue;
+      if (improvementKeys.has(key) || keys.has(key) ||
+          issues.some((error) => originalKey(error) === originalKey(parsed.issue))) continue;
       improvementKeys.add(key);
       improvements.push(parsed.issue);
       saved++;
@@ -70,8 +71,14 @@ export function createSilentIssueCollector(mission: PracticeMissionContract, onG
         continue;
       }
       keys.add(issueKey(parsed.issue));
-      const maybeSuggestion = improvements.findIndex((suggestion) => issueKey(suggestion) === issueKey(parsed.issue));
-      if (maybeSuggestion !== -1) { improvements.splice(maybeSuggestion, 1); improvementKeys.delete(issueKey(parsed.issue)); }
+      // A clearly reported error takes priority over optional style for the
+      // same original quote, even if the model produced different alternatives.
+      for (let index = improvements.length - 1; index >= 0; index--) {
+        if (originalKey(improvements[index]) === originalKey(parsed.issue)) {
+          improvementKeys.delete(issueKey(improvements[index]));
+          improvements.splice(index, 1);
+        }
+      }
       issues.push(parsed.issue);
       counts[source]++;
       saved++;
