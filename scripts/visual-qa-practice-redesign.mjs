@@ -17,7 +17,7 @@ try {
   for (const viewport of [{ width: 390, height: 844, id: 'mobile' },
     { width: 1080, height: 900, id: 'desktop' }]) {
     for (const item of screens) {
-      const context = await browser.newContext({ viewport, deviceScaleFactor: 1,
+      const context = await browser.newContext({ viewport: { width: viewport.width, height: viewport.height }, deviceScaleFactor: 1,
         reducedMotion: 'reduce', colorScheme: 'light' });
       await context.addInitScript(({ profile, locale }) => {
         localStorage.setItem('englishlive.learner-profile.v1', JSON.stringify(profile));
