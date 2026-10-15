@@ -17,13 +17,19 @@ a prerecorded mockup.
 ## Teaching storyline
 
 A friend joined a photography club, met Lina there, and later kept in
-contact after Lina moved away. The teacher uses short Egyptian-Arabic
-explanations and natural English examples. The story creates meaningful
+contact after Lina moved away. Every initial teaching explanation and task
+instruction is written **verbatim** in `src/lessonScenes/b1/teacherLabScript.ts`.
+The app sends one `[READ AUTHORED LINE]` at a time, changes the linked visual
+when audible playback begins, and only sends the next line after the last
+PCM sample finishes. This follows New Learn's authored narration model;
+Live speech is still model-generated, so verify wording fidelity by listening.
+The teacher may improvise *briefly only after* a learner attempt, for feedback
+or a requested explanation. It must never improvise the primary lesson. The story creates meaningful
 reasons for two B1 phrases rather than showing a list of vocabulary cards.
 
 | Scene | Teacher/board | Learner requirement |
 | --- | --- | --- |
-| Warm-up | Otti shares unexpected photography-club news; no model/board | React and ask a relevant spoken follow-up |
+| Introduction | 3 written lines: club update, reaction examples, follow-up model; boards appear as audio starts | React and ask a relevant spoken follow-up **after instruction** |
 | Get to know | Board introduces a relationship developing, then a two-choice contextual check | Correct board selection **and** fresh spoken example |
 | Keep in touch | Lina moves but messaging continues; second graded board choice | Correct board selection **and** fresh spoken example |
 | Compare | Side-by-side authored relationship meanings | Use each phrase in different spoken situations |
@@ -55,8 +61,9 @@ a second authoring pass, **not** silently deleted from the official lesson.
 
 ## Acceptance walkthrough (real device)
 
-1. Start the lab. Otti gives a short welcome, then introduces an
-   unexpected club update.
+1. Start the lab. Otti reads the authored introduction in 3 short audio
+   turns; the reaction and next-move visuals follow the exact teaching line.
+   There is no improvised welcome and no unprepared question before the model.
 2. In the first phrase scene, confirm the board choice is blocked
    until Otti finishes speaking and your turn begins.
 3. Tap a wrong option: the board must show a reason without advancing.
@@ -64,7 +71,8 @@ a second authoring pass, **not** silently deleted from the official lesson.
    spoken example. Stay on the scene until the learner speaks.
 5. Check the same for the second phrase, then verify the comparison.
 6. Check the final transfer has no board, no model dialogue, and
-   several genuine learner turns.
+   several genuine learner turns. Interrupt halfway through a written line
+   and confirm the resume control replays that line rather than skipping it.
 7. Verify reloading / leaving the preview does not update the
    official B1 lesson completion, and other Practice PR routes are
    unchanged.
