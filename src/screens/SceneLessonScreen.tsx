@@ -250,6 +250,12 @@ export function SceneLessonScreen() {
   function startScriptScene(sceneId: string) {
     const beats = B1_TEACHER_LAB_SCRIPT[sceneId];
     if (!beats || !transport.current?.connected || runtime.current?.currentScene.id !== sceneId) return;
+    // A model's completion tool can arrive before its last audio has drained.
+    // Never overlap the next authored line with an audible previous turn.
+    if (scripted.current.isReading || playback.current?.isPlaying) {
+      scriptNextTimer.current = window.setTimeout(() => startScriptScene(sceneId), 250);
+      return;
+    }
     clearScriptTimers();
     setScriptPaused(false);
     const first = scripted.current.start(sceneId, beats);
