@@ -80,7 +80,7 @@ const knownKindCopy: Record<KnownLessonItemKind, string> = {
   pattern: 'Patterns',
 };
 
-type CompactLogRole = 'AI' | 'YOU' | 'TOOL';
+type CompactLogRole = 'AI' | 'YOU' | 'TOOL' | 'SCRIPT';
 type QuickActionId = 'dont-understand' | 'repeat' | 'another-example';
 
 interface CompactLogEntry {
@@ -234,7 +234,8 @@ export function SceneLessonScreen() {
     pendingScriptBoard.current = { sceneId, board: beat.board };
     holdMicForTeacherContinuation.current = true;
     setLearnerMicEnabled(false);
-    appendQuickActionLog(`[authored] ${sceneId}/${beat.id}`);
+    compactLog.current.push({ role: 'SCRIPT', text: `[${sceneId}/${beat.id}] ${beat.line}` });
+    if (compactLog.current.length > 160) compactLog.current.splice(0, compactLog.current.length - 160);
     live.sendText(`[READ AUTHORED LINE — SAY ONLY THE TEXT BETWEEN MARKERS]
 BEGIN LINE
 ${beat.line}
@@ -424,6 +425,7 @@ Do not speak beyond the written line; stop after END LINE.`);
       learnerSceneAfterSpeech.current = null;
       const authoredFollowUp = B1_TEACHER_LAB_AFTER_CHOICE[sceneId];
       if (authoredFollowUp) {
+        compactLog.current.push({ role: 'SCRIPT', text: `[${sceneId}/after-choice] ${authoredFollowUp}` });
         holdMicForTeacherContinuation.current = true;
         setLearnerMicEnabled(false);
         live.sendText(`[READ AUTHORED LINE — SAY ONLY THE TEXT BETWEEN MARKERS]
