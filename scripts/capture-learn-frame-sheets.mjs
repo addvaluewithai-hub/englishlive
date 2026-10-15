@@ -5,17 +5,13 @@ import { mkdir, writeFile, readFile } from 'node:fs/promises';
 import { createServer } from 'vite';
 import { chromium } from 'playwright';
 
-import { LESSON_QA_REGISTRY, getLessonQaRegistration } from '../src/qa/lessonQaRegistry.ts';
+import { LESSON_QA_REGISTRY, getLessonQaRegistration, buildLessonQaCases } from '../src/qa/lessonQaRegistry.ts';
 
 // Runner reads the SAME authoritative lesson/beat definitions as the preview.
 // npm run qa:learn:frames -- [lesson-id]; default the first registered lesson.
 const lessonId=process.argv[2] || Object.keys(LESSON_QA_REGISTRY)[0];
 const {lesson, beats, finalSpeakingSceneId}=getLessonQaRegistration(lessonId);
-const cases=lesson.scenes.map(scene=>({
-  scene:scene.id,
-  beats:beats[scene.id].map(beat=>beat.id),
-  quiz:Boolean(scene.activity),
-}));
+const screenshotStates=buildLessonQaCases(getLessonQaRegistration(lessonId));
 const viewports={
   compact:{width:320,height:640},
   phone:{width:400,height:860},
@@ -23,18 +19,6 @@ const viewports={
 };
 const output='test-results/learn-frames/'+lessonId.replace(/[^a-z0-9_-]/gi,'_');
 const basePath='/qa.html';
-const screenshotStates=[];
-for(const entry of cases){
-  for(const beat of entry.beats)
-    screenshotStates.push({scene:entry.scene,beat,state:entry.scene===finalSpeakingSceneId?'speaking-listening':'teaching'});
-  if(entry.quiz){
-    for(const state of ['question','correct-feedback','wrong-feedback'])
-      screenshotStates.push({scene:entry.scene,beat:entry.beats.at(-1),state});
-  }
-}
-const finalBeat=beats[finalSpeakingSceneId].at(-1).id;
-screenshotStates.push({scene:finalSpeakingSceneId,beat:finalBeat,state:'speaking-otti'});
-screenshotStates.push({scene:finalSpeakingSceneId,beat:finalBeat,state:'complete'});
 const firstQuiz=lesson.scenes.find(scene=>scene.activity);
 if(!firstQuiz)throw Error(lessonId+': QA contract needs a deterministic MC checkpoint');
 const firstQuizBeat=beats[firstQuiz.id].at(-1).id;
