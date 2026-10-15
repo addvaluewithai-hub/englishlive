@@ -69,8 +69,9 @@
   line-height: 1.75; font-size: 14px;
 }
 .practice-intro-details {
-  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px;
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px;
 }
+.practice-intro-details > div:last-child { grid-column: 1 / -1; }
 .practice-intro-details > div {
   display: grid; gap: 6px; align-content: center; padding: 9px 7px;
   border: 1px solid var(--intro-line); border-radius: 15px; background: #f6fbf9;
@@ -182,3 +183,65 @@
   .practice-intro-hero, .practice-intro-objectives, .practice-intro-player-card, .practice-intro-transcript { padding: 11px; }
 }
 @media (prefers-reduced-motion: reduce) { .practice-intro * { scroll-behavior: auto !important; } }
+
+/* Screenshot QA polish: shorten the hero and give the long goal room to breathe. */
+@media (max-width: 620px) {
+  .practice-intro-illustration { height: 164px; }
+  .practice-intro-details { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .practice-intro-details > div { min-height: 64px; }
+  .practice-intro-details > div:last-child { grid-column: 1 / -1; min-height: 58px; }
+  .practice-intro-details b { font-size: 12px; }
+}
+@media (min-width: 760px) {
+  .practice-intro { min-height: unset; }
+  .practice-intro-actions { margin-top: 15px; }
+  .practice-intro-transcript { max-height: min(72dvh, 700px); overflow: auto; }
+}
+
+/* Mobile visual review: fixed-left close + fixed-right CEFR pill in both locales. */
+.practice-intro-header { direction: ltr; }
+.practice-intro-header > strong { direction: rtl; unicode-bidi: plaintext; }
+.practice-intro-header .practice-intro-close { direction: ltr; }
+.practice-intro-header .practice-intro-level { direction: ltr; }
+.practice-intro-scene .practice-intro-hero { padding: 12px; }
+.practice-intro-illustration.is-photo {
+  background: linear-gradient(145deg,#f6e5be,#beccaf);
+  isolation: isolate;
+}
+.practice-intro-scene-photo {
+  position: absolute; inset: 0; z-index: 2;
+  width: 100%; height: 100%; object-fit: cover; object-position: center 55%;
+}
+.practice-intro-illustration.is-photo::before,
+.practice-intro-illustration.is-photo::after { display: none; }
+.practice-intro-warning-mark {
+  position: absolute; z-index: 3;
+  inset-inline-start: 16px; bottom: 16px;
+  display: grid; place-items: center;
+  width: 38px; height: 38px; border-radius: 12px;
+  font-size: 20px; background: rgba(255,255,255,.92);
+  color: #c67b15; box-shadow: 0 5px 18px rgba(30,22,12,.22);
+}
+.practice-intro-details { grid-template-columns: repeat(3,minmax(0,1fr)); gap: 6px; }
+.practice-intro-details > div:last-child { grid-column: auto; }
+.practice-intro-details > div { min-height: 73px; padding: 9px 5px; align-content: start; }
+.practice-intro-details small { font-size: 11px; }
+.practice-intro-details b { font-size: 11.5px; line-height: 1.5; }
+.practice-intro-hero > p { margin-bottom: 12px; }
+.practice-intro-cast { padding: 10px; justify-content: space-between; }
+.practice-intro-cast > div { flex: 1; min-width: 0; }
+.practice-intro-cast .practice-intro-portrait { flex: 0 0 43px; }
+.practice-intro-portrait { display: inline-block; width: 45px; height: 45px; border-radius: 50%; }
+.practice-intro-portrait.is-small { width: 26px; height: 26px; }
+.practice-intro-cast b { font-size: 12px; }
+.practice-intro-cast small { font-size: 10.5px; line-height: 1.35; }
+.practice-intro-transcript-label { gap: 8px; }
+.practice-intro-transcript-label b { font-size: 12px; }
+.practice-intro-transcript li > p { font-size: 14px; line-height: 1.65; }
+.practice-intro-transcript li > small { font-size: 12.5px; }
+.practice-intro-listening { padding-bottom: 20px; }
+@media (max-width: 380px) {
+  .practice-intro-details { grid-template-columns: repeat(3,minmax(0,1fr)); }
+  .practice-intro-details > div:last-child { grid-column: auto; }
+  .practice-intro-details b { font-size: 11px; }
+}

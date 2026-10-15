@@ -4,14 +4,14 @@ export const B1_RESOLVE_WRONG_ORDER_MISSION: PracticeMissionContract = {
   sourceId: 'practice.b1.food.resolve-wrong-order.v1',
   revision: 7,
   slug: 'b1-resolve-wrong-order', level: 'B1', worldId: 'food-shopping',
-  titleAr: 'حل مشكلة في طلب غلط', titleEn: 'Resolve a wrong order',
+  titleAr: 'حل مشكلة في طلبك', titleEn: 'Resolve a wrong order',
   settingAr: 'كافيه بعد ما استلمت طلب مختلف عن اللي طلبته',
   learnerRoleAr: 'عميل استلم طلب غلط ولازم يمشي قريب', aiRoleAr: 'موظف الكافيه',
   goalAr: 'حل مشكلة طلبك بالطريقة اللي تناسبك: وضّح المشكلة، ناقش الخيارات، واسأل واتفق على الحل.',
   durationMinutes: 5,
   briefing: {
-    situationAr: 'طلبك وصل غلط، وعندك حوالي 5 دقايق قبل ما تمشي. اتكلم مع Otti واكتشف إيه الحل اللي يناسبك.',
-    situationEn: 'Your order arrived wrong, and you have about five minutes before you leave. Talk to Otti and find a solution that works for you.',
+    situationAr: 'طلبك وصل غلط، وعندك حوالي 5 دقايق قبل ما تمشي. اتكلم مع موظف الكافيه عشان توصل لحل يناسبك.',
+    situationEn: 'Your order arrived wrong, and you have about five minutes before you leave. Talk to the café staff member and find a solution that works for you.',
     facts: [
       { labelAr: 'طلبك', labelEn: 'Your order', value: 'Large hot coffee • milk • no sugar • $4' },
       { labelAr: 'اللي وصلك', labelEn: 'You received', value: 'Cold tea • sugar • no milk' },

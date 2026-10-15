@@ -62,6 +62,7 @@ const scenarios = [
   { name: 'practice-b1-wrong-order-start', path: '/practice/mission/b1-resolve-wrong-order', full: true },
   { name: 'practice-b1-wrong-order-listen', path: '/practice/mission/b1-resolve-wrong-order', click: '.practice-intro-actions .practice-intro-primary', full: true },
   { name: 'practice-b1-wrong-order-live', path: '/practice/live/b1-resolve-wrong-order', full: true },
+  { name: 'practice-b1-review-example', path: '/practice/complete/b1-resolve-wrong-order?visualReview=1', full: true },
   { name: 'practice-b1-travel-world', path: '/practice/B1/world/travel-transport', full: true },
   { name: 'legacy-speak-alias', path: '/speak', full: true },
   { name: 'speaking-lesson-start', path: '/speak/scenario/a1-s1-l01', full: true },

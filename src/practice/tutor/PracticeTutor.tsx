@@ -18,12 +18,14 @@ import { deriveTutorView } from './tutorView';
 import { usePracticeTutor } from './usePracticeTutor';
 import { useWideLayout } from './useWideLayout';
 import type { PracticeCompletionState, TutorPhase } from './types';
+import type { PracticeCorrectionRecord } from '../runtime';
 
 /** One lesson with Otti in three phases, all on the same animated speaking stage. */
-export function PracticeTutor({ mission, phase, review, onFinish, onClose }: {
+export function PracticeTutor({ mission, phase, review, onFinish, onClose, initialReviewNote }: {
   mission: PracticeMissionContract;
   phase: TutorPhase;
   review?: PracticeCompletionState;
+  initialReviewNote?: PracticeCorrectionRecord;
   onFinish?: (state: PracticeCompletionState, relaxed: boolean) => void;
   onClose: () => void;
 }) {
@@ -36,7 +38,8 @@ export function PracticeTutor({ mission, phase, review, onFinish, onClose }: {
   const [debugCopied, setDebugCopied] = useState(false);
   const showDebugTrace = phase === 'roleplay' && new URLSearchParams(window.location.search).get('debug') === '1';
   const tutor = usePracticeTutor({
-    mission, phase, locale: ar ? 'ar' : 'en', corrections: review?.corrections ?? [],
+    mission, phase, locale: ar ? 'ar' : 'en', corrections: [...(review?.corrections ?? []), ...(review?.improvements ?? []).map((note) => ({ ...note, noteType: 'improvement' as const }))],
+    initialReviewIssue: initialReviewNote,
     notesIncomplete: review ? notesIncomplete(review) : false,
     silenceDurationMs: relaxed ? 2400 : 1200, onTurn: runtime.invalidateHint,
   });
@@ -70,7 +73,7 @@ export function PracticeTutor({ mission, phase, review, onFinish, onClose }: {
         <strong>{copy.done}</strong></button>
       : <>
         <button type="button" className="fs-help-control tutor-action tutor-notes-toggle" onClick={() => setNotesOpen(true)}>
-          <strong>{copy.notes} ({review?.corrections?.length ?? 0})</strong></button>
+          <strong>{copy.notes} ({(review?.corrections?.length ?? 0) + (review?.improvements?.length ?? 0)})</strong></button>
         <Link className="fs-help-control tutor-action tutor-again-link" to={`/practice/mission/${mission.slug}`}>
           <strong>{copy.again}</strong></Link>
       </>;
@@ -86,8 +89,8 @@ export function PracticeTutor({ mission, phase, review, onFinish, onClose }: {
   return <section className={`fs-live sp-scenario-live practice-live tutor-live is-${phase}${side && wide ? ' has-side' : ''}`}
     aria-label={copy.phases[step]}>
     <LiveConversationHeader
-      title={<>{mission.level} • {ar ? mission.titleAr : mission.titleEn}</>}
-      meta={<><b>{step + 1}/3</b> {copy.phaseShort[step]}</>}
+      title={ar ? mission.titleAr : mission.titleEn}
+      meta={<b dir="ltr">{mission.level}</b>}
       metaClassName="fs-live-mode tutor-phase-meta"
       brandText="Otti"
       onClose={phase === 'roleplay' ? () => void finish() : onClose}
@@ -98,12 +101,13 @@ export function PracticeTutor({ mission, phase, review, onFinish, onClose }: {
       <div className="tutor-main">
         <TutorStage host={tutor.host} text={tutor.state.text} status={tutor.state.status}
           title={view.statusTitle} body={view.statusBody} learnerTurn={view.learnerTurn}>
-          {phase === 'briefing' ? (wide ? null : lessonCard) : <GoalStrip mission={mission} goalIds={goalIds} ar={ar} copy={copy} />}
+          {phase === 'briefing' ? (wide ? null : lessonCard) : <>
+            <GoalStrip mission={mission} goalIds={goalIds} ar={ar} copy={copy} />
+            {phase === 'roleplay' ? <PracticeHintCard runtime={runtime} learnerTurn={view.learnerTurn}
+              onRequestHint={() => void runtime.requestHint([...tutor.turns.current])} /> : null}
+          </>}
         </TutorStage>
-        <TutorDock tutor={tutor} view={view} copy={copy} action={action}>
-          {phase === 'roleplay' ? <PracticeHintCard runtime={runtime} learnerTurn={view.learnerTurn}
-            onRequestHint={() => void runtime.requestHint([...tutor.turns.current])} /> : null}
-        </TutorDock>
+        <TutorDock tutor={tutor} view={view} copy={copy} action={action} />
         {showDebugTrace ? <button type="button" className="tutor-copy-details tutor-live-debug"
           onClick={() => void copyLiveDebugTrace()}>
           {debugCopied ? 'Live tool log copied' : 'Copy live tool log'}

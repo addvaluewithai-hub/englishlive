@@ -15,6 +15,7 @@ export function usePracticeTutor(options: {
   phase: TutorPhase;
   locale: 'ar' | 'en';
   corrections: PracticeCorrectionRecord[];
+  initialReviewIssue?: PracticeCorrectionRecord;
   notesIncomplete?: boolean;
   silenceDurationMs: number;
   onTurn: () => void;
@@ -79,7 +80,7 @@ export function usePracticeTutor(options: {
     }
     await tutor?.close();
     return {
-      corrections: collector.getIssues(), achievedGoalIds: collector.getObservedGoalIds(), recordedByOtti: true,
+      corrections: collector.getIssues(), improvements: collector.getImprovements(), achievedGoalIds: collector.getObservedGoalIds(), recordedByOtti: true,
       durationSeconds: startedAt.current ? Math.round((Date.now() - startedAt.current) / 1000) : 0,
       conversationText: turns.current.map((turn) => `${turn.speaker}: ${turn.text}`).join('\n'),
       diagnostics: { transport: diagnostics.current.map((item) => ({ ...item })),
@@ -91,7 +92,7 @@ export function usePracticeTutor(options: {
   function discussCorrection(index: number) {
     const issue = options.corrections[index];
     if (!issue || options.phase !== 'review') return;
-    const message = 'PRIVATE_REVIEW_SELECTION: the learner tapped this saved note to discuss and practise. Explain it briefly, model the better sentence, invite them to say it, then listen. This is NOT new learner speech: ' + JSON.stringify({ heard: issue.originalEn, better: issue.betterEn });
+    const message = 'PRIVATE_REVIEW_SELECTION: learner chose this saved note. Explain WHY with a specific grammar/usage rule, OR if it is optional style, explain that their original was CORRECT and the alternative is only a preference. Then invite them to practise. These are notes, NOT new learner speech: ' + JSON.stringify({ heard: issue.originalEn, better: issue.betterEn, why: options.locale === 'ar' ? issue.feedbackAr : issue.feedbackEn });
     const current = session.current;
     if (!current || current.closed) { void start(message); return; }
     if (current.state.paused) current.update({ paused: false });
@@ -101,7 +102,9 @@ export function usePracticeTutor(options: {
 
   useEffect(() => {
     mounted.current = true;
-    const timer = options.phase !== 'briefing' ? window.setTimeout(() => void start(), 0) : null;
+    const selected = options.initialReviewIssue;
+    const selectedMessage = selected ? 'PRIVATE_REVIEW_SELECTION: focus on this specific note FIRST. Explain the reason without inventing additional errors. If this is a stylistic improvement, say explicitly the original was already correct. ' + JSON.stringify({ heard: selected.originalEn, better: selected.betterEn, why: options.locale === 'ar' ? selected.feedbackAr : selected.feedbackEn }) : undefined;
+    const timer = options.phase !== 'briefing' ? window.setTimeout(() => void start(selectedMessage), 0) : null;
     return () => {
       mounted.current = false;
       if (timer !== null) window.clearTimeout(timer);

@@ -30,6 +30,7 @@ export type NotebookTrace = {
 export type PracticeCompletionState = {
   support?: PracticeSupportSummary;
   corrections?: PracticeCorrectionRecord[];
+  improvements?: PracticeCorrectionRecord[];
   achievedGoalIds?: string[];
   durationSeconds?: number;
   conversationText?: string;

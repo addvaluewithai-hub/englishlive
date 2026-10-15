@@ -3,18 +3,23 @@ import type { PracticeCompletionState } from './types';
 
 /** True when the final review never arrived, so an empty list must not read as clean English. */
 export function notesIncomplete(review: PracticeCompletionState) {
-  return review.diagnostics?.finalReview !== undefined && review.diagnostics.finalReview !== 'received';
+  const trace = review.diagnostics;
+  return (trace?.finalReview !== undefined && trace.finalReview !== 'received') ||
+    trace?.notebook?.finalStatus === 'uncertain' || trace?.notebook?.finalStatus === 'invalid';
 }
 
 /** Plain-text support report. Metadata only beyond the saved notes themselves; no tokens or audio. */
 export function buildReviewReport(mission: PracticeMissionContract, review: PracticeCompletionState, ar: boolean, reviewConnection: unknown) {
   const issues = review.corrections ?? [];
+  const improvements = review.improvements ?? [];
   const trace = review.diagnostics;
   return [
     `Practice: ${mission.level} — ${mission.titleEn}`,
     'Source: Otti Live listening notes, not a verbatim transcript or proficiency score.',
     `Saved corrections: ${issues.length}`,
-    ...issues.map((issue) => `Heard: ${issue.originalEn}\nBetter: ${issue.betterEn}\nWhy: ${(ar ? issue.feedbackAr : issue.feedbackEn) || '-'}`),
+    `Optional improvements: ${improvements.length}`,
+    ...issues.map((issue) => `ERROR — Heard: ${issue.originalEn}\nCorrected: ${issue.betterEn}\nWhy: ${(ar ? issue.feedbackAr : issue.feedbackEn) || '-'}`),
+    ...improvements.map((note) => `OPTIONAL — Already-valid: ${note.originalEn}\nAlternative: ${note.betterEn}\nWhy: ${(ar ? note.feedbackAr : note.feedbackEn) || '-'}`),
     'Observed goals: ' + ((review.achievedGoalIds ?? []).join(', ') || 'none'),
     `Final review: ${trace?.finalReview ?? 'unknown'} after ${trace?.finalWaitMs ?? 0} ms`,
     'Notebook: ' + JSON.stringify(trace?.notebook ?? {}),

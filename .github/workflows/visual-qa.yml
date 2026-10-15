@@ -6,6 +6,7 @@ on:
     paths:
       - 'src/**'
       - 'scripts/visual-qa.mjs'
+      - 'scripts/visual-qa-practice-redesign.mjs'
       - 'scripts/visual-qa-speaking.mjs'
       - 'scripts/visual-qa-home.mjs'
       - 'scripts/visual-qa-lesson.mjs'
@@ -49,6 +50,8 @@ jobs:
           done
           cat /tmp/englotti-vite.log
           exit 1
+      - name: Verify redesigned Practice screens and emit small QA previews
+        run: node scripts/visual-qa-practice-redesign.mjs
       - name: Verify migrated core UI
         env:
           VISUAL_QA_INLINE_SCREENSHOTS: '1'
