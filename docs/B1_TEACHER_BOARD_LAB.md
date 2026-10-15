@@ -1,100 +1,46 @@
-# B1 U1-L02: Otti teacher + interactive board lab
+# Teacher-led B1 lesson lab · 4 visual checks + final Speaking
 
-This is an **opt-in preview** of an authored teaching vertical slice. It does **not**
-replace the live Practice screen, the official B1 lesson, or curriculum progress.
+This is an **opt-in Draft PR experiment**; do not merge into published Learn yet. It uses a distinct lesson ID, no official course progress, no Practice code changes.
 
-## Open
+Open a deployed preview: `/scene-lesson/b1-u1-l02-keep-conversation-going?teacherLab=1`.
 
-After deploying the branch preview, sign in and open:
+## Learning model
 
-`/scene-lesson/b1-u1-l02-keep-conversation-going?teacherLab=1`
+- The application owns the authored narration: one `READ:` line and one premium vector board at a time, aligned to actual audible PCM playback, **not** fake timing or model-generated slides.
+- Otti reads each line aloud. The student sees a single fixed board in the upper classroom with Otti anchored at its lower-right corner. **No inner board scroll**. On narrow phones the vector scales down.
+- Four **multiple-choice comprehension checkpoints** follow the teaching sections: React/Pick/Continue, get to know, keep in touch, compare.
+- Questions reveal only after the last spoken lesson line. The microphone is disabled during quiz stages. Options and correct answer IDs are authored in source, not graded by Gemini.
+- Student taps once. The application records the option and its correct/incorrect status (an incorrect result is **not** recorded as mastery), highlights the right answer and sends Otti a prewritten correct/wrong explanation to read aloud.
+- Only after Otti's feedback audio drains does the application notify the model to call `complete_scene`. Otti initiates the tool call; the runtime enforces ordering but **does not semantically grade free speech** in teaching scenes.
+- A wrong quiz answer **does not trap** the student: explain it, retain wrong result, continue. Later review should revisit weak concepts.
+- The **fifth and final scene is real unscripted Speaking**, in a changed workplace situation, no MC and no answer-bearing board. Otti controls when the learner has sustained enough meaningful interaction to call `complete_scene`; greetings alone and generic goodbyes should not count.
 
-Remove `teacherLab=1` to return to the existing full Scene Lesson.
-This deliberately reuses the live Otti voice, stage and `complete_scene`
-mechanics. It requires Gemini Live and a working microphone; it is **not**
-a prerecorded mockup.
+## Scenes and illustrations
 
-## Teaching storyline
+| Step | Exact narrated teaching topic | Full-board authored SVG | Assessment |
+| --- | --- | --- | --- |
+| 1 | React, pick the detail, ask a connected question | Three illustrated progression cards, plus photography update | Choose the response that continues a conversation |
+| 2 | Gradually develop a relationship with `get to know` | A three-point relationship timeline with two characters | Choose the new-relationship sentence |
+| 3 | Stay connected despite distance with `keep in touch` | People in separate cities with messaging route | Choose the continuing-contact sentence |
+| 4 | Compare first acquaintance vs. ongoing contact | Two large annotated comparison panels | Choose the pair with correct contexts |
+| 5 | New work-team update | No board, large reactive Otti | Live multi-turn conversation with teacher judgment |
 
-A friend joined a photography club, met Lina there, and later kept in
-contact after Lina moved away. Every initial teaching explanation and task
-instruction is written **verbatim** in `src/lessonScenes/b1/teacherLabScript.ts`.
-The app sends one `READ:` instruction at a time, changes the linked visual
-when audible playback begins, and only sends the next line after the last
-PCM sample finishes. This follows New Learn's authored narration model;
-Live speech is still model-generated, so verify wording fidelity by listening.
-The teacher may improvise *briefly only after* a learner attempt, for feedback
-or a requested explanation. It must never improvise the primary lesson. The story creates meaningful
-reasons for two B1 phrases rather than showing a list of vocabulary cards.
+## Acceptance checks
 
-| Scene | Teacher/board | Learner requirement |
-| --- | --- | --- |
-| Introduction | 3 written lines: club update, reaction examples, follow-up model; boards appear as audio starts | React and ask a relevant spoken follow-up **after instruction** |
-| Get to know | Board introduces a relationship developing, then a two-choice contextual check | Correct board selection **and** fresh spoken example |
-| Keep in touch | Lina moves but messaging continues; second graded board choice | Correct board selection **and** fresh spoken example |
-| Compare | Side-by-side authored relationship meanings | Use each phrase in different spoken situations |
-| Fresh transfer | No board; unrelated coworker/course conversation | Sustain multiple spoken turns without prompts giving away target phrases |
+1. Open the preview in a **real mobile browser**, including at 320px width. Check large board, readable options, no clipped text, no internal board scrollbar and stable footer.
+2. Confirm each board changes only when the corresponding narrated audio **actually starts**.
+3. Confirm questions stay hidden until Otti finishes the last explanation.
+4. Pick a **wrong answer** on each quiz in different test runs; Otti should explain why and clearly give the right answer, then call `complete_scene` once after speaking. The log must preserve `incorrect`, not mastery.
+5. Pick a correct option: Otti explains the reason, then advances. No forced spoken retry in a comprehension quiz.
+6. In the last scene the microphone opens, no quiz is shown and Otti asks for substantive follow-up. Test vague and incoherent replies: Otti should help or extend the conversation, not instantly call completion.
+7. Interrupt narration: resume should replay, not silently skip, the authored line.
+8. Copy the compact log and compare `SCRIPT:` vs. `AI:` for fidelity.
+9. Confirm no cloud course progress or Practice flows are affected.
 
-The lab is intentionally **partial**. The full B1 U1-L02 lesson additionally
-covers `you see`, five planning words, emphasis, turn-holding,
-confirmation, invitation and connected-speech listening. Those are for
-a second authoring pass, **not** silently deleted from the official lesson.
+## Engineering validation
 
-## Safety and progress semantics
+Run `npm run check`, `npm run test:learn-pilot`, `npm run test:ui`, and `npm run test:practice`. These tests cannot verify Gemini's audible compliance, teaching judgment, Arabic pronunciation, mobile screenshots or real microphone behavior; those remain launch gates.
 
-- The content uses a unique `-teacher-board-lab` lesson ID.
-- `loadTeachingBundle({ preview: true })` bypasses published lesson loading
-  and cloud session creation. `SceneLessonRuntime({ preview: true })`
-  suppresses official course completion and cloud progress reporting.
-- The preview does not create a resumable scene checkpoint.
-- The application grades board choices against an authored answer key;
-  the Live model cannot decide what the correct click was.
-- A wrong choice offers an authored Arabic retry cue; the learner can
-  try again.
-- A correct choice gets a silent client-to-agent BOARD_CHECK message,
-  **never counted as microphone evidence**. Earlier microphone activity is
-  reset, so a *fresh* microphone observation after the correct choice and
-  the teacher's pedagogical self-audit are required to complete that scene.
-- A stale answer or choice from another scene is rejected.
-- The completion mechanism is not a verified English pronunciation or
-  semantic assessment. A live speaking acceptance test is required.
+## Scope
 
-## Acceptance walkthrough (real device)
-
-1. Start the lab. Otti reads the authored introduction in 3 short audio
-   turns; the reaction and next-move visuals follow the exact teaching line.
-   There is no improvised welcome and no unprepared question before the model.
-2. In the first phrase scene, confirm the board choice is blocked
-   until Otti finishes speaking and your turn begins.
-3. Tap a wrong option: the board must show a reason without advancing.
-4. Tap the correct option: see success and hear Otti ask for a **new**
-   spoken example. Stay on the scene until the learner speaks.
-5. Check the same for the second phrase, then verify the comparison.
-6. Check the final transfer has no board, no model dialogue, and
-   several genuine learner turns. Interrupt halfway through a written line
-   and confirm the resume control replays that line rather than skipping it.
-7. Verify reloading / leaving the preview does not update the
-   official B1 lesson completion, and other Practice PR routes are
-   unchanged.
-8. Repeat on a 320px-width phone and with interruption/reconnection;
-   the board must scroll within its surface without covering the mic.
-
-Run `npm run check`, `npm run test:learn-pilot`,
-`npm run test:ui` and `npm run test:practice`. Tests cover
-activity order/gates but cannot replace real provider audio/phone QA.
-
-## Next editorial review
-
-Listen for short natural teacher turns, accurate Arabic explanations,
-correct use of `get to know` vs `keep in touch`, and a *changed*
-spoken context before marking a scene complete. If this succeeds,
-extend the same director/board contract to vocabulary and contextual
-grammar (not five separate flashcard scenes).
-
-## Narration fidelity diagnostics
-
-Use **Copy compact log** after the lesson. Each `SCRIPT:` entry shows
-the exact author-written line sent to Live and the neighboring `AI:` entry
-shows the returned speech transcription. Compare their meanings and wording.
-A transcription is not perfect proof of spoken fidelity: listen to the audio,
-especially for Egyptian-Arabic/English mixing, accents and expression.
+This is the **first chapter pilot**, intentionally using five scenes rather than replacing the entire official B1 U1-L02 curriculum. The complete editorial storyboard (phrases, planning vocabulary, integrated grammar, listening, invitations) remains a separate draft for the next implementation pass. **Do not claim the full B1 lesson has been shipped.**
