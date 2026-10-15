@@ -23,6 +23,9 @@ import {
   type StoredSceneLessonCheckpoint,
 } from '../lessonScenes/progressStore';
 import { getRequiredSceneLesson } from '../lessonScenes/catalog';
+import { B1_L02_TEACHER_BOARD_PILOT } from '../lessonScenes/b1/teacherBoardPilot';
+import { TeacherBoardActivity } from '../lessonScenes/TeacherBoardActivity';
+import '../lessonScenes/teacherBoardPilot.css';
 import { SceneLessonRuntime } from '../lessonScenes/SceneLessonRuntime';
 import type { SceneLessonState } from '../lessonScenes/types';
 import { GeminiLiveTransport } from '../live/GeminiLiveTransport';
@@ -170,11 +173,12 @@ export function SceneLessonScreen() {
   const { lessonId } = useParams();
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const localLesson = getRequiredSceneLesson(lessonId);
+  const teacherLab = lessonId === 'b1-u1-l02-keep-conversation-going' && params.get('teacherLab') === '1';
+  const localLesson = teacherLab ? B1_L02_TEACHER_BOARD_PILOT : getRequiredSceneLesson(lessonId);
   const profile = readLearnerProfile();
   const character = getCharacterDefinition(params.get('character') ?? profile?.characterId);
   const knownItems = knownItemsForLesson(localLesson.id);
-  const initialCheckpoint = useRef<StoredSceneLessonCheckpoint | null>(readSceneLessonCheckpoint(localLesson.id));
+  const initialCheckpoint = useRef<StoredSceneLessonCheckpoint | null>(teacherLab ? null : readSceneLessonCheckpoint(localLesson.id));
 
   const host = useRef<CharacterHostHandle | null>(null);
   const transport = useRef<GeminiLiveTransport | null>(null);
@@ -267,6 +271,7 @@ export function SceneLessonScreen() {
   }
 
   function persistCheckpoint(state: SceneLessonState) {
+    if (teacherLab) return; // Preview must never write course progress or checkpoints.
     if (state.completedAt) {
       clearSceneLessonCheckpoint(localLesson.id);
       setSavedCheckpoint(null);
@@ -339,6 +344,20 @@ export function SceneLessonScreen() {
     live.sendText(`[LEARNER TEXT CHAT] ${value}\nTyped text is help/context only, not spoken evidence. If it answers the speaking task, ask the learner to say it aloud before completing the scene.`);
     setChatMessage('');
     setToolsOpen(false);
+  }
+
+  function chooseBoardActivity(sceneId: string, optionId: string) {
+    const sceneRuntime = runtime.current;
+    const live = transport.current;
+    if (!teacherLab || !sceneRuntime || !live?.connected || status !== 'listening' || !micOpen) {
+      return { accepted: false, correct: false, error: 'استنى لحد ما Otti يخلص الشرح.' };
+    }
+    const answer = sceneRuntime.submitBoardChoice(sceneId, optionId);
+    if (answer.accepted && answer.correct) {
+      appendQuickActionLog('[board] correct comprehension choice');
+      live.sendText('[BOARD_CHECK: correct] The learner passed the application-graded on-board comprehension choice in the CURRENT SCENE. This is NOT voice evidence. Briefly acknowledge it, then ask for a fresh meaningful SPOKEN sentence in a changed context before using complete_scene. Do not repeat the same example.');
+    }
+    return answer;
   }
 
   function sendQuickAction(actionId: QuickActionId) {
@@ -427,7 +446,7 @@ export function SceneLessonScreen() {
     compactLog.current = [];
 
     const bundle = await loadTeachingBundle(localLesson, character);
-    const sessionLesson = adaptLessonForKnownItems(bundle.lesson, knownItemIds);
+    const sessionLesson = teacherLab ? localLesson : adaptLessonForKnownItems(bundle.lesson, knownItemIds);
     const teacherName = bundle.character.displayName?.trim() || character.name;
     const restoredState = savedCheckpoint?.state && savedCheckpoint.lessonId === localLesson.id
       ? savedCheckpoint.state
@@ -444,6 +463,7 @@ export function SceneLessonScreen() {
       policyPrompt: bundle.teachingPolicy.prompt,
       adaptiveContext: claimedKnownContext(localLesson.id, knownItemIds),
       restoredState,
+      preview: teacherLab,
     });
     runtime.current = sceneRuntime;
     setLessonState(sceneRuntime.snapshot);
@@ -721,8 +741,18 @@ export function SceneLessonScreen() {
         ) : null}
 
         {board && !preflightVisible ? (
-          <div className="premium-board-layer" aria-live="polite">
-            <ConversationBoard board={board} />
+          <div className={currentScene.activity ? 'premium-board-layer has-teacher-activity' : 'premium-board-layer'} aria-live="polite">
+            {currentScene.activity && teacherLab ? (
+              <TeacherBoardActivity
+                key={currentScene.id}
+                sceneId={currentScene.id}
+                board={board}
+                activity={currentScene.activity}
+                passed={lessonState?.scenes[currentScene.id]?.activityPassed === true}
+                canAnswer={learnerTurn && Boolean(transport.current?.connected)}
+                onChoose={chooseBoardActivity}
+              />
+            ) : <ConversationBoard board={board} />}
           </div>
         ) : null}
 
