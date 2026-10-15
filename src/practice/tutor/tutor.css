@@ -268,3 +268,20 @@
     max-height: 245px;
   }
 }
+
+/* Second pass after inspecting actual 390x844 screenshots: remove the empty
+   strip above Otti and move the help/opportunities up within thumb reach. */
+@media (max-width: 620px) {
+  .tutor-live.is-roleplay .tutor-stage.practice-live-stage,
+  .tutor-live.is-review .tutor-stage.practice-live-stage {
+    min-height: 0;
+    grid-template-rows: 235px auto auto;
+    padding-top: 0;
+  }
+  .tutor-live.is-roleplay .tutor-stage .sp-scenario-character,
+  .tutor-live.is-review .tutor-stage .sp-scenario-character {
+    height: 235px;
+    max-height: 235px;
+    align-self: center;
+  }
+}
