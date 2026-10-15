@@ -23,6 +23,8 @@ const isolatedSource = runtimeSource
 const code = (await transform(isolatedSource, { loader: 'ts', format: 'esm', target: 'es2022' })).code;
 const { SceneLessonRuntime } = await import('data:text/javascript;base64,' + Buffer.from(code).toString('base64'));
 import { B1_L02_TEACHER_BOARD_PILOT as lesson } from '../src/lessonScenes/b1/teacherBoardPilot.ts';
+import { B1_TEACHER_LAB_SCRIPT, B1_TEACHER_LAB_AFTER_CHOICE } from '../src/lessonScenes/b1/teacherLabScript.ts';
+import { ScriptedNarrationDirector } from '../src/lessonScenes/ScriptedNarrationDirector.ts';
 
 const validAudit = {
   evidenceType: 'independent_production',
@@ -39,6 +41,7 @@ function create() {
     onStateChange: (state) => changes.push(state),
   });
   runtime.markLessonOpeningComplete();
+  runtime.markScriptedNarrationComplete(runtime.currentScene.id);
   const complete = runtime.tools.find((tool) => tool.declaration.name === 'complete_scene');
   assert.ok(complete);
   return { runtime, complete, changes };
@@ -63,13 +66,14 @@ test('a correct board choice alone cannot complete a scene without real micropho
   assert.equal(complete.handle(validAudit).completedSceneId, 'warm-up');
   const current = runtime.currentScene;
   assert.equal(current.id, 'get-to-know');
+  runtime.markScriptedNarrationComplete(current.id);
 
   // Even a plausible spoken attempt cannot skip the application-owned check.
   runtime.recordLearnerAudioLevel(0.5);
   assert.match(complete.handle(validAudit).error, /board comprehension check/);
   assert.equal(runtime.submitBoardChoice(current.id, 'old').correct, false);
   const boardTool = runtime.tools.find((tool) => tool.declaration.name === 'show_board');
-  assert.match(boardTool.handle({ mode: 'note', title: 'Override', items: ['Should not appear'] }).error, /interactive board/);
+  assert.match(boardTool.handle({ mode: 'note', title: 'Override', items: ['Should not appear'] }).error, /authored narrator/);
   assert.match(complete.handle(validAudit).error, /board comprehension check/);
   assert.equal(runtime.snapshot.scenes[current.id].activityPassed, false);
 
@@ -86,6 +90,7 @@ test('a tap is not spoken evidence; stale or unknown choices are rejected', () =
   runtime.recordLearnerAudioLevel(0.5);
   complete.handle(validAudit);
   const id = runtime.currentScene.id;
+  runtime.markScriptedNarrationComplete(id);
   assert.equal(runtime.submitBoardChoice(id, 'nonsense').accepted, false);
   assert.equal(runtime.submitBoardChoice('keep-in-touch', 'contact').accepted, false);
   assert.equal(runtime.submitBoardChoice(id, 'new').correct, true);
@@ -100,6 +105,7 @@ test('preview cannot be confused with production scene completion', () => {
   const { runtime, complete } = create();
   for (const scene of lesson.scenes) {
     assert.equal(runtime.currentScene.id, scene.id);
+    runtime.markScriptedNarrationComplete(scene.id);
     if (scene.activity) {
       runtime.submitBoardChoice(scene.id, scene.activity.correctOptionId);
     }
@@ -109,4 +115,45 @@ test('preview cannot be confused with production scene completion', () => {
   }
   assert.ok(runtime.snapshot.completedAt);
   assert.equal(runtime.snapshot.lessonId, lesson.id);
+});
+
+test('every lab scene has written narration, board cues and an answer pause', () => {
+  for (const scene of lesson.scenes) {
+    const beats = B1_TEACHER_LAB_SCRIPT[scene.id];
+    assert.ok(beats?.length, 'no written lines for ' + scene.id);
+    assert.equal(new Set(beats.map((beat) => beat.id)).size, beats.length);
+    assert.ok(beats.every((beat) => beat.line.trim().length > 30));
+    if (scene.activity) {
+      assert.ok(B1_TEACHER_LAB_AFTER_CHOICE[scene.id]);
+      assert.ok(beats.at(-1).board);
+    }
+  }
+});
+
+test('director switches lines only on audible end, never on pause or a tool-only turn', () => {
+  const narration = new ScriptedNarrationDirector();
+  const scene = lesson.scenes[0];
+  const beats = B1_TEACHER_LAB_SCRIPT[scene.id];
+  assert.equal(narration.start(scene.id, beats).id, beats[0].id);
+  assert.equal(narration.currentBeat.id, beats[0].id);
+  assert.equal(narration.pause().id, beats[0].id);
+  assert.deepEqual(narration.audioFinished(), { next: null, finishedSceneId: null });
+  assert.equal(narration.resume().id, beats[0].id);
+  assert.equal(narration.audioFinished().next.id, beats[1].id);
+  assert.equal(narration.audioFinished().next.id, beats[2].id);
+  assert.deepEqual(narration.audioFinished(), { next: null, finishedSceneId: scene.id });
+  assert.equal(narration.isReading, false);
+});
+
+test('spoken activity cannot complete the opening until the full written narration is done', () => {
+  const { runtime, complete } = create();
+  // fresh runtime's create() marks opening narrated; trigger on next scene to test gate.
+  runtime.recordLearnerAudioLevel(0.5);
+  complete.handle(validAudit);
+  assert.equal(runtime.currentScene.id, 'get-to-know');
+  runtime.recordLearnerAudioLevel(0.5);
+  assert.match(complete.handle(validAudit).error, /authored narration/);
+  runtime.showScriptedBoard('get-to-know', B1_TEACHER_LAB_SCRIPT['get-to-know'][0].board);
+  runtime.markScriptedNarrationComplete('get-to-know');
+  assert.match(complete.handle(validAudit).error, /board comprehension check/);
 });
