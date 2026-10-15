@@ -229,3 +229,42 @@
   .teacher-lab-portrait { display: block; }
   .teacher-lab-landscape { display: none; }
 }
+
+/* The old caption was bottom-aligned for the wooden whiteboard. Explicitly
+   move it out of question content for the new top-board architecture. */
+.premium-lesson-stage.is-teacher-lab .premium-scene-caption {
+  top: 4px !important;
+  bottom: auto !important;
+  left: 10px !important;
+  right: 10px !important;
+  width: auto;
+  height: 37px;
+  transform: none !important;
+  opacity: 1 !important;
+  display: grid;
+  place-items: center;
+  gap: 1px;
+}
+.premium-lesson-stage.is-teacher-lab .premium-scene-caption strong {
+  font-size: 12px !important;
+  line-height: 1.2;
+  max-width: 96%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.premium-lesson-stage.is-teacher-lab .premium-scene-caption small {
+  font-size: 10px !important;
+  line-height: 1.1;
+  color: #28796e;
+}
+.premium-lesson-stage.is-teacher-lab:not(.has-board) .premium-lesson-character {
+  transform: translateY(16%) !important;
+}
+@media (max-width: 620px) and (min-height: 681px) {
+  .is-teacher-lab .teacher-pilot-card:has(.teacher-pilot-task) .teacher-lab-visual {
+    height: clamp(190px, 28vh, 240px);
+    max-height: 48%;
+    flex: 0 1 auto;
+  }
+}
