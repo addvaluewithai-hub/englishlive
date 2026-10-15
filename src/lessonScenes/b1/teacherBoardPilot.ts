@@ -16,7 +16,7 @@ export const B1_L02_TEACHER_BOARD_PILOT: SceneLessonDefinition = {
     'Keep one continuing story about Lina and a photography club for teaching.',
     'For the last scene use a different work or course setting; hide the board and do not model a full answer.',
     'The application checks board selections; a correct tap is comprehension practice, not spoken evidence.',
-    'Wait for the correct board result and a real learner spoken attempt before calling complete_scene.',
+    'The four teaching checks are multiple-choice: a correct or wrong choice gets specific spoken feedback, then Otti requests completion. No spoken evidence in these checks.',
     'Speak concise Egyptian Arabic to explain meanings; use English for example sentences and roleplay.',
     'Never demand an immediate echo as proof of independent speaking.',
   ],
@@ -35,6 +35,17 @@ export const B1_L02_TEACHER_BOARD_PILOT: SceneLessonDefinition = {
         explainInArabic: ['ابدأ بالسكريبت المكتوب: اشرح React ثم Pick ثم Continue مع مثال واضح قبل ما الطالب يجرب.', 'ما تحوّلش المقدمة إلى اختبار ارتجالي قبل الشرح.'],
         englishTargets: ['Really?', 'That sounds interesting.', 'What do you do there?'],
         constraints: ['The application reads three authored lines with a changing board before inviting a response.', 'Do not introduce either relationship phrase in this scene.'],
+      },
+      activity: {
+        promptAr: 'صاحبك قال إنه دخل نادي تصوير جديد. إيه أفضل رد يخلي المحادثة تكمل؟',
+        options: [
+          { id: 'continue', text: 'Really? What do you do there?' },
+          { id: 'stop', text: 'Okay.' },
+          { id: 'unrelated', text: 'I prefer eating pizza.' },
+        ],
+        correctOptionId: 'continue',
+        successAr: 'صحيح! اتفاعلت مع الخبر وسألت عن تفصيلة مرتبطة بيه.',
+        retryAr: 'الإجابة مش بتكمّل الموضوع؛ لازم نرد على الخبر ونسأل عن تفصيلة فيه.',
       },
       interaction: {
         kind: 'guided_dialogue',
@@ -118,6 +129,17 @@ export const B1_L02_TEACHER_BOARD_PILOT: SceneLessonDefinition = {
         title: 'Two different moments',
         left: { title: 'get to know', body: 'when a relationship is developing' },
         right: { title: 'keep in touch', body: 'when contact continues' },
+      },
+      activity: {
+        promptAr: 'في شركة جديدة بتتعرف على زميل، وفي نفس الوقت لسه بتتكلم مع صاحبك القديم. أنهي اختيار صحيح؟',
+        options: [
+          { id: 'right', text: "I'm getting to know my new coworker. I keep in touch with my old friend." },
+          { id: 'swapped', text: "I keep in touch with the new stranger. I'm getting to know my old friend from school." },
+          { id: 'both', text: "I'm getting to know both people for the first time." },
+        ],
+        correctOptionId: 'right',
+        successAr: 'صح! الشخص الجديد بنبدأ نتعرف عليه، والقديم بنستمر على تواصل معاه.',
+        retryAr: 'راجع الفرق: get to know للعلاقة اللي بتتكون، keep in touch للتواصل المستمر.',
       },
       interaction: {
         kind: 'micro_practice',
