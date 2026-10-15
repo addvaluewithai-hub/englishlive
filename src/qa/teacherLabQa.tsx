@@ -112,7 +112,7 @@ function QaClassroom(){
         </div>
         <div className="premium-control-row">
           <button type="button" className="premium-secondary-control" aria-label="المساعدة والكتابة"><ProductIcon name="chat" size={22}/><span>مساعدة</span></button>
-          {isSpeaking ? <button type="button" className={'premium-main-control '+(speaking?'is-interrupt':'is-mic')}>
+          {isSpeaking ? <button type="button" className={'premium-main-control '+(speaking?'is-interrupt':'is-mic is-open')}>
             <ProductIcon name="speak" size={28}/><span>دورك</span></button>
             : <div className="premium-main-control is-quiz-status">
               <ProductIcon name="check" size={27}/><span>{answered?'اسمع':state==='question'?'اختار':'استنى'}</span></div>}
