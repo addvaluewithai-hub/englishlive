@@ -396,7 +396,8 @@
   height: 100dvh;
   margin: 0 auto;
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  /* Header, checkpoint bar, progress rail, flexing classroom stage, footer. */
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
   overflow: hidden;
   background: var(--v3-paper);
   color: var(--v3-ink);
