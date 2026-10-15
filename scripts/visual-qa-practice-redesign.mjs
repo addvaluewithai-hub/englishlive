@@ -71,6 +71,18 @@ try {
       }
       console.log(`QA_SHOT_END:${name}`);
       console.log(`[practice redesign ok] ${name}: screenshot ${jpeg.length} bytes, overflow ${overflow}px`);
+      if (viewport.id === 'mobile') {
+        // Check complete scrollable mobile content, including below the sticky action.
+        const full = await page.screenshot({ type: 'jpeg', quality: 43, fullPage: true });
+        const full64 = full.toString('base64');
+        const fullName = `${name}-full`;
+        console.log(`QA_SHOT_BEGIN:${fullName}`);
+        for (let start = 0; start < full64.length; start += 3000) {
+          console.log(`QA_SHOT_CHUNK:${full64.slice(start, start + 3000)}`);
+        }
+        console.log(`QA_SHOT_END:${fullName}`);
+        console.log(`[practice redesign full] ${fullName}: screenshot ${full.length} bytes`);
+      }
       await context.close();
     }
   }
