@@ -5,32 +5,41 @@ import { mkdir, writeFile, readFile } from 'node:fs/promises';
 import { createServer } from 'vite';
 import { chromium } from 'playwright';
 
-const lessonId='b1-u1-l02-teacher-board-lab';
-const cases=[
- {scene:'warm-up', beats:['story','reaction','follow-up']},
- {scene:'get-to-know', beats:['meaning','model','choice']},
- {scene:'keep-in-touch', beats:['after-club','meaning','choice']},
- {scene:'compare-and-use', beats:['comparison','ask']},
- {scene:'fresh-transfer', beats:['new-context']},
-];
+import { LESSON_QA_REGISTRY, getLessonQaRegistration } from '../src/qa/lessonQaRegistry.ts';
+
+// Runner reads the SAME authoritative lesson/beat definitions as the preview.
+// npm run qa:learn:frames -- [lesson-id]; default the first registered lesson.
+const lessonId=process.argv[2] || Object.keys(LESSON_QA_REGISTRY)[0];
+const {lesson, beats, finalSpeakingSceneId}=getLessonQaRegistration(lessonId);
+const cases=lesson.scenes.map(scene=>({
+  scene:scene.id,
+  beats:beats[scene.id].map(beat=>beat.id),
+  quiz:Boolean(scene.activity),
+}));
 const viewports={
   compact:{width:320,height:640},
   phone:{width:400,height:860},
   desktop:{width:1280,height:900},
 };
-const output='test-results/learn-frames';
+const output='test-results/learn-frames/'+lessonId.replace(/[^a-z0-9_-]/gi,'_');
 const basePath='/qa.html';
 const screenshotStates=[];
 for(const entry of cases){
   for(const beat of entry.beats)
-    screenshotStates.push({scene:entry.scene,beat,state:entry.scene==='fresh-transfer'?'speaking-listening':'teaching'});
-  if(entry.scene!=='fresh-transfer'){
+    screenshotStates.push({scene:entry.scene,beat,state:entry.scene===finalSpeakingSceneId?'speaking-listening':'teaching'});
+  if(entry.quiz){
     for(const state of ['question','correct-feedback','wrong-feedback'])
       screenshotStates.push({scene:entry.scene,beat:entry.beats.at(-1),state});
   }
 }
-screenshotStates.push({scene:'fresh-transfer',beat:'new-context',state:'speaking-otti'});
-screenshotStates.push({scene:'fresh-transfer',beat:'new-context',state:'complete'});
+const finalBeat=beats[finalSpeakingSceneId].at(-1).id;
+screenshotStates.push({scene:finalSpeakingSceneId,beat:finalBeat,state:'speaking-otti'});
+screenshotStates.push({scene:finalSpeakingSceneId,beat:finalBeat,state:'complete'});
+const firstQuiz=lesson.scenes.find(scene=>scene.activity);
+if(!firstQuiz)throw Error(lessonId+': QA contract needs a deterministic MC checkpoint');
+const firstQuizBeat=beats[firstQuiz.id].at(-1).id;
+const lastQuiz=lesson.scenes.filter(scene=>scene.activity).at(-1);
+const lastQuizBeat=lastQuiz ? beats[lastQuiz.id].at(-1).id : '';
 const server=await createServer({server:{host:'127.0.0.1',port:0},logLevel:'error'});
 await server.listen();
 const base=server.resolvedUrls.local[0];
@@ -47,7 +56,7 @@ try{
     page.on('response',r=>{if(r.status()>=400&&!r.url().endsWith('/favicon.ico'))exceptions.push('HTTP '+r.status()+' '+r.url())});
     for(const entry of screenshotStates){
       exceptions.length=0;
-      const params=new URLSearchParams(entry);
+      const params=new URLSearchParams({...entry,lesson:lessonId});
       await page.goto(new URL(basePath+'?'+params.toString(),base).href,{waitUntil:'networkidle'});
       await page.locator('[data-qa-ready=true]').waitFor({timeout:15000});
       await page.evaluate(()=>document.fonts.ready);
@@ -106,13 +115,12 @@ try{
       tiles.set(key,[...(tiles.get(key)||[]),{id,path,warnings}]);
       // Return compact real screenshots for human image inspection from CI logs.
       if((viewport==='phone'&&[
-        'warm-up--follow-up--question',
-        'get-to-know--choice--wrong-feedback',
-        'compare-and-use--ask--question',
-        'fresh-transfer--new-context--speaking-listening',
+        firstQuiz.id+'--'+firstQuizBeat+'--question',
+        lastQuiz?.id+'--'+lastQuizBeat+'--wrong-feedback',
+        finalSpeakingSceneId+'--'+finalBeat+'--speaking-listening',
       ].includes(id))||(viewport==='compact'&&[
-        'get-to-know--choice--question',
-        'compare-and-use--ask--wrong-feedback'
+        firstQuiz.id+'--'+firstQuizBeat+'--wrong-feedback',
+        lastQuiz?.id+'--'+lastQuizBeat+'--question',
       ].includes(id))){
         const jpeg=await page.screenshot({type:'jpeg',quality:48});
         console.log('FRAME_IMAGE|'+id+'|'+jpeg.toString('base64'));
@@ -120,10 +128,11 @@ try{
     }
     // Real click flow on the same component as Live, no mocked answer markup.
     if(viewport==='phone'){
-      const params=new URLSearchParams({scene:'warm-up',beat:'follow-up',state:'question'});
+      const wrongIndex=firstQuiz.activity.options.findIndex(option=>option.id!==firstQuiz.activity.correctOptionId);
+      const params=new URLSearchParams({lesson:lessonId,scene:firstQuiz.id,beat:firstQuizBeat,state:'question'});
       await page.goto(new URL(basePath+'?'+params,base).href);
       await page.locator('[data-qa-ready=true]').waitFor();
-      await page.locator('.teacher-pilot-options button').nth(1).click();
+      await page.locator('.teacher-pilot-options button').nth(wrongIndex).click();
       assert.equal(await page.locator('[data-qa-ready]').getAttribute('data-lesson-state'),'wrong-feedback');
       assert.equal(await page.locator('.teacher-pilot-options button.is-right').count(),1);
       assert.equal(await page.locator('.teacher-pilot-options button.is-wrong').count(),1);
@@ -140,6 +149,6 @@ try{
   await writeFile(output+'/REPORT.json',JSON.stringify(rows,null,2)+'\n');
   await writeFile(output+'/REPORT.md',['# Classroom frame audit','',...rows.map(r=>'- '+r.viewport+' / '+r.id+' : '+(r.warnings.join(' | ')||'no structural warning')),''].join('\n'));
   const failures=rows.filter(r=>r.warnings.length);
-  console.log('FRAME_QA_SUMMARY '+JSON.stringify({snapshots:rows.length,contactSheets:tiles.size,warningCount:failures.length,firstWarnings:failures.slice(0,18).map(r=>({id:r.id,viewport:r.viewport,warnings:r.warnings,stage:r.computed.stage,board:r.computed.board,quiz:r.computed.quiz}))}));
+  console.log('FRAME_QA_SUMMARY '+JSON.stringify({lessonId,scenes:lesson.scenes.length,snapshots:rows.length,contactSheets:tiles.size,warningCount:failures.length,firstWarnings:failures.slice(0,18).map(r=>({id:r.id,viewport:r.viewport,warnings:r.warnings,stage:r.computed.stage,board:r.computed.board,quiz:r.computed.quiz}))}));
   if(failures.length)process.exitCode=1;
 }finally{await browser.close();await server.close();}
