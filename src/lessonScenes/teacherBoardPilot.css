@@ -259,12 +259,19 @@
   color: #28796e;
 }
 .premium-lesson-stage.is-teacher-lab:not(.has-board) .premium-lesson-character {
-  transform: translateY(16%) !important;
+  transform: translate(-50%, 16%) !important;
 }
 @media (max-width: 620px) and (min-height: 681px) {
   .is-teacher-lab .teacher-pilot-card:has(.teacher-pilot-task) .teacher-lab-visual {
-    height: clamp(190px, 28vh, 240px);
-    max-height: 48%;
+    height: clamp(184px, 26vh, 220px);
+    max-height: 44%;
     flex: 0 1 auto;
+  }
+}
+
+/* The feedback text is part of the board; keep it above Otti's safe zone. */
+@media (max-width: 620px) and (min-height: 681px) {
+  .is-teacher-lab .teacher-pilot-card:has(.teacher-pilot-task) {
+    padding-bottom: 105px;
   }
 }
