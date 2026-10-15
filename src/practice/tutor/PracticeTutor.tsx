@@ -101,12 +101,13 @@ export function PracticeTutor({ mission, phase, review, onFinish, onClose, initi
       <div className="tutor-main">
         <TutorStage host={tutor.host} text={tutor.state.text} status={tutor.state.status}
           title={view.statusTitle} body={view.statusBody} learnerTurn={view.learnerTurn}>
-          {phase === 'briefing' ? (wide ? null : lessonCard) : <GoalStrip mission={mission} goalIds={goalIds} ar={ar} copy={copy} />}
+          {phase === 'briefing' ? (wide ? null : lessonCard) : <>
+            <GoalStrip mission={mission} goalIds={goalIds} ar={ar} copy={copy} />
+            {phase === 'roleplay' ? <PracticeHintCard runtime={runtime} learnerTurn={view.learnerTurn}
+              onRequestHint={() => void runtime.requestHint([...tutor.turns.current])} /> : null}
+          </>}
         </TutorStage>
-        <TutorDock tutor={tutor} view={view} copy={copy} action={action}>
-          {phase === 'roleplay' ? <PracticeHintCard runtime={runtime} learnerTurn={view.learnerTurn}
-            onRequestHint={() => void runtime.requestHint([...tutor.turns.current])} /> : null}
-        </TutorDock>
+        <TutorDock tutor={tutor} view={view} copy={copy} action={action} />
         {showDebugTrace ? <button type="button" className="tutor-copy-details tutor-live-debug"
           onClick={() => void copyLiveDebugTrace()}>
           {debugCopied ? 'Live tool log copied' : 'Copy live tool log'}
