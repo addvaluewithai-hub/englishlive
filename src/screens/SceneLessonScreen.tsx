@@ -24,7 +24,7 @@ import {
 } from '../lessonScenes/progressStore';
 import { getRequiredSceneLesson } from '../lessonScenes/catalog';
 import { B1_L02_TEACHER_BOARD_PILOT } from '../lessonScenes/b1/teacherBoardPilot';
-import { TeacherBoardActivity } from '../lessonScenes/TeacherBoardActivity';
+import { TeacherLabBoardLayer } from '../lessonScenes/TeacherLabBoardLayer';
 import { ScriptedNarrationDirector } from '../lessonScenes/ScriptedNarrationDirector';
 import { B1_TEACHER_LAB_SCRIPT, B1_TEACHER_LAB_QUIZ_FEEDBACK, type TeachingBeat } from '../lessonScenes/b1/teacherLabScript';
 import '../lessonScenes/teacherBoardPilot.css';
@@ -886,20 +886,18 @@ export function SceneLessonScreen() {
         ) : null}
 
         {board && !preflightVisible ? (
-          <div className={currentScene.activity ? 'premium-board-layer has-teacher-activity' : 'premium-board-layer'} aria-live="polite">
-            {currentScene.activity && teacherLab ? (
-              <TeacherBoardActivity
-                key={currentScene.id}
-                sceneId={currentScene.id}
-                beatId={visibleBeatId}
-                activity={currentScene.activity}
-                answered={quizState?.activityAnswered === true}
-                choiceId={quizState?.activityChoiceId}
-                questionReady={quizReady && status === 'listening' && Boolean(transport.current?.connected)}
-                onChoose={chooseBoardActivity}
-              />
-            ) : <ConversationBoard board={board} />}
-          </div>
+          teacherLab && currentScene.activity ? (
+            <TeacherLabBoardLayer
+              sceneId={currentScene.id} beatId={visibleBeatId}
+              activity={currentScene.activity}
+              answered={quizState?.activityAnswered === true}
+              choiceId={quizState?.activityChoiceId}
+              questionReady={quizReady && status === 'listening' && Boolean(transport.current?.connected)}
+              onChoose={chooseBoardActivity}
+            />
+          ) : (
+            <div className="premium-board-layer" aria-live="polite"><ConversationBoard board={board} /></div>
+          )
         ) : null}
 
         {error ? <div className="premium-live-error" role="alert">{error}</div> : null}
