@@ -40,6 +40,10 @@ try {
       if (item.id === 'hold-voice') {
         assert.equal(await page.locator('.tutor-hold-control').count(), 1);
         assert.equal(await page.locator('.tutor-goals[open]').count(), 0, 'Goals collapsed by default');
+        const goals = await page.locator('.tutor-stage .tutor-goals').boundingBox();
+        const hint = await page.locator('.tutor-stage .practice-hint-toggle').boundingBox();
+        assert.ok(goals && hint && hint.y >= goals.y + goals.height && hint.y - (goals.y + goals.height) <= 24,
+          'Contextual hint must appear directly after optional goals, not across an empty strip');
         assert.equal(await page.locator('.tutor-phase-meta b').innerText(), 'B1',
           'Roleplay header must show the CEFR level, not the obsolete 2/3 counter');
         const character = await page.locator('.tutor-stage .sp-scenario-character').boundingBox();
