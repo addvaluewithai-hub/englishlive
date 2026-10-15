@@ -19,7 +19,7 @@ a prerecorded mockup.
 A friend joined a photography club, met Lina there, and later kept in
 contact after Lina moved away. Every initial teaching explanation and task
 instruction is written **verbatim** in `src/lessonScenes/b1/teacherLabScript.ts`.
-The app sends one `[READ AUTHORED LINE]` at a time, changes the linked visual
+The app sends one `READ:` instruction at a time, changes the linked visual
 when audible playback begins, and only sends the next line after the last
 PCM sample finishes. This follows New Learn's authored narration model;
 Live speech is still model-generated, so verify wording fidelity by listening.
