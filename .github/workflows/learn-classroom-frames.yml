@@ -8,6 +8,9 @@ on:
       - 'src/product-v3-premium.css'
       - 'qa.html'
       - 'scripts/capture-learn-frame-sheets.mjs'
+      - 'src/qa/lessonQaRegistry.ts'
+      - 'src/qa/lessonQaVisuals.ts'
+      - 'package.json'
       - '.github/workflows/learn-classroom-frames.yml'
   workflow_dispatch:
 
@@ -32,7 +35,7 @@ jobs:
         run: npm install --no-save --package-lock=false playwright@1.62.1
       - run: npx playwright install --with-deps chromium
       - name: Capture ALL classroom beats, quiz branches and Speaking states
-        run: node scripts/capture-learn-frame-sheets.mjs
+        run: npm run qa:learn:frames
       - uses: actions/upload-artifact@v4
         if: always()
         with:
