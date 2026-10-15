@@ -1,3 +1,4 @@
+import { TeacherLabPortraitVisual } from './TeacherLabPortraitVisual';
 import type { CSSProperties } from 'react';
 
 /** Editorially-authored vector illustrations. Each board is a single fixed canvas. */
@@ -5,7 +6,9 @@ export function TeacherLabVisual({ sceneId, beatId }: { sceneId: string; beatId?
   // English teaching labels must not inherit the Arabic RTL direction.
   const common = { fontFamily: "Inter, system-ui, sans-serif", direction: 'ltr', unicodeBidi: 'isolate' } as CSSProperties;
   return (
-    <svg className="teacher-lab-visual" viewBox="0 0 720 360" xmlns="http://www.w3.org/2000/svg"
+    <>
+    <TeacherLabPortraitVisual sceneId={sceneId} beatId={beatId}/>
+    <svg className="teacher-lab-visual teacher-lab-landscape" viewBox="0 0 720 360" xmlns="http://www.w3.org/2000/svg"
       preserveAspectRatio="xMidYMid meet" role="img"
       aria-label={sceneId === 'warm-up' ? 'A conversation grows from news to a reaction and a follow-up question'
         : sceneId === 'get-to-know' ? 'A timeline from first meeting to becoming familiar'
@@ -102,5 +105,6 @@ export function TeacherLabVisual({ sceneId, beatId }: { sceneId: string; beatId?
         </g>
       )}
     </svg>
+    </>
   );
 }
