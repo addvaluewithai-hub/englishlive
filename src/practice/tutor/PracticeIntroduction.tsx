@@ -61,8 +61,9 @@ export function PracticeIntroduction({ mission, onClose, onStart }: {
     ? (ar ? mission.briefing.requiredMovesAr : mission.briefing.requiredMovesEn)
     : mission.beats.filter((beat) => beat.type === 'required')
       .map((beat) => ar ? beat.overviewAr || beat.learnerIntentEn : beat.learnerIntentEn);
-  const role = ar ? mission.learnerRoleAr : 'The learner';
-  const partner = ar ? mission.aiRoleAr : 'Your conversation partner';
+  const role = ar ? (mission.slug === 'b1-resolve-wrong-order' ? 'الزبون' : mission.learnerRoleAr) : 'The customer';
+  const partner = ar ? mission.aiRoleAr : 'Staff member';
+  const shortGoal = ar ? (mission.slug === 'b1-resolve-wrong-order' ? 'اشرح المشكلة واتفق على حل' : mission.titleAr) : mission.titleEn;
 
   function loadAudio() {
     if (urlRef.current) return Promise.resolve(urlRef.current);
@@ -141,7 +142,7 @@ export function PracticeIntroduction({ mission, onClose, onStart }: {
         aria-label={page === 'listen' ? (ar ? 'الرجوع للموقف' : 'Back to scenario') : (ar ? 'إغلاق' : 'Close')}>
         {page === 'listen' ? '‹' : '×'}
       </button>
-      <strong>{ar ? mission.titleAr : mission.titleEn}</strong>
+      <strong dir="auto">{ar ? mission.titleAr : mission.titleEn}</strong>
       <span className="practice-intro-level" dir="ltr">{mission.level}</span>
     </header>
 
@@ -160,7 +161,7 @@ export function PracticeIntroduction({ mission, onClose, onStart }: {
         <div className="practice-intro-details">
           <div><small>{ar ? 'دورك' : 'Your role'}</small><b>{role}</b></div>
           <div><small>{ar ? 'الطرف الآخر' : 'Partner'}</small><b>{partner}</b></div>
-          <div><small>{ar ? 'الهدف' : 'Goal'}</small><b>{ar ? mission.goalAr : mission.briefing?.successEn || mission.titleEn}</b></div>
+          <div><small>{ar ? 'الهدف' : 'Goal'}</small><b>{shortGoal}</b></div>
         </div>
       </section>
       <section className="practice-intro-objectives">
