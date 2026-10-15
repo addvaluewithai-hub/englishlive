@@ -59,6 +59,7 @@ export class SceneLessonRuntime {
   private readonly policyPrompt: string;
   private readonly adaptiveContext: string;
   private readonly resumedFromCheckpoint: boolean;
+  private readonly preview: boolean;
 
   constructor(
     readonly lesson: SceneLessonDefinition,
@@ -68,9 +69,11 @@ export class SceneLessonRuntime {
       policyPrompt?: string;
       adaptiveContext?: string;
       restoredState?: SceneLessonState | null;
+      preview?: boolean;
     } = {},
   ) {
     if (!lesson.scenes.length) throw new Error('Scene lesson requires at least one scene.');
+    this.preview = options.preview === true;
     this.state = this.createInitialState(options.restoredState ?? null);
     this.resumedFromCheckpoint = Boolean(
       options.restoredState
@@ -80,7 +83,7 @@ export class SceneLessonRuntime {
     this.onBoardChange = options.onBoardChange;
     this.policyPrompt = options.policyPrompt?.trim() ?? '';
     this.adaptiveContext = options.adaptiveContext?.trim() ?? '';
-    markProductLessonStarted(lesson.id);
+    if (!this.preview) markProductLessonStarted(lesson.id);
     this.tools = [this.completeSceneTool(), this.showBoardTool()];
   }
 
@@ -156,7 +159,7 @@ SCENE COMPLETION — TEACHER JUDGEMENT
 - If the tool says lessonComplete=true, one short warm closing is enough.
 
 BOARD
-- The authored board for the CURRENT SCENE appears automatically, so you do not need a tool simply to reveal it.
+- The authored board for the CURRENT SCENE appears automatically, so you do not need a tool simply to reveal it.\n- If the current scene includes boardActivity, ask the learner to make that selection before you seek a new spoken use. The app grades the selection and will send an internal BOARD_CHECK result. Do not reveal the correct option before the learner attempts. A correct board click is not independent spoken evidence; request a changed meaningful spoken sentence afterwards.
 - The board is support rather than a completion gate.
 - If another visual would genuinely help, show_board can replace the current board with one small note, example set, or comparison that stays inside the current scene language.
 - The authored board is usually preferable unless the learner really needs a simpler example or tiny comparison.
@@ -202,6 +205,7 @@ ${JSON.stringify(this.scenePayload(this.currentScene), null, 2)}
       const met = previous?.status === 'met';
       scenes[scene.id] = {
         status: met ? 'met' : 'pending',
+        activityPassed: previous?.activityPassed === true,
         evidence: met ? clone(previous?.evidence ?? []) : [],
         metAt: met ? previous?.metAt : undefined,
       };
@@ -236,12 +240,36 @@ ${JSON.stringify(this.scenePayload(this.currentScene), null, 2)}
       interaction: scene.interaction,
       verification: sceneVerificationContract(this.lesson.id, scene.id, scene.interaction.kind),
       authoredBoard: scene.board ?? null,
+      boardActivity: scene.activity
+        ? {
+            promptAr: scene.activity.promptAr,
+            options: scene.activity.options,
+            requiredBeforeCompletion: true,
+          }
+        : null,
     };
   }
 
   private showAuthoredBoard() {
     this.activeBoard = this.currentScene.board ?? null;
     this.onBoardChange?.(this.activeBoard ? clone(this.activeBoard) : null);
+  }
+
+  /** A board tap is client-graded comprehension evidence, never microphone evidence. */
+  submitBoardChoice(sceneId: string, optionId: string) {
+    if (this.state.completedAt || this.currentScene.id !== sceneId) {
+      return { accepted: false, correct: false, error: 'This scene is no longer active.' };
+    }
+    const activity = this.currentScene.activity;
+    if (!activity || !activity.options.some((option) => option.id === optionId)) {
+      return { accepted: false, correct: false, error: 'Unknown board activity or choice.' };
+    }
+    const correct = optionId === activity.correctOptionId;
+    if (correct && !this.state.scenes[sceneId].activityPassed) {
+      this.state.scenes[sceneId].activityPassed = true;
+      this.persistAndEmit();
+    }
+    return { accepted: true, correct };
   }
 
   private persistAndEmit() {
@@ -316,6 +344,13 @@ ${JSON.stringify(this.scenePayload(this.currentScene), null, 2)}
             nextAction: 'Please finish the short welcome first and assess the scene afterwards.',
           };
         }
+        if (this.currentScene.activity && !this.state.scenes[this.currentScene.id].activityPassed) {
+          return {
+            error: 'The required board comprehension check has not passed.',
+            nextAction: 'Please let the learner choose a correct option on the board before asking for a fresh spoken example.',
+            currentScene: this.scenePayload(this.currentScene),
+          };
+        }
         if (!this.learnerAudioObserved) {
           return {
             error: 'No real learner voice activity has been observed in this scene.',
@@ -364,7 +399,7 @@ ${JSON.stringify(this.scenePayload(this.currentScene), null, 2)}
         this.learnerAudioObserved = false;
 
         if (this.advanceFrom(scene.id)) {
-          recordRuntimeSceneCompletion({
+          if (!this.preview) recordRuntimeSceneCompletion({
             lessonId: this.lesson.id,
             sceneId: scene.id,
             sceneIndex,
@@ -383,8 +418,8 @@ ${JSON.stringify(this.scenePayload(this.currentScene), null, 2)}
         this.state.completedAt ??= new Date().toISOString();
         this.activeBoard = null;
         this.onBoardChange?.(null);
-        markProductLessonCompleted(this.lesson.id);
-        recordRuntimeSceneCompletion({
+        if (!this.preview) markProductLessonCompleted(this.lesson.id);
+        if (!this.preview) recordRuntimeSceneCompletion({
           lessonId: this.lesson.id,
           sceneId: scene.id,
           sceneIndex,
