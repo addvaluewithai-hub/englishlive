@@ -236,11 +236,7 @@ export function SceneLessonScreen() {
     setLearnerMicEnabled(false);
     compactLog.current.push({ role: 'SCRIPT', text: `[${sceneId}/${beat.id}] ${beat.line}` });
     if (compactLog.current.length > 160) compactLog.current.splice(0, compactLog.current.length - 160);
-    live.sendText(`[READ AUTHORED LINE — SAY ONLY THE TEXT BETWEEN MARKERS]
-BEGIN LINE
-${beat.line}
-END LINE
-Do not speak beyond the written line; stop after END LINE.`);
+    live.sendText(`READ:\n${beat.line}`);
     if (scriptWatchdog.current !== null) window.clearTimeout(scriptWatchdog.current);
     scriptWatchdog.current = window.setTimeout(() => {
       if (!scripted.current.isReading || scripted.current.currentSceneId !== sceneId) return;
@@ -428,11 +424,7 @@ Do not speak beyond the written line; stop after END LINE.`);
         compactLog.current.push({ role: 'SCRIPT', text: `[${sceneId}/after-choice] ${authoredFollowUp}` });
         holdMicForTeacherContinuation.current = true;
         setLearnerMicEnabled(false);
-        live.sendText(`[READ AUTHORED LINE — SAY ONLY THE TEXT BETWEEN MARKERS]
-BEGIN LINE
-${authoredFollowUp}
-END LINE
-Do not speak beyond the written line; stop after END LINE.`);
+        live.sendText(`READ:\n${authoredFollowUp}`);
       }
     }
     return answer;
