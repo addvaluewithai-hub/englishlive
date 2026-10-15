@@ -193,11 +193,12 @@ try {
     assert.equal(await page.locator('.tutor-goal-items > span').count(), 4);
     assert.equal(await page.locator('.tutor-goal-items > .is-observed').count(), 0, 'goals must not be claimed without observed speech');
     await page.locator('.tutor-action').click();
-    await page.locator('.tutor-notes-toggle').waitFor();
-    assert.equal(await page.locator('.tutor-live').getAttribute('aria-label'), locale === 'ar' ? 'نراجع سوا' : 'Review together');
-    assert.equal(await page.locator('.tutor-stage .fs-live-character-host').count(), 1, 'review keeps the same animated stage');
-    assert.equal(await page.locator('.tutor-goal-items > .is-observed').count(), 0);
-    assert.equal(await page.locator('.tutor-note-list li').count(), 0);
+    await page.locator('.practice-recap-hero').waitFor();
+    assert.equal(await page.locator('.practice-recap-notes').count(), 1, 'review opens notes first');
+    assert.equal(await page.locator('.practice-recap .fs-live-character-host').count(), 0, 'voice review is opt-in');
+    assert.equal(await page.locator('.practice-recap-note.is-error').count(), 0, 'QA has no recorded learner audio');
+    assert.equal(await page.locator('.practice-recap-note.is-improvement').count(), 0);
+    assert.equal(await page.locator('.practice-recap-empty').count(), 1);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true, `Practice recap ${locale}: horizontal overflow`);
     await context.close();
   }
