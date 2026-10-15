@@ -69,8 +69,9 @@
   line-height: 1.75; font-size: 14px;
 }
 .practice-intro-details {
-  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px;
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px;
 }
+.practice-intro-details > div:last-child { grid-column: 1 / -1; }
 .practice-intro-details > div {
   display: grid; gap: 6px; align-content: center; padding: 9px 7px;
   border: 1px solid var(--intro-line); border-radius: 15px; background: #f6fbf9;
