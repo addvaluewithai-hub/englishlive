@@ -3,8 +3,8 @@ import { createRoot } from 'react-dom/client';
 import { CharacterHost } from '../character/CharacterHost';
 import { getCharacterDefinition } from '../character/registry';
 import { ProductIcon } from '../components/ProductIcon';
-import { B1_L02_TEACHER_BOARD_PILOT as lesson } from '../lessonScenes/b1/teacherBoardPilot';
-import { B1_TEACHER_LAB_SCRIPT } from '../lessonScenes/b1/teacherLabScript';
+import { LESSON_QA_REGISTRY, getLessonQaRegistration } from './lessonQaRegistry';
+import { getQaLessonVisual } from './lessonQaVisuals';
 import { TeacherLabBoardLayer } from '../lessonScenes/TeacherLabBoardLayer';
 import '../ui/theme/tokens.css';
 import '../styles.css';
@@ -48,11 +48,14 @@ import '../lessonScenes/teacherBoardPilot.css';
 type FixtureMode = 'teaching' | 'question' | 'correct-feedback' | 'wrong-feedback'
   | 'speaking-listening' | 'speaking-otti' | 'complete';
 const args = new URLSearchParams(location.search);
+const lessonId = args.get('lesson') ?? Object.keys(LESSON_QA_REGISTRY)[0];
+const {lesson, beats, visualKey, finalSpeakingSceneId} = getLessonQaRegistration(lessonId);
+const LessonVisual = getQaLessonVisual(visualKey);
 const sceneId = args.get('scene') || lesson.scenes[0].id;
 const selectedScene = lesson.scenes.find(x=>x.id===sceneId);
 if (!selectedScene) throw new Error('Unknown QA scene: '+sceneId);
-const beatId = args.get('beat') || B1_TEACHER_LAB_SCRIPT[sceneId]?.[0]?.id || '';
-if (!B1_TEACHER_LAB_SCRIPT[sceneId]?.some(x=>x.id===beatId)) throw new Error('Unknown QA beat: '+beatId);
+const beatId = args.get('beat') || beats[sceneId]?.[0]?.id || '';
+if (!beats[sceneId]?.some(x=>x.id===beatId)) throw new Error('Unknown QA beat: '+beatId);
 const mode = (args.get('state') || (selectedScene.activity?'teaching':'speaking-listening')) as FixtureMode;
 const validModes:FixtureMode[] = ['teaching','question','correct-feedback','wrong-feedback','speaking-listening','speaking-otti','complete'];
 if(!validModes.includes(mode)) throw new Error('Invalid QA state: '+mode);
@@ -66,7 +69,9 @@ function QaClassroom(){
     state==='wrong-feedback' ? selectedScene?.activity?.options.find(x=>x.id!==selectedScene.activity?.correctOptionId)?.id : undefined);
   const character = getCharacterDefinition('otti');
   const sceneIndex = lesson.scenes.findIndex(x=>x.id===sceneId);
-  const isSpeaking = !selectedScene?.activity;
+  const startWindow = Math.min(Math.max(0, sceneIndex - 2), Math.max(0, lesson.scenes.length - 5));
+  const visibleScenes = lesson.scenes.slice(startWindow, startWindow + 5);
+  const isSpeaking = sceneId === finalSpeakingSceneId;
   const answered = state==='correct-feedback' || state==='wrong-feedback';
   const showBoard = !isSpeaking && state!=='complete';
   const speaking = state==='speaking-otti';
@@ -87,11 +92,16 @@ function QaClassroom(){
     data-lesson-state={state} style={{'--character-accent':character.accent} as React.CSSProperties}>
       <header className="premium-lesson-topbar">
         <button type="button" className="premium-top-icon" aria-label="الخروج من الدرس"><ProductIcon name="close" size={24}/></button>
-        <div className="premium-lesson-title"><small>B1 · الوحدة 1 · الدرس 2</small><strong>{lesson.title}</strong></div>
+        <div className="premium-lesson-title"><small>{lesson.levelId.toUpperCase()} · درس تفاعلي · ${sceneIndex+1} / ${lesson.scenes.length}</small><strong>{lesson.title}</strong></div>
         <button type="button" className="premium-top-icon" aria-label="أدوات الدرس"><ProductIcon name="more" size={25}/></button>
       </header>
       <div className="adaptive-checkpoint-bar" aria-label="مراحل الدرس">
-        {['رد على الخبر','تعارف','تواصل','مقارنة','Speaking'].map((s,i)=><span key={s} className={i<sceneIndex?'is-complete':i===sceneIndex?'is-current':''}><i/>{s}</span>)}
+        {visibleScenes.map((scene,i)=>{
+          const actualIndex = i + startWindow;
+          return <span key={scene.id} className={actualIndex<sceneIndex?'is-complete':actualIndex===sceneIndex?'is-current':''}>
+            <i/>{scene.id===finalSpeakingSceneId?'Speaking':scene.title.length>17?scene.title.slice(0,15)+'…':scene.title}
+          </span>;
+        })}
       </div>
       <div className="premium-lesson-progress">
         {lesson.scenes.map((s,i)=><span key={s.id} className={i<sceneIndex?'is-complete':i===sceneIndex?'is-current':''}/>)}
@@ -102,7 +112,7 @@ function QaClassroom(){
         {showBoard&&selectedScene?.activity? <TeacherLabBoardLayer
           sceneId={sceneId} beatId={beatId} activity={selectedScene.activity}
           answered={answered} choiceId={choice}
-          questionReady={state==='question'} onChoose={onChoose}
+          questionReady={state==='question'} onChoose={onChoose} Visual={LessonVisual}
         />:null}
       </main>
       <footer className="premium-lesson-footer">
