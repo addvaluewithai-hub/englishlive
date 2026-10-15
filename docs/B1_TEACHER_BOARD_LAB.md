@@ -45,9 +45,9 @@ a second authoring pass, **not** silently deleted from the official lesson.
 - A wrong choice offers an authored Arabic retry cue; the learner can
   try again.
 - A correct choice gets a silent client-to-agent BOARD_CHECK message,
-  **never counted as microphone evidence**. A separate microphone
-  observation and the teacher's pedagogical self-audit are required to
-  complete that scene.
+  **never counted as microphone evidence**. Earlier microphone activity is
+  reset, so a *fresh* microphone observation after the correct choice and
+  the teacher's pedagogical self-audit are required to complete that scene.
 - A stale answer or choice from another scene is rejected.
 - The completion mechanism is not a verified English pronunciation or
   semantic assessment. A live speaking acceptance test is required.
