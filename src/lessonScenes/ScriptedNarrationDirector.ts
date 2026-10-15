@@ -36,6 +36,12 @@ export class ScriptedNarrationDirector {
     return { next: null, finishedSceneId: this.sceneId };
   }
 
+  resume(): TeachingBeat {
+    if (this.reading || this.index < 0) throw new Error('No paused line to resume.');
+    this.reading = true;
+    return this.beats[this.index];
+  }
+
   /** An interruption does not automatically skip an unread line. */
   pause(): TeachingBeat | null {
     const beat = this.currentBeat;
