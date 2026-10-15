@@ -97,6 +97,10 @@ export interface SceneLessonSceneState {
   status: 'pending' | 'active' | 'met';
   evidence: SceneLessonEvidence[];
   activityPassed?: boolean;
+  /** Quiz attempts are assessed deterministically; wrong answers still receive teaching feedback. */
+  activityAnswered?: boolean;
+  activityFeedbackPlayed?: boolean;
+  activityChoiceId?: string;
   automaticTranscript?: string;
   metAt?: string;
 }
