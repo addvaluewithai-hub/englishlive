@@ -112,7 +112,7 @@ function QaClassroom(){
         <div className="premium-control-row">
           <button type="button" className="premium-secondary-control" aria-label="المساعدة والكتابة"><ProductIcon name="chat" size={22}/><span>مساعدة</span></button>
           <button type="button" className={'premium-main-control '+(speaking?'is-interrupt':isSpeaking?'is-mic':'is-start')}>
-            <ProductIcon name={speaking?'pause':'speak'} size={28}/><span>{isSpeaking?'دورك':'استنى'}</span>
+            <ProductIcon name="speak" size={28}/><span>{isSpeaking?'دورك':'استنى'}</span>
           </button>
           <div className="premium-mic-meter" aria-label="Microphone level 0 percent"><span style={{height:'0%'}}/></div>
         </div>
