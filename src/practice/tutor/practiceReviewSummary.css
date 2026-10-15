@@ -97,7 +97,8 @@
 .practice-recap-support button { min-height: 42px; border: 1px solid var(--recap-border); padding: 8px 14px; color: var(--recap-teal); background: white; border-radius: 13px; font: inherit; cursor: pointer; }
 .practice-recap :is(button,summary,a):focus-visible { outline: 3px solid #17aaa0; outline-offset: 3px; }
 @media (min-width: 720px) {
-  .practice-recap-lists > section > div { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  /* A single note is not an awkward half-width card on desktop. */
+  .practice-recap-lists > section > div { grid-template-columns: minmax(0, 1fr); }
   .practice-recap-note { align-content: start; }
   .practice-recap-practise { align-self: end; }
 }
