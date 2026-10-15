@@ -3,7 +3,9 @@ import type { PracticeCompletionState } from './types';
 
 /** True when the final review never arrived, so an empty list must not read as clean English. */
 export function notesIncomplete(review: PracticeCompletionState) {
-  return review.diagnostics?.finalReview !== undefined && review.diagnostics.finalReview !== 'received';
+  const trace = review.diagnostics;
+  return (trace?.finalReview !== undefined && trace.finalReview !== 'received') ||
+    trace?.notebook?.finalStatus === 'uncertain' || trace?.notebook?.finalStatus === 'invalid';
 }
 
 /** Plain-text support report. Metadata only beyond the saved notes themselves; no tokens or audio. */
