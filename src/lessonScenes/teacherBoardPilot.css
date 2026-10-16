@@ -300,3 +300,22 @@
 
 .a1-audio-phrase{display:block;max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;color:#195f56;font-size:11px;font-weight:800;}
 @media(max-width:420px){.a1-audio-phrase{max-width:160px;font-size:10px;}}
+
+/* A1 studio listening feedback: shift explanation out of Otti's collision zone.
+ * State-scoped so the illustrated teaching and unanswered MC keep full size. */
+@media (max-width:620px){
+  .premium-lesson-stage.is-teacher-lab:has(.a1-audio-panel):has(.teacher-pilot-right) .premium-lesson-character,
+  .premium-lesson-stage.is-teacher-lab:has(.a1-audio-panel):has(.teacher-pilot-retry) .premium-lesson-character {
+    width:64px !important;height:64px !important;right:4px !important;bottom:3px !important;
+  }
+  .is-teacher-lab .teacher-pilot-card:has(.a1-audio-panel):has(.teacher-pilot-right) .a1-audio-board-art,
+  .is-teacher-lab .teacher-pilot-card:has(.a1-audio-panel):has(.teacher-pilot-retry) .a1-audio-board-art {
+    max-height:25% !important;height:110px !important;
+  }
+}
+@media (max-width:420px) and (max-height:680px){
+  .premium-lesson-stage.is-teacher-lab:has(.a1-audio-panel):has(.teacher-pilot-right) .premium-lesson-character,
+  .premium-lesson-stage.is-teacher-lab:has(.a1-audio-panel):has(.teacher-pilot-retry) .premium-lesson-character {
+    width:48px !important;height:48px !important;right:3px !important;bottom:2px !important;
+  }
+}
