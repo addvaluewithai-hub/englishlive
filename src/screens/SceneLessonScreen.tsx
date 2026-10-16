@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { MicrophonePcmStream } from '../audio/MicrophonePcmStream';
 import { PcmPlaybackQueue } from '../audio/PcmPlaybackQueue';
+import { waitForTeacherAudioDrain } from '../audio/lessonAudioGate';
 import { LessonAudioController, lessonAudioTool, type LessonAudioState } from '../audio/LessonAudioController';
 import { CharacterHost, type CharacterHostHandle } from '../character/CharacterHost';
 import { CharacterPerformanceController } from '../character/CharacterPerformanceController';
@@ -297,6 +298,14 @@ export function SceneLessonScreen() {
   async function playAuthoredAudio(clipId:string) {
     const audio=lessonAudio.current;
     if(!listeningLab||!audio)return false;
+    // Gemini's turn-complete event can precede final PCM draining.
+    if(!await waitForTeacherAudioDrain(
+      ()=>Boolean(playback.current?.isPlaying),
+      ms=>new Promise<void>(done=>window.setTimeout(done,ms)),
+    )){
+      setError('لسه صوت Otti شغال. مش هنشغّل التسجيل فوق صوته؛ جرّب تاني.');
+      return false;
+    }
     holdMicForTeacherContinuation.current = true;
     setLearnerMicEnabled(false);
     setStatus('speaking');
@@ -307,7 +316,7 @@ export function SceneLessonScreen() {
       return true;
     }
     setError(result.status==='unavailable'
-      ? 'المتصفح مش قادر يشغّل صوت التجربة. جرب Chrome أو فعّل صوت المتصفح. الدرس مش هيتخطّى التسجيل.'
+      ? 'تسجيل Gemini TTS لسه مش موجود أو مش معتمد. الدرس مش هيتخطّى الـListening قبل ما الصوت الحقيقي يشتغل.'
       : 'التسجيل اتوقف. تقدر تعيده قبل ما نكمل.');
     return false;
   }
@@ -365,9 +374,10 @@ export function SceneLessonScreen() {
         A1_U1_L01_AUDIO,lessonAudio.current,
         async ()=>{
           if(scripted.current.isReading) return false;
-          for(let i=0;i<70 && playback.current?.isPlaying;i++)
-            await new Promise<void>(done=>window.setTimeout(done,100));
-          return !playback.current?.isPlaying;
+          return waitForTeacherAudioDrain(
+            ()=>Boolean(playback.current?.isPlaying),
+            ms=>new Promise<void>(done=>window.setTimeout(done,ms)),
+          );
         }
       ));
     }
