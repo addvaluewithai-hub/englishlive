@@ -1,0 +1,56 @@
+{
+  "turns": [
+    {
+      "speaker": "Maya",
+      "text": "Good morning! I'm Maya. What's your name?",
+      "style": "Warm and friendly woman meeting someone for the first time. Clear natural American English, A1-friendly pace, not exaggerated."
+    },
+    {
+      "speaker": "Leo",
+      "text": "Hi, Maya. My name is Leo.",
+      "style": "Relaxed friendly man responding naturally, clear conversational English and gentle learner-friendly pace."
+    },
+    {
+      "speaker": "Maya",
+      "text": "How are you, Leo?",
+      "style": "Warm, genuinely curious, short natural pause after the question."
+    },
+    {
+      "speaker": "Leo",
+      "text": "Pretty good, thanks. And you?",
+      "style": "Friendly upbeat response, clear easy-to-follow English."
+    },
+    {
+      "speaker": "Maya",
+      "text": "Really good, thank you. Bye!",
+      "style": "Natural friendly closing with an unhurried goodbye."
+    },
+    {
+      "speaker": "Leo",
+      "text": "Bye, Maya!",
+      "style": "Friendly brief goodbye, natural release."
+    }
+  ],
+  "speakers": {
+    "Maya": "Aoede",
+    "Leo": "Achird"
+  },
+  "routing": "quality",
+  "format": "wav",
+  "sample_rate": 24000,
+  "temperature": 1,
+  "allow_model_fallback": true,
+  "transcript": {
+    "language_codes": [
+      "en-US"
+    ],
+    "diarization": true,
+    "write_vtt": true
+  },
+  "metadata": {
+    "lessonId": "a1-u1-l01-listening-lab",
+    "sourceLessonId": "U1-L01",
+    "purpose": "listening-source-dialogue",
+    "edition": "pilot02"
+  }
+}

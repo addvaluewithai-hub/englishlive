@@ -1,4 +1,4 @@
-import { useState, type ComponentType } from 'react';
+import { useState, type ComponentType, type ReactNode } from 'react';
 import { TeacherLabVisual } from './TeacherLabVisual';
 import type { SceneBoardActivity } from './types';
 
@@ -6,7 +6,7 @@ type ChoiceResult = { accepted: boolean; correct: boolean; error?: string };
 
 /** A fixed, non-scrolling classroom slide; the speaking scene has no quiz board. */
 export function TeacherBoardActivity({
-  sceneId, beatId, activity, answered, choiceId, questionReady, onChoose, Visual = TeacherLabVisual,
+  sceneId, beatId, activity, answered, choiceId, questionReady, onChoose, Visual = TeacherLabVisual, extra,
 }: {
   sceneId: string;
   beatId: string;
@@ -17,6 +17,7 @@ export function TeacherBoardActivity({
   onChoose: (sceneId: string, choiceId: string) => ChoiceResult;
   /** Each lesson must register its own meaningful visual, not a generic fallback. */
   Visual?: ComponentType<{ sceneId: string; beatId: string }>;
+  extra?: ReactNode;
 }) {
   const [error, setError] = useState('');
   const [localChoice, setLocalChoice] = useState<string | null>(null);
@@ -39,6 +40,7 @@ export function TeacherBoardActivity({
         <span>{answered ? (correct ? 'إجابة صحيحة' : 'نتعلّم من الإجابة') : questionReady ? 'دورك تختار' : 'Otti بيشرح'}</span>
       </div>
       <Visual sceneId={sceneId} beatId={beatId}/>
+      {extra}
       {questionReady || answered ? (
         <div className="teacher-pilot-task">
           <strong>{activity.promptAr}</strong>

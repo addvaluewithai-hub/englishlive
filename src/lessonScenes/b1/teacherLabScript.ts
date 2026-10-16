@@ -5,6 +5,8 @@ export interface TeachingBeat {
   id: string;
   line: string;
   board: SupportBoard | null;
+  /** Play this authored listening clip AFTER the spoken line has finished, before proceeding. */
+  audioClipId?: string;
 }
 
 /** Each beat is one short audible turn. The final beat ends at a learner checkpoint. */

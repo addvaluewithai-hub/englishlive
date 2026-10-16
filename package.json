@@ -14,6 +14,7 @@
     "test:learn-pilot": "node --import tsx --test scripts/test-learn-teacher-board.mjs",
     "qa:learn:frames": "node --import tsx scripts/capture-learn-frame-sheets.mjs",
     "test:learn-qa-registry": "node --import tsx --test scripts/test-learn-qa-registry.mjs",
+    "test:a1-listening": "node --import tsx --test scripts/test-a1-listening-pilot.mjs",
     "qa:learn:frames:all": "node --import tsx scripts/capture-all-learn-frame-sheets.mjs",
     "preview": "vite preview",
     "cf:dev": "npm run build && wrangler pages dev dist",
@@ -24,7 +25,8 @@
     "cap:add:android": "cap add android",
     "cap:open:ios": "cap open ios",
     "cap:open:android": "cap open android",
-    "test:practice": "node --import tsx --test scripts/test-practice-coach.mjs scripts/test-practice-notebook.mjs scripts/test-practice-tutor.mjs"
+    "test:practice": "node --import tsx --test scripts/test-practice-coach.mjs scripts/test-practice-notebook.mjs scripts/test-practice-tutor.mjs",
+    "test:a1:coverage": "node --import tsx --test scripts/test-a1-content-coverage.mjs"
   },
   "dependencies": {
     "@capacitor/core": "8.5.2",

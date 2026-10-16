@@ -2,6 +2,8 @@ import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { MicrophonePcmStream } from '../audio/MicrophonePcmStream';
 import { PcmPlaybackQueue } from '../audio/PcmPlaybackQueue';
+import { waitForTeacherAudioDrain } from '../audio/lessonAudioGate';
+import { LessonAudioController, lessonAudioTool, type LessonAudioState } from '../audio/LessonAudioController';
 import { CharacterHost, type CharacterHostHandle } from '../character/CharacterHost';
 import { CharacterPerformanceController } from '../character/CharacterPerformanceController';
 import { getCharacterDefinition } from '../character/registry';
@@ -24,6 +26,11 @@ import {
 } from '../lessonScenes/progressStore';
 import { getRequiredSceneLesson } from '../lessonScenes/catalog';
 import { B1_L02_TEACHER_BOARD_PILOT } from '../lessonScenes/b1/teacherBoardPilot';
+import { A1_U1_L01_LISTENING_PILOT } from '../lessonScenes/a1/listeningTeacherPilot';
+import { A1_LISTENING_BEATS, A1_LISTENING_FEEDBACK } from '../lessonScenes/a1/listeningTeacherScript';
+import { A1_U1_L01_AUDIO } from '../lessonScenes/a1/listeningAudioPilot';
+import { A1FirstMeetingVisual } from '../lessonScenes/a1/A1FirstMeetingVisual';
+import { LessonAudioPanel } from '../lessonScenes/LessonAudioPanel';
 import { TeacherLabBoardLayer } from '../lessonScenes/TeacherLabBoardLayer';
 import { ScriptedNarrationDirector } from '../lessonScenes/ScriptedNarrationDirector';
 import { B1_TEACHER_LAB_SCRIPT, B1_TEACHER_LAB_QUIZ_FEEDBACK, type TeachingBeat } from '../lessonScenes/b1/teacherLabScript';
@@ -175,8 +182,13 @@ export function SceneLessonScreen() {
   const { lessonId } = useParams();
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const teacherLab = lessonId === 'b1-u1-l02-keep-conversation-going' && params.get('teacherLab') === '1';
-  const localLesson = teacherLab ? B1_L02_TEACHER_BOARD_PILOT : getRequiredSceneLesson(lessonId);
+  const listeningLab = (lessonId === 'a1-u1-l01-hello-im' && params.get('listeningLab') === '1')
+    || lessonId === 'a1-u1-l01-listening-lab';
+  const teacherLab = listeningLab || (lessonId === 'b1-u1-l02-keep-conversation-going' && params.get('teacherLab') === '1');
+  const localLesson = listeningLab ? A1_U1_L01_LISTENING_PILOT
+    : teacherLab ? B1_L02_TEACHER_BOARD_PILOT : getRequiredSceneLesson(lessonId);
+  const teachingBeats = listeningLab ? A1_LISTENING_BEATS : B1_TEACHER_LAB_SCRIPT;
+  const quizFeedback = listeningLab ? A1_LISTENING_FEEDBACK : B1_TEACHER_LAB_QUIZ_FEEDBACK;
   const profile = readLearnerProfile();
   const character = getCharacterDefinition(params.get('character') ?? profile?.characterId);
   const knownItems = knownItemsForLesson(localLesson.id);
@@ -186,6 +198,11 @@ export function SceneLessonScreen() {
   const transport = useRef<GeminiLiveTransport | null>(null);
   const microphone = useRef<MicrophonePcmStream | null>(null);
   const playback = useRef<PcmPlaybackQueue | null>(null);
+  const lessonAudio = useRef<LessonAudioController | null>(null);
+  const [lessonAudioState,setLessonAudioState] = useState<LessonAudioState>({
+    status:'idle',clipId:null,speaker:null,turnId:null,positionMs:null
+  });
+  const [heardClips,setHeardClips] = useState<Readonly<Record<string,boolean>>>({});
   const performer = useRef<CharacterPerformanceController | null>(null);
   const runtime = useRef<SceneLessonRuntime | null>(null);
   const compactLog = useRef<CompactLogEntry[]>([]);
@@ -250,7 +267,7 @@ export function SceneLessonScreen() {
   }
 
   function startScriptScene(sceneId: string) {
-    const beats = B1_TEACHER_LAB_SCRIPT[sceneId];
+    const beats = teachingBeats[sceneId];
     if (!beats || !transport.current?.connected || runtime.current?.currentScene.id !== sceneId) return;
     // A model's completion tool can arrive before its last audio has drained.
     // Never overlap the next authored line with an audible previous turn.
@@ -278,15 +295,58 @@ export function SceneLessonScreen() {
     } catch { /* There is no interrupted narration to resume. */ }
   }
 
+  async function playAuthoredAudio(clipId:string) {
+    const audio=lessonAudio.current;
+    if(!listeningLab||!audio)return false;
+    // Gemini's turn-complete event can precede final PCM draining.
+    if(!await waitForTeacherAudioDrain(
+      ()=>Boolean(playback.current?.isPlaying),
+      ms=>new Promise<void>(done=>window.setTimeout(done,ms)),
+    )){
+      setError('لسه صوت Otti شغال. مش هنشغّل التسجيل فوق صوته؛ جرّب تاني.');
+      return false;
+    }
+    holdMicForTeacherContinuation.current = true;
+    setLearnerMicEnabled(false);
+    setStatus('speaking');
+    const result=await audio.play(clipId);
+    compactLog.current.push({role:'TOOL',text:`[lesson audio] ${clipId} → ${result.status} (${result.source})`});
+    if(result.status==='played'){
+      setHeardClips(v=>({...v,[clipId]:true}));
+      return true;
+    }
+    setError(result.status==='unavailable'
+      ? 'تسجيل Gemini TTS لسه مش موجود أو مش معتمد. الدرس مش هيتخطّى الـListening قبل ما الصوت الحقيقي يشتغل.'
+      : 'التسجيل اتوقف. تقدر تعيده قبل ما نكمل.');
+    return false;
+  }
+
+  function replayAuthoredAudio(clipId:string) {
+    if(!listeningLab || scripted.current.isReading || playback.current?.isPlaying
+      || lessonAudioState.status!=='idle')return;
+    void playAuthoredAudio(clipId).then(()=>{
+      holdMicForTeacherContinuation.current=false;
+      if(runtime.current?.currentScene.activity){
+        setStatus('listening');
+      } else {
+        setLearnerMicEnabled(true);
+        setStatus('listening');
+      }
+    });
+  }
+
   function clearDecisionNudge() {
     if (decisionNudgeTimer.current !== null) window.clearTimeout(decisionNudgeTimer.current);
     decisionNudgeTimer.current = null;
   }
 
   function setLearnerMicEnabled(enabled: boolean) {
-    microphone.current?.setEnabled(enabled);
-    setMicOpen(enabled);
-    if (!enabled) setMicLevel(0);
+    const currentAudioStatus = lessonAudio.current?.snapshot.status;
+    const audioBusy = listeningLab && currentAudioStatus !== undefined && currentAudioStatus !== 'idle';
+    const actuallyEnabled=enabled && !audioBusy;
+    microphone.current?.setEnabled(actuallyEnabled);
+    setMicOpen(actuallyEnabled);
+    if (!actuallyEnabled) setMicLevel(0);
   }
 
   function appendDialogueLog(role: 'AI' | 'YOU', text: string, typed = false) {
@@ -311,7 +371,20 @@ export function SceneLessonScreen() {
   }
 
   function tracedTools(sceneRuntime: SceneLessonRuntime): readonly LiveClientTool[] {
-    return sceneRuntime.tools.map((tool) => ({
+    const registeredTools:LiveClientTool[] = [...sceneRuntime.tools];
+    if(listeningLab && lessonAudio.current) {
+      registeredTools.push(lessonAudioTool(
+        A1_U1_L01_AUDIO,lessonAudio.current,
+        async ()=>{
+          if(scripted.current.isReading) return false;
+          return waitForTeacherAudioDrain(
+            ()=>Boolean(playback.current?.isPlaying),
+            ms=>new Promise<void>(done=>window.setTimeout(done,ms)),
+          );
+        }
+      ));
+    }
+    return registeredTools.map((tool) => ({
       declaration: tool.declaration,
       handle: async (args) => {
         try {
@@ -430,7 +503,7 @@ export function SceneLessonScreen() {
     if (answer.accepted) {
       appendQuickActionLog(`[board] ${sceneId} choice=${optionId} ${answer.correct ? 'correct' : 'incorrect'}`);
       learnerSceneAfterSpeech.current = null;
-      const authoredFeedback = B1_TEACHER_LAB_QUIZ_FEEDBACK[sceneId]?.[answer.correct ? 'correct' : 'wrong'];
+      const authoredFeedback = quizFeedback[sceneId]?.[answer.correct ? 'correct' : 'wrong'];
       if (authoredFeedback) {
         pendingQuizFeedback.current = { sceneId, correct: answer.correct };
         compactLog.current.push({ role: 'SCRIPT', text: `[${sceneId}/quiz-${answer.correct ? 'correct' : 'wrong'}] ${authoredFeedback}` });
@@ -472,6 +545,7 @@ export function SceneLessonScreen() {
 
   async function closeLive() {
     clearScriptTimers();
+    lessonAudio.current?.close();
     pendingScriptBoard.current = null;
     pendingQuizFeedback.current = null;
     setScriptPaused(false);
@@ -538,6 +612,9 @@ export function SceneLessonScreen() {
     clearDecisionNudge();
     compactLog.current = [];
     clearScriptTimers();
+    lessonAudio.current?.close();
+    lessonAudio.current=null;
+    setHeardClips({});
     scripted.current = new ScriptedNarrationDirector();
     pendingScriptBoard.current = null;
     pendingQuizFeedback.current = null;
@@ -570,6 +647,18 @@ export function SceneLessonScreen() {
 
     const characterPerformance = new CharacterPerformanceController(() => host.current);
     performer.current = characterPerformance;
+    if(listeningLab){
+      lessonAudio.current = new LessonAudioController(A1_U1_L01_AUDIO,(state)=>{
+        setLessonAudioState(state);
+        if(state.status!=='idle'){
+          setLearnerMicEnabled(false);
+          setStatus('speaking');
+        } else if(!scripted.current.isReading && !playback.current?.isPlaying){
+          setStatus('listening');
+          if(!sceneRuntime.currentScene.activity)setLearnerMicEnabled(true);
+        }
+      });
+    }
 
     let live: GeminiLiveTransport;
     const queue = new PcmPlaybackQueue({
@@ -600,13 +689,30 @@ export function SceneLessonScreen() {
         if (teacherLab && scripted.current.isReading) {
           if (scriptWatchdog.current !== null) window.clearTimeout(scriptWatchdog.current);
           scriptWatchdog.current = null;
-          const step = scripted.current.audioFinished();
-          if (step.next && step.finishedSceneId === null) {
-            readAuthoredBeat(sceneRuntime.currentScene.id, step.next);
-          } else if (step.finishedSceneId) {
-            sceneRuntime.markScriptedNarrationComplete(step.finishedSceneId);
-            holdMicForTeacherContinuation.current = false;
-          }
+          const sceneId=sceneRuntime.currentScene.id;
+          const beat=scripted.current.currentBeat;
+          const advance=()=>{
+            if(sceneRuntime.currentScene.id!==sceneId || !scripted.current.isReading)return;
+            const step=scripted.current.audioFinished();
+            if(step.next) readAuthoredBeat(sceneId,step.next);
+            else if(step.finishedSceneId){
+              sceneRuntime.markScriptedNarrationComplete(step.finishedSceneId);
+              holdMicForTeacherContinuation.current=false;
+              setStatus('listening');
+              if(!sceneRuntime.currentScene.activity)setLearnerMicEnabled(true);
+            }
+          };
+          if(listeningLab && beat?.audioClipId){
+            void playAuthoredAudio(beat.audioClipId).then(ok=>{
+              if(ok) advance();
+              else {
+                scripted.current.pause();
+                setScriptPaused(true);
+                holdMicForTeacherContinuation.current=false;
+                setStatus('listening');
+              }
+            });
+          } else advance();
           return;
         }
         if (teacherLab && pendingQuizFeedback.current) {
@@ -671,6 +777,7 @@ export function SceneLessonScreen() {
           void queue.enqueue(data, pcmSampleRate(mimeType));
         },
         onInterrupted: () => {
+          lessonAudio.current?.interrupt();
           if (teacherLab && scripted.current.isReading) {
             scripted.current.pause();
             clearScriptTimers();
@@ -771,7 +878,8 @@ export function SceneLessonScreen() {
   const board = welcomeComplete ? activeBoard : null;
   const quizState = lessonState?.scenes[currentScene.id];
   const quizReady = teacherLab && Boolean(currentScene.activity) &&
-    Boolean(runtime.current?.scriptedNarrationComplete) && !scripted.current.isReading;
+    Boolean(runtime.current?.scriptedNarrationComplete) && !scripted.current.isReading
+    && lessonAudioState.status==='idle';
   const checkpointGroups = checkpointGroupsForLesson(activeLesson);
   const preflightVisible = !preflightReady && !liveLesson && !connecting;
 
@@ -894,6 +1002,14 @@ export function SceneLessonScreen() {
               choiceId={quizState?.activityChoiceId}
               questionReady={quizReady && status === 'listening' && Boolean(transport.current?.connected)}
               onChoose={chooseBoardActivity}
+              Visual={listeningLab ? A1FirstMeetingVisual : undefined}
+              extra={listeningLab ? (
+                <LessonAudioPanel audio={A1_U1_L01_AUDIO}
+                  sceneClipId={teachingBeats[currentScene.id]?.find(b=>b.audioClipId)?.audioClipId ?? 'full-conversation'}
+                  state={lessonAudioState} heardFull={Boolean(heardClips['full-conversation'])}
+                  disabled={scripted.current.isReading || teacherSpeaking || !liveLesson}
+                  onPlay={replayAuthoredAudio}/>
+              ):undefined}
             />
           ) : (
             <div className="premium-board-layer" aria-live="polite"><ConversationBoard board={board} /></div>
