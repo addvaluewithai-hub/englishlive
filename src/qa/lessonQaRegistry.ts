@@ -75,7 +75,7 @@ export function assertQaRegistration(record: LessonQaRegistration): void {
   if (Object.keys(beats).some(id=>!ids.includes(id))) throw new Error(lesson.id + ': orphan script scene');
 }
 
-export type QaFrameState = 'teaching' | 'audio-playing' | 'question' | 'correct-feedback' | 'wrong-feedback'
+export type QaFrameState = 'teaching' | 'audio-loading' | 'audio-playing' | 'question' | 'correct-feedback' | 'wrong-feedback'
   | 'speaking-listening' | 'speaking-otti' | 'complete';
 export interface QaFrameCase { scene: string; beat: string; state: QaFrameState; }
 
@@ -88,8 +88,10 @@ export function buildLessonQaCases(record: LessonQaRegistration): QaFrameCase[] 
     for (const beat of ids) {
       cases.push({scene:scene.id,beat,state:scene.id===record.finalSpeakingSceneId
         ? 'speaking-listening' : 'teaching'});
-      if(record.beats[scene.id].find(b=>b.id===beat)?.audioClipId)
+      if(record.beats[scene.id].find(b=>b.id===beat)?.audioClipId) {
+        cases.push({scene:scene.id,beat,state:'audio-loading'});
         cases.push({scene:scene.id,beat,state:'audio-playing'});
+      }
     }
     if(scene.activity) {
       const beat=ids.at(-1)!;
