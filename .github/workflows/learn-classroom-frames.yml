@@ -28,7 +28,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - run: npm install --no-audit --no-fund
+      - run: npm install --package-lock-only
+      - run: npm ci
       - name: Typecheck and build production app
         run: npm run check
       - name: Install Playwright in ephemeral CI runner
