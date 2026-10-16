@@ -323,7 +323,7 @@ export function SceneLessonScreen() {
 
   function replayAuthoredAudio(clipId:string) {
     if(!listeningLab || scripted.current.isReading || playback.current?.isPlaying
-      || lessonAudioState.status==='playing')return;
+      || lessonAudioState.status!=='idle')return;
     void playAuthoredAudio(clipId).then(()=>{
       holdMicForTeacherContinuation.current=false;
       if(runtime.current?.currentScene.activity){
@@ -341,9 +341,12 @@ export function SceneLessonScreen() {
   }
 
   function setLearnerMicEnabled(enabled: boolean) {
-    microphone.current?.setEnabled(enabled);
-    setMicOpen(enabled);
-    if (!enabled) setMicLevel(0);
+    const audioBusy=listeningLab && lessonAudio.current?.snapshot.status !== undefined
+      && lessonAudio.current.snapshot.status !== 'idle';
+    const actuallyEnabled=enabled && !audioBusy;
+    microphone.current?.setEnabled(actuallyEnabled);
+    setMicOpen(actuallyEnabled);
+    if (!actuallyEnabled) setMicLevel(0);
   }
 
   function appendDialogueLog(role: 'AI' | 'YOU', text: string, typed = false) {
@@ -647,7 +650,7 @@ export function SceneLessonScreen() {
     if(listeningLab){
       lessonAudio.current = new LessonAudioController(A1_U1_L01_AUDIO,(state)=>{
         setLessonAudioState(state);
-        if(state.status==='playing'){
+        if(state.status!=='idle'){
           setLearnerMicEnabled(false);
           setStatus('speaking');
         } else if(!scripted.current.isReading && !playback.current?.isPlaying){
@@ -876,7 +879,7 @@ export function SceneLessonScreen() {
   const quizState = lessonState?.scenes[currentScene.id];
   const quizReady = teacherLab && Boolean(currentScene.activity) &&
     Boolean(runtime.current?.scriptedNarrationComplete) && !scripted.current.isReading
-    && lessonAudioState.status!=='playing';
+    && lessonAudioState.status==='idle';
   const checkpointGroups = checkpointGroupsForLesson(activeLesson);
   const preflightVisible = !preflightReady && !liveLesson && !connecting;
 
