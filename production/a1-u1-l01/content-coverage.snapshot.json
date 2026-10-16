@@ -1,0 +1,523 @@
+{
+  "schemaVersion": 1,
+  "lessonId": "a1-u1-l01-listening-lab",
+  "sourceLevel": "A1",
+  "sourceLessonId": "U1-L01",
+  "canonicalSource": "english-course/interactive-content-production/coverage/A1/U1-L01.json",
+  "courseStatusPR": "https://github.com/addvaluewithai-hub/english-course/pull/9",
+  "readonlySnapshot": true,
+  "sourceItemCount": 36,
+  "items": [
+    {
+      "sourceId": "ability.gse_all_objectives.gse.adult.2022.a1.p09.007",
+      "label": "Can understand basic phrases in short, simple texts. (P)",
+      "category": "ability",
+      "semanticRole": "role_requires_explicit_pedagogical_decision",
+      "disposition": "escalate",
+      "evidence": [],
+      "review": "needs-review"
+    },
+    {
+      "sourceId": "ability.gse_all_objectives.gse.adult.2022.a1.p14.001",
+      "label": "Can understand the main information when people introduce themselves (e.g. ‘name’, ‘age’, ‘where they are from’). (P)",
+      "category": "ability",
+      "semanticRole": "role_requires_explicit_pedagogical_decision",
+      "disposition": "bounded",
+      "evidence": [
+        {
+          "kind": "guided-explanation",
+          "sceneId": "say-your-name",
+          "beatId": "name-chunk"
+        }
+      ],
+      "review": "reviewed"
+    },
+    {
+      "sourceId": "ability.gse_all_objectives.gse.adult.2022.a1.p14.012",
+      "label": "Can follow speech which is very slow and carefully articulated, with long pauses. (Ca)",
+      "category": "ability",
+      "semanticRole": "role_requires_explicit_pedagogical_decision",
+      "disposition": "teach",
+      "evidence": [
+        {
+          "kind": "listening",
+          "sceneId": "first-listen",
+          "beatId": "scene-set"
+        }
+      ],
+      "review": "reviewed"
+    },
+    {
+      "sourceId": "ability.gse_all_objectives.gse.adult.2022.a1.p22.009",
+      "label": "Can give key information to introduce themselves (e.g. ‘name’, ‘age’, ‘where they are from’). (P)",
+      "category": "ability",
+      "semanticRole": "role_requires_explicit_pedagogical_decision",
+      "disposition": "bounded",
+      "evidence": [
+        {
+          "kind": "guided-explanation",
+          "sceneId": "say-your-name",
+          "beatId": "name-chunk"
+        }
+      ],
+      "review": "reviewed"
+    },
+    {
+      "sourceId": "ability.gse_all_objectives.gse.adult.2022.a1.p22.018",
+      "label": "Can ask and answer simple questions in areas of immediate need or on very familiar topics. (Ca)",
+      "category": "ability",
+      "semanticRole": "role_requires_explicit_pedagogical_decision",
+      "disposition": "teach",
+      "evidence": [
+        {
+          "kind": "productive-speaking",
+          "sceneId": "fresh-meeting",
+          "beatId": "new-person"
+        }
+      ],
+      "review": "reviewed"
+    },
+    {
+      "sourceId": "ability.gse_all_objectives.gse.adult.2022.a1.p22.020",
+      "label": "Can accurately repeat clearly spoken words, phrases, and short sentences. (P)",
+      "category": "ability",
+      "semanticRole": "role_requires_explicit_pedagogical_decision",
+      "disposition": "bounded",
+      "evidence": [
+        {
+          "kind": "productive-speaking",
+          "sceneId": "fresh-meeting",
+          "beatId": "new-person"
+        }
+      ],
+      "review": "reviewed"
+    },
+    {
+      "sourceId": "ability.gse_all_objectives.gse.adult.2022.a1.p22.023",
+      "label": "Can introduce themselves, their hobbies and interests in a basic way. (CJa)",
+      "category": "ability",
+      "semanticRole": "role_requires_explicit_pedagogical_decision",
+      "disposition": "bounded",
+      "evidence": [
+        {
+          "kind": "productive-speaking",
+          "sceneId": "fresh-meeting",
+          "beatId": "new-person"
+        }
+      ],
+      "review": "reviewed"
+    },
+    {
+      "sourceId": "ability.gse_all_objectives.gse.adult.2022.a1.p23.012",
+      "label": "Can make an introduction and use basic greeting and leave-taking expressions. (C)",
+      "category": "ability",
+      "semanticRole": "role_requires_explicit_pedagogical_decision",
+      "disposition": "bounded",
+      "evidence": [
+        {
+          "kind": "productive-speaking",
+          "sceneId": "fresh-meeting",
+          "beatId": "new-person"
+        }
+      ],
+      "review": "reviewed"
+    },
+    {
+      "sourceId": "oxford.phrase.online.0314",
+      "label": "Good morning",
+      "category": "phrase",
+      "semanticRole": "formulaic_productive_required",
+      "disposition": "teach",
+      "evidence": [
+        {
+          "kind": "guided-explanation",
+          "sceneId": "say-your-name",
+          "beatId": "name-chunk"
+        },
+        {
+          "kind": "productive-speaking",
+          "sceneId": "fresh-meeting",
+          "beatId": "new-person"
+        }
+      ],
+      "review": "reviewed"
+    },
+    {
+      "sourceId": "oxford.phrase.online.0346",
+      "label": "How are you?",
+      "category": "phrase",
+      "semanticRole": "formulaic_productive_required",
+      "disposition": "teach",
+      "evidence": [
+        {
+          "kind": "guided-explanation",
+          "sceneId": "ask-how-are-you",
+          "beatId": "wellbeing-meaning"
+        },
+        {
+          "kind": "productive-speaking",
+          "sceneId": "fresh-meeting",
+          "beatId": "new-person"
+        }
+      ],
+      "review": "reviewed"
+    },
+    {
+      "sourceId": "oxford.phrase.online.0579",
+      "label": "pretty good",
+      "category": "phrase",
+      "semanticRole": "formulaic_productive_required",
+      "disposition": "teach",
+      "evidence": [
+        {
+          "kind": "guided-explanation",
+          "sceneId": "ask-how-are-you",
+          "beatId": "wellbeing-meaning"
+        },
+        {
+          "kind": "productive-speaking",
+          "sceneId": "fresh-meeting",
+          "beatId": "new-person"
+        }
+      ],
+      "review": "reviewed"
+    },
+    {
+      "sourceId": "oxford.phrase.online.0599",
+      "label": "really good",
+      "category": "phrase",
+      "semanticRole": "formulaic_productive_required",
+      "disposition": "teach",
+      "evidence": [
+        {
+          "kind": "guided-explanation",
+          "sceneId": "ask-how-are-you",
+          "beatId": "wellbeing-meaning"
+        },
+        {
+          "kind": "productive-speaking",
+          "sceneId": "fresh-meeting",
+          "beatId": "new-person"
+        }
+      ],
+      "review": "reviewed"
+    },
+    {
+      "sourceId": "oxford.phrase.online.0668",
+      "label": "Thank you",
+      "category": "phrase",
+      "semanticRole": "formulaic_productive_required",
+      "disposition": "teach",
+      "evidence": [
+        {
+          "kind": "guided-explanation",
+          "sceneId": "ask-how-are-you",
+          "beatId": "wellbeing-meaning"
+        },
+        {
+          "kind": "productive-speaking",
+          "sceneId": "fresh-meeting",
+          "beatId": "new-person"
+        }
+      ],
+      "review": "reviewed"
+    },
+    {
+      "sourceId": "egp.1741163706530x753542801715210100",
+      "label": "FORM: PREDICATIVE, WITH 'BE'",
+      "category": "grammar",
+      "semanticRole": "role_requires_explicit_pedagogical_decision",
+      "disposition": "contextual",
+      "evidence": [
+        {
+          "kind": "guided-explanation",
+          "sceneId": "say-your-name",
+          "beatId": "name-chunk"
+        }
+      ],
+      "review": "reviewed"
+    },
+    {
+      "sourceId": "egp.1741163708329x286701804737242940",
+      "label": "FORM: AFFIRMATIVE DECLARATIVE",
+      "category": "grammar",
+      "semanticRole": "role_requires_explicit_pedagogical_decision",
+      "disposition": "bounded",
+      "evidence": [
+        {
+          "kind": "guided-explanation",
+          "sceneId": "say-your-name",
+          "beatId": "name-chunk"
+        }
+      ],
+      "review": "reviewed"
+    },
+    {
+      "sourceId": "egp.1741163708329x778951051617750700",
+      "label": "FORM: NEGATIVE DECLARATIVE WITH 'BE'",
+      "category": "grammar",
+      "semanticRole": "role_requires_explicit_pedagogical_decision",
+      "disposition": "escalate",
+      "evidence": [],
+      "review": "needs-review"
+    },
+    {
+      "sourceId": "egp.1741163708789x105964971324936210",
+      "label": "FORM: WITH NOUNS",
+      "category": "grammar",
+      "semanticRole": "role_requires_explicit_pedagogical_decision",
+      "disposition": "bounded",
+      "evidence": [
+        {
+          "kind": "guided-explanation",
+          "sceneId": "say-your-name",
+          "beatId": "name-chunk"
+        }
+      ],
+      "review": "reviewed"
+    },
+    {
+      "sourceId": "egp.1741163716067x824562184770361200",
+      "label": "FORM: MAIN VERB 'BE'",
+      "category": "grammar",
+      "semanticRole": "role_requires_explicit_pedagogical_decision",
+      "disposition": "contextual",
+      "evidence": [
+        {
+          "kind": "guided-explanation",
+          "sceneId": "say-your-name",
+          "beatId": "name-chunk"
+        }
+      ],
+      "review": "reviewed"
+    },
+    {
+      "sourceId": "egp.1741163713868x463659211645272000",
+      "label": "FORM: (SUBJECT) STATEMENTS",
+      "category": "grammar",
+      "semanticRole": "role_requires_explicit_pedagogical_decision",
+      "disposition": "bounded",
+      "evidence": [
+        {
+          "kind": "guided-explanation",
+          "sceneId": "say-your-name",
+          "beatId": "name-chunk"
+        }
+      ],
+      "review": "reviewed"
+    },
+    {
+      "sourceId": "egp.1741163715288x539616242661052000",
+      "label": "FORM: LINKING VERB, 'BE'",
+      "category": "grammar",
+      "semanticRole": "role_requires_explicit_pedagogical_decision",
+      "disposition": "contextual",
+      "evidence": [
+        {
+          "kind": "guided-explanation",
+          "sceneId": "say-your-name",
+          "beatId": "name-chunk"
+        }
+      ],
+      "review": "reviewed"
+    },
+    {
+      "sourceId": "egp.1741163715608x123988758899529200",
+      "label": "FORM: 'BE' + COMPLEMENT",
+      "category": "grammar",
+      "semanticRole": "role_requires_explicit_pedagogical_decision",
+      "disposition": "contextual",
+      "evidence": [
+        {
+          "kind": "guided-explanation",
+          "sceneId": "ask-how-are-you",
+          "beatId": "wellbeing-meaning"
+        }
+      ],
+      "review": "reviewed"
+    },
+    {
+      "sourceId": "oxford.o3000.p01.012",
+      "label": "advice",
+      "category": "word",
+      "semanticRole": "receptive_required",
+      "disposition": "escalate",
+      "evidence": [],
+      "review": "needs-review"
+    },
+    {
+      "sourceId": "oxford.o3000.p01.013",
+      "label": "afraid",
+      "category": "word",
+      "semanticRole": "receptive_required",
+      "disposition": "escalate",
+      "evidence": [],
+      "review": "needs-review"
+    },
+    {
+      "sourceId": "oxford.o3000.p01.061",
+      "label": "be",
+      "category": "word",
+      "semanticRole": "receptive_required",
+      "disposition": "contextual",
+      "evidence": [
+        {
+          "kind": "guided-explanation",
+          "sceneId": "say-your-name",
+          "beatId": "name-chunk"
+        }
+      ],
+      "review": "reviewed"
+    },
+    {
+      "sourceId": "oxford.o3000.p02.011",
+      "label": "excited",
+      "category": "word",
+      "semanticRole": "productive_required",
+      "disposition": "escalate",
+      "evidence": [],
+      "review": "needs-review"
+    },
+    {
+      "sourceId": "oxford.o3000.p02.034",
+      "label": "feeling",
+      "category": "word",
+      "semanticRole": "productive_required",
+      "disposition": "escalate",
+      "evidence": [],
+      "review": "needs-review"
+    },
+    {
+      "sourceId": "oxford.o3000.p02.160",
+      "label": "its",
+      "category": "word",
+      "semanticRole": "receptive_required",
+      "disposition": "escalate",
+      "evidence": [],
+      "review": "needs-review"
+    },
+    {
+      "sourceId": "oxford.o3000.p03.007",
+      "label": "nothing",
+      "category": "word",
+      "semanticRole": "receptive_required",
+      "disposition": "escalate",
+      "evidence": [],
+      "review": "needs-review"
+    },
+    {
+      "sourceId": "oxford.o3000.p03.056",
+      "label": "people",
+      "category": "word",
+      "semanticRole": "receptive_required",
+      "disposition": "bounded",
+      "evidence": [
+        {
+          "kind": "listening",
+          "sceneId": "first-listen",
+          "beatId": "big-picture"
+        }
+      ],
+      "review": "reviewed"
+    },
+    {
+      "sourceId": "oxford.o3000.p03.064",
+      "label": "photograph",
+      "category": "word",
+      "semanticRole": "receptive_required",
+      "disposition": "escalate",
+      "evidence": [],
+      "review": "needs-review"
+    },
+    {
+      "sourceId": "oxford.o3000.p03.136",
+      "label": "sad",
+      "category": "word",
+      "semanticRole": "receptive_required",
+      "disposition": "escalate",
+      "evidence": [],
+      "review": "needs-review"
+    },
+    {
+      "sourceId": "oxford.o3000.p03.252",
+      "label": "thanks",
+      "category": "word",
+      "semanticRole": "receptive_required",
+      "disposition": "teach",
+      "evidence": [
+        {
+          "kind": "guided-explanation",
+          "sceneId": "ask-how-are-you",
+          "beatId": "wellbeing-meaning"
+        }
+      ],
+      "review": "reviewed"
+    },
+    {
+      "sourceId": "oxford.o3000.p03.274",
+      "label": "tired",
+      "category": "word",
+      "semanticRole": "receptive_required",
+      "disposition": "escalate",
+      "evidence": [],
+      "review": "needs-review"
+    },
+    {
+      "sourceId": "oxford.o3000.p04.100",
+      "label": "yourself",
+      "category": "word",
+      "semanticRole": "receptive_required",
+      "disposition": "escalate",
+      "evidence": [],
+      "review": "needs-review"
+    },
+    {
+      "sourceId": "pronunciation.sound_perception.a1",
+      "label": "Sound perception and word recognition",
+      "category": "pronunciation",
+      "semanticRole": "role_requires_explicit_pedagogical_decision",
+      "disposition": "teach",
+      "evidence": [
+        {
+          "kind": "listening",
+          "sceneId": "first-listen",
+          "beatId": "scene-set"
+        },
+        {
+          "kind": "listening",
+          "sceneId": "say-your-name",
+          "beatId": "listen-again"
+        }
+      ],
+      "review": "reviewed"
+    },
+    {
+      "sourceId": "pronunciation.intonation_stance.a1",
+      "label": "Intonation, interaction, and stance",
+      "category": "pronunciation",
+      "semanticRole": "role_requires_explicit_pedagogical_decision",
+      "disposition": "teach",
+      "evidence": [
+        {
+          "kind": "guided-explanation",
+          "sceneId": "ask-how-are-you",
+          "beatId": "wellbeing-meaning"
+        },
+        {
+          "kind": "productive-speaking",
+          "sceneId": "fresh-meeting",
+          "beatId": "new-person"
+        }
+      ],
+      "review": "reviewed"
+    }
+  ],
+  "qualityGates": {
+    "sourceReview": "agent-audited-pending-owner",
+    "scriptCritique": "pending",
+    "screenshotReview": "pending",
+    "liveAudio": "pending",
+    "speakingReview": "pending",
+    "ownerAcceptance": "pending"
+  }
+}
