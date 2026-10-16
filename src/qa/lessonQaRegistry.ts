@@ -2,6 +2,9 @@ import type { SceneLessonDefinition } from '../lessonScenes/types';
 import type { TeachingBeat } from '../lessonScenes/b1/teacherLabScript';
 import { B1_L02_TEACHER_BOARD_PILOT } from '../lessonScenes/b1/teacherBoardPilot';
 import { B1_TEACHER_LAB_SCRIPT } from '../lessonScenes/b1/teacherLabScript';
+import { A1_U1_L01_LISTENING_PILOT } from '../lessonScenes/a1/listeningTeacherPilot';
+import { A1_LISTENING_BEATS } from '../lessonScenes/a1/listeningTeacherScript';
+import { A1_U1_L01_AUDIO, validateLessonAudio } from '../lessonScenes/a1/listeningAudioPilot';
 
 /**
  * Registry for deterministic classroom QA, NOT published lesson enrollment.
@@ -14,8 +17,16 @@ export interface LessonQaRegistration {
   beats: Readonly<Record<string, readonly TeachingBeat[]>>;
   finalSpeakingSceneId: string;
   visualKey: string;
+  audio?: typeof A1_U1_L01_AUDIO;
 }
 export const LESSON_QA_REGISTRY: Readonly<Record<string, LessonQaRegistration>> = {
+  [A1_U1_L01_LISTENING_PILOT.id]: {
+    lesson:A1_U1_L01_LISTENING_PILOT,
+    beats:A1_LISTENING_BEATS,
+    finalSpeakingSceneId:'fresh-meeting',
+    visualKey:'a1-first-meeting',
+    audio:A1_U1_L01_AUDIO,
+  },
   [B1_L02_TEACHER_BOARD_PILOT.id]: {
     lesson: B1_L02_TEACHER_BOARD_PILOT,
     beats: B1_TEACHER_LAB_SCRIPT,
@@ -33,6 +44,7 @@ export function getLessonQaRegistration(lessonId: string): LessonQaRegistration 
 
 export function assertQaRegistration(record: LessonQaRegistration): void {
   const { lesson, beats, finalSpeakingSceneId, visualKey } = record;
+  if(record.audio) validateLessonAudio(record.audio);
   if (!visualKey) throw new Error(lesson.id + ': missing bespoke lesson visual registration');
   if (!lesson.scenes.length) throw new Error(lesson.id + ': empty lesson');
   const ids = lesson.scenes.map(scene => scene.id);
@@ -44,7 +56,13 @@ export function assertQaRegistration(record: LessonQaRegistration): void {
     if (!authored?.length) throw new Error(lesson.id + '/' + scene.id + ': no authored beats');
     const beatIds = authored.map(beat => beat.id);
     if (new Set(beatIds).size !== beatIds.length) throw new Error(scene.id + ': duplicate beat');
-    for (const beat of authored) if (!beat.line?.trim()) throw new Error(scene.id + '/' + beat.id + ': empty narration');
+    for (const beat of authored) {
+      if (!beat.line?.trim()) throw new Error(scene.id + '/' + beat.id + ': empty narration');
+      if (beat.audioClipId) {
+        if (!record.audio) throw new Error('Listening beat without registered audio manifest: '+beat.id);
+        if (!record.audio.clips.some(c=>c.id===beat.audioClipId)) throw new Error('Missing clip ID: '+beat.audioClipId);
+      }
+    }
     if (scene.id !== finalSpeakingSceneId && !scene.activity) {
       throw new Error(scene.id + ': this classroom QA version requires an authored MC checkpoint for each teaching scene; split or extend the renderer explicitly');
     }
@@ -57,7 +75,7 @@ export function assertQaRegistration(record: LessonQaRegistration): void {
   if (Object.keys(beats).some(id=>!ids.includes(id))) throw new Error(lesson.id + ': orphan script scene');
 }
 
-export type QaFrameState = 'teaching' | 'question' | 'correct-feedback' | 'wrong-feedback'
+export type QaFrameState = 'teaching' | 'audio-playing' | 'question' | 'correct-feedback' | 'wrong-feedback'
   | 'speaking-listening' | 'speaking-otti' | 'complete';
 export interface QaFrameCase { scene: string; beat: string; state: QaFrameState; }
 
@@ -70,6 +88,8 @@ export function buildLessonQaCases(record: LessonQaRegistration): QaFrameCase[] 
     for (const beat of ids) {
       cases.push({scene:scene.id,beat,state:scene.id===record.finalSpeakingSceneId
         ? 'speaking-listening' : 'teaching'});
+      if(record.beats[scene.id].find(b=>b.id===beat)?.audioClipId)
+        cases.push({scene:scene.id,beat,state:'audio-playing'});
     }
     if(scene.activity) {
       const beat=ids.at(-1)!;
