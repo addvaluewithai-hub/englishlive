@@ -319,3 +319,17 @@
     width:48px !important;height:48px !important;right:3px !important;bottom:2px !important;
   }
 }
+
+/* Compact A1 feedback: real Chromium at 320x640 showed Otti touching the last
+   answer area. Anchor the actual character box to the stage bottom safe zone,
+   neutralising old animated translations without hiding teacher feedback. */
+@media (max-width: 420px) and (max-height: 680px) {
+  .premium-lesson-stage.is-teacher-lab.has-board:has(.a1-audio-panel):has(.teacher-pilot-right) .premium-lesson-character,
+  .premium-lesson-stage.is-teacher-lab.has-board:has(.a1-audio-panel):has(.teacher-pilot-retry) .premium-lesson-character {
+    position: absolute !important;
+    inset: auto 3px 1px auto !important;
+    width: 46px !important;
+    height: 46px !important;
+    transform: none !important;
+  }
+}
