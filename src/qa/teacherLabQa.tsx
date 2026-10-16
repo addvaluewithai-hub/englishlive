@@ -60,7 +60,7 @@ if (!beats[sceneId]?.some(x=>x.id===beatId)) throw new Error('Unknown QA beat: '
 const mode = (args.get('state') || (selectedScene.activity?'teaching':'speaking-listening')) as FixtureMode;
 const validModes:FixtureMode[] = ['teaching','audio-loading','audio-playing','question','correct-feedback','wrong-feedback','speaking-listening','speaking-otti','complete'];
 if(!validModes.includes(mode)) throw new Error('Invalid QA state: '+mode);
-if (Boolean(selectedScene.activity) !== ['teaching','audio-playing','question','correct-feedback','wrong-feedback'].includes(mode)
+if (Boolean(selectedScene.activity) !== ['teaching','audio-loading','audio-playing','question','correct-feedback','wrong-feedback'].includes(mode)
     && mode!=='complete') throw new Error('Scene/QA mode mismatch: '+sceneId+' / '+mode);
 
 function QaClassroom(){
