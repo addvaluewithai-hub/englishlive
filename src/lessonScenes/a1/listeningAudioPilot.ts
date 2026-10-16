@@ -10,6 +10,9 @@ export interface LessonAudioTurn {
   id: string;
   speaker: 'maya' | 'leo';
   english: string;
+  /** Absolute reviewed timecodes in the approved master asset, if recorded. */
+  startMs?: number;
+  endMs?: number;
 }
 export interface LessonAudioClip {
   id: string;
@@ -55,6 +58,13 @@ export function validateLessonAudio(packageData:LessonAudioPackage) {
   if(turnIds.length!==new Set(turnIds).size)throw Error('Duplicate turn IDs');
   const clipIds=packageData.clips.map(x=>x.id);
   if(clipIds.length!==new Set(clipIds).size)throw Error('Duplicate clip IDs');
+  if(packageData.assetUrl){
+    if(!/^(https:\/\/|\/audio\/)/.test(packageData.assetUrl))throw Error('Audio asset URL must be HTTPS or same-origin /audio/');
+    for(const turn of packageData.turns){
+      if(turn.startMs===undefined||turn.endMs===undefined||turn.endMs<=turn.startMs)
+        throw Error('Missing reviewed audio timecodes for '+turn.id);
+    }
+  }
   for(const clip of packageData.clips){
     if(!clip.turnIds.length)throw Error('Empty clip: '+clip.id);
     getAuthoredClip(packageData,clip.id);
