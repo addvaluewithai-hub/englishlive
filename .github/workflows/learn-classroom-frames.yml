@@ -27,13 +27,15 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '24'
       - run: npm install --no-audit --no-fund
       - name: Typecheck and build production app
         run: npm run check
       - name: Install Playwright in ephemeral CI runner
         run: npm install --no-save --package-lock=false playwright@1.62.1
       - run: npx playwright install --with-deps chromium
+      - name: Check A1 listening and clip-tool contract
+        run: npm run test:a1-listening
       - name: Verify registry completeness for any authored lesson
         run: npm run test:learn-qa-registry
       - name: Capture ALL classroom beats, quiz branches and Speaking states
