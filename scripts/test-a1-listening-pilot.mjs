@@ -31,6 +31,7 @@ test('authored audio is immutable ID-based and has full, name and wellbeing clip
 test('frame QA covers every A1 authored audio playback beat plus all 3 MC branches and final speech',()=>{
   const reg=LESSON_QA_REGISTRY[lesson.id];
   const cases=buildLessonQaCases(reg);
+  assert.equal(cases.filter(x=>x.state==='audio-loading').length,3);
   assert.equal(cases.filter(x=>x.state==='audio-playing').length,3);
   assert.equal(cases.filter(x=>x.state==='wrong-feedback').length,3);
   assert.equal(cases.filter(x=>x.state==='question').length,3);
