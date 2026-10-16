@@ -8,7 +8,7 @@
 - **Authorized dialogue script**: `src/lessonScenes/a1/listeningAudioPilot.ts`.
 - **Prebuilt TTS request**: [gemini-tts-request.json](gemini-tts-request.json).
 - **Factory**: [addvaluewithai-hub/gemini-tts](https://github.com/addvaluewithai-hub/gemini-tts), read `docs/AGENT.md` and `docs/API.md`.
-- **Stable factory job ID**: `englotti-a1-u1-l01-dialogue-pilot01`.
+- **Stable factory job ID**: `englotti-a1-u1-l01-dialogue-pilot02`.
 
 The six source utterances belong to *Maya* (Aoede) and *Leo* (Achird); both are named curated studio voices in the Factory's built-in registry. Target: **quality**, two speakers, **WAV 24 kHz**, English, Gemini transcription with per-word actual-audio timestamps, diarization and VTT, delivered to Cloudinary.
 
@@ -17,7 +17,7 @@ The six source utterances belong to *Maya* (Aoede) and *Leo* (Achird); both are 
 In the **Gemini TTS Factory GitHub repository**:
 
 1. Actions → **Gemini TTS Factory** → **Run workflow**.
-2. Set `job_id` to `englotti-a1-u1-l01-dialogue-pilot01` (change edition on any regeneration to avoid Cloudinary overwrite).
+2. Set `job_id` to `englotti-a1-u1-l01-dialogue-pilot02` (change edition on any regeneration to avoid Cloudinary overwrite).
 3. Paste the **exact JSON object** from this folder's `gemini-tts-request.json` into `request_json`.
 4. The workflow uses repository secrets `GEMINI_API_KEY_1…` and `CLOUDINARY_URL`; don't expose or copy them to EnglishLive frontend.
 5. Wait for **status=completed** and **all three** `audio_url`, `transcript_url`, `vtt_url` in `result.json`. Dispatch accepted or a green workflow is not enough if transcription failed.
