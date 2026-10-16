@@ -199,7 +199,7 @@ export function SceneLessonScreen() {
   const playback = useRef<PcmPlaybackQueue | null>(null);
   const lessonAudio = useRef<LessonAudioController | null>(null);
   const [lessonAudioState,setLessonAudioState] = useState<LessonAudioState>({
-    status:'idle',clipId:null,speaker:null,turnId:null,mode:null
+    status:'idle',clipId:null,speaker:null,turnId:null,positionMs:null
   });
   const [heardClips,setHeardClips] = useState<Readonly<Record<string,boolean>>>({});
   const performer = useRef<CharacterPerformanceController | null>(null);
@@ -301,7 +301,7 @@ export function SceneLessonScreen() {
     setLearnerMicEnabled(false);
     setStatus('speaking');
     const result=await audio.play(clipId);
-    compactLog.current.push({role:'TOOL',text:`[lesson audio] ${clipId} → ${result.status} (${result.mode})`});
+    compactLog.current.push({role:'TOOL',text:`[lesson audio] ${clipId} → ${result.status} (${result.source})`});
     if(result.status==='played'){
       setHeardClips(v=>({...v,[clipId]:true}));
       return true;
