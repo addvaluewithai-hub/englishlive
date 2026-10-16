@@ -95,6 +95,8 @@ test('approved recording seek finishes only after the audited segment boundary',
     const controller=new LessonAudioController(withTimes,s=>completed.push(s));
     let finished=false;
     const pending=controller.play('name-exchange').then(r=>{finished=true;return r});
+    assert.equal(controller.snapshot.status,'loading','microphone must already be held before network audio metadata');
+    assert.ok(completed.some(state=>state.status==='loading'));
     await Promise.resolve();await Promise.resolve();
     const player=MockAudio.instances.at(-1);
     assert.equal(player.currentTime,0);
