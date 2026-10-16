@@ -49,7 +49,7 @@ test('all five locked productive phrases are present in narrated explanation, so
   assert.ok(list.every(x=>x.semanticRole==='formulaic_productive_required'));
   // A phrase can be addressed to a named person ("How are you, Leo?")
   // rather than matching only the dictionary's question-mark punctuation.
-  const lexical=(value)=>value.toLowerCase().replace(/[?!,.؟]/g,'').replace(/\\s+/g,' ').trim();
+  const lexical=(value)=>value.toLowerCase().replace(/[?!,.؟]/g,'').replace(/\s+/g,' ').trim();
   for(const phrase of list){
     const text=lexical(phrase.label);
     assert.ok(lexical(allAuthoredSpeech).includes(text),phrase.label+' omitted from teacher narration');
