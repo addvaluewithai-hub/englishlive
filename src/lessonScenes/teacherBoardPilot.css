@@ -275,3 +275,25 @@
     padding-bottom: 105px;
   }
 }
+
+/* Source-aligned A1 listening dock inside same teacher-board component. */
+.teacher-pilot-card .a1-audio-board-art { max-height: 48%; }
+.a1-audio-panel{
+  flex:0 0 auto;min-width:0;display:flex;align-items:center;justify-content:space-between;
+  gap:9px;padding:7px 10px;border:1px solid #b7dcd2;border-radius:13px;
+  background:#e9f7f4;color:#215951;
+}
+.a1-audio-panel-copy{display:flex;flex-direction:column;gap:2px;min-width:0;text-align:left;direction:ltr}
+.a1-audio-panel-copy strong{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.a1-audio-panel-copy small{font-size:8px;color:#617d79;line-height:1.15;white-space:normal;}
+.a1-audio-panel button{
+  border:0;background:#087d70;color:#fff;border-radius:10px;min-width:64px;
+  min-height:42px;font:inherit;font-size:11px;font-weight:800;cursor:pointer;
+}
+.a1-audio-panel button:disabled{opacity:.55;cursor:not-allowed;}
+.a1-audio-panel button:focus-visible{outline:3px solid #f0b15d;outline-offset:2px}
+@media(max-height:680px){
+  .teacher-pilot-card .a1-audio-board-art{max-height:24%;}
+  .a1-audio-panel{padding:5px 7px}
+  .a1-audio-panel-copy small{font-size:7px}
+}
