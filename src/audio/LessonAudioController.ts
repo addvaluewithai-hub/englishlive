@@ -8,7 +8,7 @@ export type AudioClipResult = {
   source:'gemini-tts-factory';
 };
 export interface LessonAudioState {
-  status:'idle'|'playing';
+  status:'idle'|'loading'|'playing';
   clipId:string|null;
   speaker:string|null;
   turnId:string|null;
@@ -59,6 +59,9 @@ export class LessonAudioController {
     const audio=new Audio(this.authored.audioUrl);
     audio.preload='auto';
     this.activeAudio=audio;
+    // Gate the live microphone BEFORE network fetch/metadata/seeking begins.
+    // A queued/slow recording must not leave user input open to audio echo.
+    this.emit({status:'loading',clipId,speaker:null,turnId:null,positionMs:clip.startMs});
     return new Promise(resolve=>{
       let settled=false;
       let watchdog:ReturnType<typeof setTimeout>|undefined;
