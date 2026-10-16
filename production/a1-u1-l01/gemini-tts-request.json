@@ -2,7 +2,7 @@
   "turns": [
     {
       "speaker": "Maya",
-      "text": "Hello. I'm Maya. What's your name?",
+      "text": "Good morning! I'm Maya. What's your name?",
       "style": "Warm and friendly woman meeting someone for the first time. Clear natural American English, A1-friendly pace, not exaggerated."
     },
     {
@@ -17,12 +17,12 @@
     },
     {
       "speaker": "Leo",
-      "text": "I'm fine, thanks. And you?",
+      "text": "Pretty good, thanks. And you?",
       "style": "Friendly upbeat response, clear easy-to-follow English."
     },
     {
       "speaker": "Maya",
-      "text": "I'm okay, thank you. Bye!",
+      "text": "Really good, thank you. Bye!",
       "style": "Natural friendly closing with an unhurried goodbye."
     },
     {
@@ -51,6 +51,6 @@
     "lessonId": "a1-u1-l01-listening-lab",
     "sourceLessonId": "U1-L01",
     "purpose": "listening-source-dialogue",
-    "edition": "pilot01"
+    "edition": "pilot02"
   }
 }
