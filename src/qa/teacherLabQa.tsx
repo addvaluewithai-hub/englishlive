@@ -80,7 +80,7 @@ function QaClassroom(){
   const audioClip=beats[sceneId]?.find(b=>b.audioClipId)?.audioClipId;
   const audioState={status:(state==='audio-playing'?'playing':'idle') as 'idle'|'playing',
     clipId:audioClip||null,speaker:state==='audio-playing'?'maya':null,
-    turnId:state==='audio-playing'?'greeting':null,mode:audio?.assetUrl?'asset' as const:'browser-preview' as const};
+    turnId:state==='audio-playing'?'greeting':null,positionMs:state==='audio-playing'?1250:null};
   const status = isSpeaking ? (speaking?'speaking':'listening') : (state==='teaching'?'speaking':state==='question'?'listening':'speaking');
   const onChoose = (_scene:string,id:string)=>{
     if (state!=='question'||!selectedScene?.activity) return {accepted:false,correct:false};
