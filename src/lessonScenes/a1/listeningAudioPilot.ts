@@ -37,7 +37,7 @@ export interface LessonAudioPackage {
 }
 export const A1_U1_L01_AUDIO:LessonAudioPackage = {
   lessonId:'a1-u1-l01-listening-lab',
-  factoryJobId:'englotti-a1-u1-l01-dialogue-pilot01',
+  factoryJobId:'englotti-a1-u1-l01-dialogue-pilot02',
   audioUrl:null,
   transcriptUrl:null,
   vttUrl:null,
