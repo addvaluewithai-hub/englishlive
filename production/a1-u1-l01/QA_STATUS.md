@@ -12,7 +12,7 @@
 | Product phrase/script mapping | **authoring check** | All 5 locked-productive phrases now in exact teacher lines + authored two-speaker source, planned final Speaking; this does NOT demonstrate student production |
 | Full authored listening | **asset missing** | TTS Factory `production/a1-u1-l01/gemini-tts-request.json`, edition `pilot02`, job `englotti-a1-u1-l01-dialogue-pilot02`; paid job not dispatched |
 | Audio / timestamp review | **NOT TESTED** | Need completed WAV, diarized word transcript, VTT and Cloudinary URLs; six audited turn bounds + four clip bounds and actual listening review |
-| Visual QA | **automated browser capture** | GitHub Actions on Draft PR #54 takes all A1 beats, audio playing, MC feedback and final Speaking at 320x640/400x860/1280x900. **All actual contact sheets need visual inspection after this SHA**; reports cannot prove pedagogy |
+| Visual QA | **agent-inspected; owner review pending** | [Chromium frame run #38857861117](https://github.com/addvaluewithai-hub/englishlive/actions/runs/38857861117): **69 A1 PNGs across 12 sheets**, at 320x640/400x860/1280x900, plus **78 B1 regression PNGs across 15 sheets**. Zero structural warnings. Agent opened all A1 sheets in grouped montages and inspected representative original frames; pedagogical/owner review remains pending |
 | PCM non-overlap | **unit guarded, Live untested** | `waitForTeacherAudioDrain` prevents prerecording from starting before PCM queue is silent, tested with fake queue. Actual Gemini PCM / device, audio turn races, mic echo, interruptions and reconnection pending |
 | Speaking | **Live untested** | Otti decides sufficiency in changed first meeting; must refuse to pass thin/no-sense greetings and goodbye loops. Check good/weak answer counterexamples with real provider |
 | Cold new agent | **static smoke only** | Course `test_cold_agent_handoff.py` confirms source discovery and `IN_FLIGHT_REVIEW`. A genuinely independent agent trial not performed |
@@ -38,3 +38,9 @@ Do not confuse MC receptive correctness, authoring tests or provider transcripts
 4. Replay `play_lesson_audio(name-exchange)` and wellbeing clip during Otti Live teaching: prove no overlap with Gemini PCM, suppressed microphone, no unearned audio completion, and clean failures/reconnect.
 5. Review real contact sheets, fix visuals, rerun QA, conduct Speaking fixtures with weak and strong responses.
 6. Mark Course `qualityGates.*=accepted` only with actual evidence/owner approval; run `coverage_gate.py ready A1 U1-L01`, then request release separately.
+
+## Screenshot regression evidence from actual Chromium
+
+- **Before:** [run #38857358684](https://github.com/addvaluewithai-hub/englishlive/actions/runs/38857358684) flagged a real compact 320x640 overlap between Otti and the final MC feedback; one warning, A1 suite failed. B1 baseline still green.
+- **After:** [run #38857861117](https://github.com/addvaluewithai-hub/englishlive/actions/runs/38857861117) passed: 69 A1 + 78 B1 frames, 12 + 15 scene/view contact sheets, **zero structural warnings**, no reported internal board scrolling or Otti/quiz intersection. The 12 A1 sheets were opened for agent visual review at three layouts. Real audio was unavailable and never simulated as heard.
+- The clean run is a rendering-regression check **only**, not a claim the listening experience or student learning has been validated. Any subsequent CSS/teaching content change invalidates affected visual screenshots.
