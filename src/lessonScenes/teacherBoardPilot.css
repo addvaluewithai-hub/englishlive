@@ -297,3 +297,6 @@
   .a1-audio-panel{padding:5px 7px}
   .a1-audio-panel-copy small{font-size:7px}
 }
+
+.a1-audio-phrase{display:block;max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;color:#195f56;font-size:11px;font-weight:800;}
+@media(max-width:420px){.a1-audio-phrase{max-width:160px;font-size:10px;}}
