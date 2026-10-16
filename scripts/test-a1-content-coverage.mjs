@@ -47,10 +47,13 @@ test('all five locked productive phrases are present in narrated explanation, so
   const list=items.filter(x=>x.category==='phrase');
   assert.deepEqual(list.map(x=>x.label).sort(),names.slice().sort());
   assert.ok(list.every(x=>x.semanticRole==='formulaic_productive_required'));
+  // A phrase can be addressed to a named person ("How are you, Leo?")
+  // rather than matching only the dictionary's question-mark punctuation.
+  const lexical=(value)=>value.toLowerCase().replace(/[?!,.؟]/g,'').replace(/\\s+/g,' ').trim();
   for(const phrase of list){
-    const text=phrase.label.toLowerCase();
-    assert.ok(allAuthoredSpeech.includes(text),phrase.label+' omitted from teacher narration');
-    assert.ok(recordedScript.includes(text),phrase.label+' omitted from actual TTS source');
+    const text=lexical(phrase.label);
+    assert.ok(lexical(allAuthoredSpeech).includes(text),phrase.label+' omitted from teacher narration');
+    assert.ok(lexical(recordedScript).includes(text),phrase.label+' omitted from actual TTS source');
     assert.ok(phrase.evidence.some(e=>e.kind==='productive-speaking'),phrase.label+' has no Speaking plan');
   }
   assert.match(A1_LISTENING_BEATS['fresh-meeting'][0].line,/Pretty good/);
