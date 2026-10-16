@@ -20,11 +20,11 @@ export function A1FirstMeetingVisual({sceneId,beatId}:{sceneId:string;beatId:str
     <path d="M139 117q39 -36 79 0" stroke="#5ab1a1" strokeWidth="4" strokeDasharray="5 6" fill="none"/>
     <circle cx="180" cy="113" r="15" fill="#fff" stroke="#99d5c9"/><path d="M174 113h12m-6-6v12" stroke="#208479" strokeWidth="2.5" strokeLinecap="round"/>
     <rect x="18" y="210" width="324" height="62" rx="18" fill="#fff" stroke="#c2e6dc" strokeWidth="2"/>
-    {listening?<><text x="180" y="235" fontSize="17" fontWeight="850" textAnchor="middle" fill="#215e58">Hello! · Hi!</text>
-      <text x="180" y="255" fontSize="13" textAnchor="middle" fill="#66807b">{beatId==='scene-set'?'Listen first. Notice the situation.':'Greeting → Names → How are you?'}</text></>:
+    {listening?<><text x="180" y="235" fontSize="17" fontWeight="850" textAnchor="middle" fill="#215e58">{beatId==='scene-set'?'Two people meet': 'Good morning! · Hi!'}</text>
+      <text x="180" y="255" fontSize="13" textAnchor="middle" fill="#66807b">{beatId==='scene-set'?'Listen first. Notice their interaction.':'Greeting → Names → How are you?'}</text></>:
       names?<><text x="180" y="234" fontSize="17" fontWeight="850" textAnchor="middle" fill="#215e58">“I'm Maya.” · “My name is Leo.”</text>
       <text x="180" y="255" fontSize="13" textAnchor="middle" fill="#66807b">I'm = I am</text></>:
       <><text x="180" y="235" fontSize="17" fontWeight="850" textAnchor="middle" fill="#215e58">“How are you?”</text>
-      <text x="180" y="255" fontSize="13" textAnchor="middle" fill="#66807b">“I'm fine, thanks. And you?”</text></>}
+      <text x="180" y="255" fontSize="13" textAnchor="middle" fill="#66807b">“Pretty good!” · “Really good!”</text></>}
   </svg>;
 }
