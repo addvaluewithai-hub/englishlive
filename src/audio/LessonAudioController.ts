@@ -61,11 +61,13 @@ export class LessonAudioController {
     this.activeAudio=audio;
     return new Promise(resolve=>{
       let settled=false;
+      let watchdog:ReturnType<typeof setTimeout>|undefined;
       const start=clip.startMs!/1000;
       const end=clip.endMs!/1000;
       const settle=(status:AudioClipResult['status'])=>{
         if(settled)return;
         settled=true;
+        if(watchdog!==undefined)clearTimeout(watchdog);
         audio.pause();
         audio.removeEventListener('timeupdate',tick);
         audio.removeEventListener('ended',ended);
@@ -92,6 +94,8 @@ export class LessonAudioController {
         audio.currentTime=start;
         void audio.play().catch(()=>settle('unavailable'));
       };
+      // A stalled network/decoder must not hold the blocking Gemini tool forever.
+      watchdog=setTimeout(()=>settle('error'),Math.max(18000,(end-start)*1000+15000));
       audio.addEventListener('timeupdate',tick);
       audio.addEventListener('ended',ended);
       audio.addEventListener('error',errored);
