@@ -341,8 +341,8 @@ export function SceneLessonScreen() {
   }
 
   function setLearnerMicEnabled(enabled: boolean) {
-    const audioBusy=listeningLab && lessonAudio.current?.snapshot.status !== undefined
-      && lessonAudio.current.snapshot.status !== 'idle';
+    const currentAudioStatus = lessonAudio.current?.snapshot.status;
+    const audioBusy = listeningLab && currentAudioStatus !== undefined && currentAudioStatus !== 'idle';
     const actuallyEnabled=enabled && !audioBusy;
     microphone.current?.setEnabled(actuallyEnabled);
     setMicOpen(actuallyEnabled);
