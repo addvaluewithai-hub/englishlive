@@ -2,140 +2,135 @@ import type { LessonAudioPackage, LessonAudioTurn } from '../lessonScenes/a1/lis
 import { getAuthoredClip, validateLessonAudio } from '../lessonScenes/a1/listeningAudioPilot';
 import type { LiveClientTool } from '../live/tools';
 
-export type AudioClipResult = { clipId:string; status:'played'|'interrupted'|'unavailable'; mode:'asset'|'browser-preview' };
-export type LessonAudioState = { status:'idle'|'playing'; clipId:string|null; speaker:string|null; turnId:string|null; mode:'asset'|'browser-preview'|null };
-const idle:LessonAudioState={status:'idle',clipId:null,speaker:null,turnId:null,mode:null};
+export type AudioClipResult = {
+  clipId:string;
+  status:'played'|'interrupted'|'unavailable'|'error';
+  source:'gemini-tts-factory';
+};
+export interface LessonAudioState {
+  status:'idle'|'playing';
+  clipId:string|null;
+  speaker:string|null;
+  turnId:string|null;
+  /** Current absolute time in the factory's WAV. */
+  positionMs:number|null;
+}
+const idle:LessonAudioState={status:'idle',clipId:null,speaker:null,turnId:null,positionMs:null};
 type Listener=(state:LessonAudioState)=>void;
 
 /**
- * One active clip at a time. Real recordings (when approved) take precedence.
- * Browser voices are only an explicitly marked preview fallback.
- * Never feed asset audio into the model's microphone input.
+ * Plays ONLY reviewed timecode slices from a single durable Gemini TTS WAV.
+ * No browser TTS, fake voice timings, guessed clip cutting, or client-side Gemini
+ * access. Caller must suspend Otti voice and learner mic until this finishes.
  */
 export class LessonAudioController {
-  private generation=0;
   private activeAudio:HTMLAudioElement|null=null;
-  private currentUtterance:SpeechSynthesisUtterance|null=null;
-  private done:(value:AudioClipResult)=>void=()=>{};
+  private finishActive:(status:AudioClipResult['status'])=>void=()=>{};
   private state:LessonAudioState=idle;
-  constructor(private readonly authored:LessonAudioPackage,private readonly onState:Listener=()=>{}) {
+  constructor(private readonly authored:LessonAudioPackage,private readonly onState:Listener=()=>{}){
     validateLessonAudio(authored);
   }
   get snapshot(){return this.state;}
-  private emit(s:LessonAudioState){this.state=s;this.onState(s);}
+  private emit(state:LessonAudioState){this.state=state;this.onState(state);}
+
   interrupt(){
-    this.generation++;
-    this.activeAudio?.pause();
-    this.activeAudio=null;
-    if(typeof window!=='undefined'&&'speechSynthesis'in window)window.speechSynthesis.cancel();
-    this.currentUtterance=null;
-    this.done({clipId:this.state.clipId||'',status:'interrupted',mode:this.state.mode||'browser-preview'});
-    this.done=()=>{};
+    const current=this.activeAudio;
+    if(current){
+      current.pause();
+      current.removeAttribute('src');
+      current.load();
+      this.activeAudio=null;
+      this.finishActive('interrupted');
+    }
     this.emit(idle);
   }
+
   async play(clipId:string):Promise<AudioClipResult>{
     const turns=getAuthoredClip(this.authored,clipId);
     this.interrupt();
-    const generation=this.generation;
-    const mode=this.authored.assetUrl?'asset':'browser-preview';
-    return new Promise(resolve=>{
-      this.done=resolve;
-      void this.run(turns,clipId,generation,mode).then(status=>{
-        if(this.generation!==generation)return;
-        this.done=()=>{};
-        this.emit(idle);
-        resolve({clipId,status,mode});
-      });
-    });
-  }
-  private async run(turns:readonly LessonAudioTurn[],clipId:string,generation:number,mode:'asset'|'browser-preview'){
-    // Future approved recorded assets may be split per line or annotated with
-    // exact timecode ranges. Never guess offsets for one long file.
-    for(const turn of turns){
-      if(generation!==this.generation)return 'interrupted' as const;
-      this.emit({status:'playing',clipId,speaker:turn.speaker,turnId:turn.id,mode});
-      const result=await this.speakTurn(turn,mode,generation);
-      if(result!=='played')return result;
+    const clip=this.authored.clips.find(c=>c.id===clipId)!;
+    if(!this.authored.approved||!this.authored.audioUrl||
+       clip.startMs===undefined||clip.endMs===undefined){
+      return {clipId,status:'unavailable',source:'gemini-tts-factory'};
     }
-    return 'played' as const;
-  }
-  private speakTurn(turn:LessonAudioTurn,mode:'asset'|'browser-preview',generation:number):Promise<'played'|'interrupted'|'unavailable'>{
-    if(mode==='asset'){
-      const startMs=turn.startMs;
-      const endMs=turn.endMs;
-      if(!this.authored.assetUrl||startMs===undefined||endMs===undefined)return Promise.resolve('unavailable');
-      return new Promise(resolve=>{
-        const audio=new Audio(this.authored.assetUrl!);
-        audio.preload='auto';
-        this.activeAudio=audio;
-        let settled=false;
-        let ticker:number|undefined;
-        const finish=(state:'played'|'interrupted'|'unavailable')=>{
-          if(settled)return;settled=true;
-          if(ticker!==undefined)window.clearInterval(ticker);
-          audio.pause();
-          audio.removeAttribute('src');
-          if(this.activeAudio===audio)this.activeAudio=null;
-          resolve(state);
-        };
-        audio.onerror=()=>finish('unavailable');
-        audio.onloadedmetadata=()=>{
-          if(!Number.isFinite(audio.duration)||audio.duration*1000<endMs-50)return finish('unavailable');
-          audio.currentTime=startMs/1000;
-          audio.play().catch(()=>finish('unavailable'));
-        };
-        audio.onpause=()=>{
-          if(generation!==this.generation)finish('interrupted');
-        };
-        ticker=window.setInterval(()=>{
-          if(generation!==this.generation)finish('interrupted');
-          else if(audio.currentTime*1000>=endMs-35)finish('played');
-        },35);
-      });
-    }
-    if(typeof window==='undefined'||!('speechSynthesis'in window))
-      return Promise.resolve('unavailable');
+    // Browsers are allowed to reject autoplay, codec or CORS policy. Report
+    // failure instead of pretending the learner heard the clip.
+    if(typeof Audio==='undefined')return {clipId,status:'unavailable',source:'gemini-tts-factory'};
+    const audio=new Audio(this.authored.audioUrl);
+    audio.preload='auto';
+    this.activeAudio=audio;
     return new Promise(resolve=>{
       let settled=false;
-      const finish=(value:'played'|'interrupted'|'unavailable')=>{
-        if(settled)return;settled=true;resolve(value);
+      const start=clip.startMs!/1000;
+      const end=clip.endMs!/1000;
+      const settle=(status:AudioClipResult['status'])=>{
+        if(settled)return;
+        settled=true;
+        audio.pause();
+        audio.removeEventListener('timeupdate',tick);
+        audio.removeEventListener('ended',ended);
+        audio.removeEventListener('error',errored);
+        audio.removeEventListener('loadedmetadata',loaded);
+        this.finishActive=()=>{};
+        if(this.activeAudio===audio)this.activeAudio=null;
+        this.emit(idle);
+        resolve({clipId,status,source:'gemini-tts-factory'});
       };
-      const utterance=new SpeechSynthesisUtterance(turn.english);
-      utterance.lang=this.authored.language;
-      utterance.rate=.83;
-      const voices=window.speechSynthesis.getVoices().filter(v=>v.lang.toLowerCase().startsWith('en'));
-      if(voices.length){
-        utterance.voice=voices[turn.speaker==='maya'?0:Math.min(1,voices.length-1)];
-      }
-      const watchdog=window.setTimeout(()=>finish('unavailable'),Math.max(16000,turn.english.length*250));
-      const originalFinish=finish;
-      const guardedFinish=(value:'played'|'interrupted'|'unavailable')=>{
-        window.clearTimeout(watchdog);
-        originalFinish(value);
+      this.finishActive=settle;
+      const tick=()=>{
+        const ms=Math.round(audio.currentTime*1000);
+        const turn:LessonAudioTurn|undefined=turns.find(t=>
+          t.startMs!==undefined&&t.endMs!==undefined&&ms>=t.startMs&&ms<t.endMs);
+        this.emit({status:'playing',clipId,speaker:turn?.speaker??null,turnId:turn?.id??null,positionMs:ms});
+        if(audio.currentTime>=end-.025)settle('played');
       };
-      utterance.onend=()=>guardedFinish(generation===this.generation?'played':'interrupted');
-      utterance.onerror=()=>guardedFinish(generation===this.generation?'unavailable':'interrupted');
-      this.currentUtterance=utterance;
-      window.speechSynthesis.speak(utterance);
+      const ended=()=>settle(audio.currentTime>=end-.1?'played':'error');
+      const errored=()=>settle('error');
+      const loaded=()=>{
+        if(this.activeAudio!==audio)return;
+        if(!Number.isFinite(audio.duration)||end>audio.duration+.1){settle('error');return;}
+        audio.currentTime=start;
+        void audio.play().catch(()=>settle('unavailable'));
+      };
+      audio.addEventListener('timeupdate',tick);
+      audio.addEventListener('ended',ended);
+      audio.addEventListener('error',errored);
+      audio.addEventListener('loadedmetadata',loaded);
+      audio.load();
     });
   }
+
   close(){this.interrupt();}
 }
 
-/** Registered tool deliberately accepts only authored IDs, never arbitrary URLs/timings. */
-export function lessonAudioTool(packageData:LessonAudioPackage,controller:LessonAudioController,awaitTeacherSilence:()=>Promise<boolean>):LiveClientTool{
+/**
+ * Otti can replay named segments, never arbitrary audio, URLs or time ranges.
+ * The tool waits until the app says Otti's live PCM queue is silent; successful
+ * output is returned only once the actual WAV has finished audibly playing.
+ */
+export function lessonAudioTool(
+  packageData:LessonAudioPackage,
+  controller:LessonAudioController,
+  awaitTeacherSilence:()=>Promise<boolean>,
+):LiveClientTool {
   return {
     declaration:{
       name:'play_lesson_audio',
-      description:'Play a reviewed, pre-authored lesson audio clip to the learner. Only the named clip IDs are allowed. Waits for playback completion; does not send recording to the AI. Use only for requested replay or when the app invites it.',
+      description:'Replay an authored excerpt of the approved lesson recording. Select clipId from the enumerated clips. The tool returns only after actual playback or a failure. Do not speak over it.',
       behavior:'BLOCKING',
-      parameters:{type:'object',properties:{clipId:{type:'string',enum:packageData.clips.map(x=>x.id)}},required:['clipId']},
+      parameters:{
+        type:'object',
+        properties:{clipId:{type:'string',enum:packageData.clips.map(x=>x.id)}},
+        required:['clipId'],
+      },
     },
-    async handle(args){
-      if(typeof args.clipId!=='string'||!packageData.clips.some(x=>x.id===args.clipId))
-        return {error:'Unknown clip ID. Use an authored clip ID.'};
-      if(!(await awaitTeacherSilence()))return {error:'Teacher voice is still playing. Retry when silent.'};
-      return controller.play(args.clipId);
+    async handle(args) {
+      if(typeof args.clipId!=='string'||!packageData.clips.some(c=>c.id===args.clipId))
+        return {error:'Unknown lesson clip ID'};
+      if(!(await awaitTeacherSilence()))return {error:'Teacher voice is still playing'};
+      const result=await controller.play(args.clipId);
+      if(result.status!=='played')return {error:'Audio playback '+result.status,clipId:args.clipId};
+      return result;
     }
   };
 }
