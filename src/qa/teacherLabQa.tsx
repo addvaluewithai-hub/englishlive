@@ -6,6 +6,7 @@ import { ProductIcon } from '../components/ProductIcon';
 import { LESSON_QA_REGISTRY, getLessonQaRegistration } from './lessonQaRegistry';
 import { getQaLessonVisual } from './lessonQaVisuals';
 import { TeacherLabBoardLayer } from '../lessonScenes/TeacherLabBoardLayer';
+import { LessonAudioPanel } from '../lessonScenes/LessonAudioPanel';
 import '../ui/theme/tokens.css';
 import '../styles.css';
 import '../session-stage.css';
@@ -46,7 +47,7 @@ import '../practice-hint-dynamic.css';
 import '../lessonScenes/teacherBoardPilot.css';
 
 type FixtureMode = 'teaching' | 'question' | 'correct-feedback' | 'wrong-feedback'
-  | 'speaking-listening' | 'speaking-otti' | 'complete';
+  | 'speaking-listening' | 'speaking-otti' | 'complete' | 'audio-playing';
 const args = new URLSearchParams(location.search);
 const lessonId = args.get('lesson') ?? Object.keys(LESSON_QA_REGISTRY)[0];
 const {lesson, beats, visualKey, finalSpeakingSceneId} = getLessonQaRegistration(lessonId);
@@ -57,9 +58,9 @@ if (!selectedScene) throw new Error('Unknown QA scene: '+sceneId);
 const beatId = args.get('beat') || beats[sceneId]?.[0]?.id || '';
 if (!beats[sceneId]?.some(x=>x.id===beatId)) throw new Error('Unknown QA beat: '+beatId);
 const mode = (args.get('state') || (selectedScene.activity?'teaching':'speaking-listening')) as FixtureMode;
-const validModes:FixtureMode[] = ['teaching','question','correct-feedback','wrong-feedback','speaking-listening','speaking-otti','complete'];
+const validModes:FixtureMode[] = ['teaching','audio-playing','question','correct-feedback','wrong-feedback','speaking-listening','speaking-otti','complete'];
 if(!validModes.includes(mode)) throw new Error('Invalid QA state: '+mode);
-if (Boolean(selectedScene.activity) !== ['teaching','question','correct-feedback','wrong-feedback'].includes(mode)
+if (Boolean(selectedScene.activity) !== ['teaching','audio-playing','question','correct-feedback','wrong-feedback'].includes(mode)
     && mode!=='complete') throw new Error('Scene/QA mode mismatch: '+sceneId+' / '+mode);
 
 function QaClassroom(){
@@ -75,6 +76,11 @@ function QaClassroom(){
   const answered = state==='correct-feedback' || state==='wrong-feedback';
   const showBoard = !isSpeaking && state!=='complete';
   const speaking = state==='speaking-otti';
+  const audio = getLessonQaRegistration(lessonId).audio;
+  const audioClip=beats[sceneId]?.find(b=>b.audioClipId)?.audioClipId;
+  const audioState={status:(state==='audio-playing'?'playing':'idle') as 'idle'|'playing',
+    clipId:audioClip||null,speaker:state==='audio-playing'?'maya':null,
+    turnId:state==='audio-playing'?'greeting':null,mode:audio?.assetUrl?'asset' as const:'browser-preview' as const};
   const status = isSpeaking ? (speaking?'speaking':'listening') : (state==='teaching'?'speaking':state==='question'?'listening':'speaking');
   const onChoose = (_scene:string,id:string)=>{
     if (state!=='question'||!selectedScene?.activity) return {accepted:false,correct:false};
@@ -113,6 +119,9 @@ function QaClassroom(){
           sceneId={sceneId} beatId={beatId} activity={selectedScene.activity}
           answered={answered} choiceId={choice}
           questionReady={state==='question'} onChoose={onChoose} Visual={LessonVisual}
+          extra={audio&&audioClip ? <LessonAudioPanel audio={audio} sceneClipId={audioClip}
+            state={audioState} heardFull={state!=='teaching'} disabled={state==='audio-playing'}
+            onPlay={()=>{}}/>:undefined}
         />:null}
       </main>
       <footer className="premium-lesson-footer">
