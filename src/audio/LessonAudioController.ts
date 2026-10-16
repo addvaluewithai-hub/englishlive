@@ -61,9 +61,37 @@ export class LessonAudioController {
   }
   private speakTurn(turn:LessonAudioTurn,mode:'asset'|'browser-preview',generation:number):Promise<'played'|'interrupted'|'unavailable'>{
     if(mode==='asset'){
-      // Real asset playback needs per-turn indexed URLs or reviewed timestamps;
-      // don't play the entire conversation for a requested fragment.
-      return Promise.resolve('unavailable');
+      const startMs=turn.startMs;
+      const endMs=turn.endMs;
+      if(!this.authored.assetUrl||startMs===undefined||endMs===undefined)return Promise.resolve('unavailable');
+      return new Promise(resolve=>{
+        const audio=new Audio(this.authored.assetUrl!);
+        audio.preload='auto';
+        this.activeAudio=audio;
+        let settled=false;
+        let ticker:number|undefined;
+        const finish=(state:'played'|'interrupted'|'unavailable')=>{
+          if(settled)return;settled=true;
+          if(ticker!==undefined)window.clearInterval(ticker);
+          audio.pause();
+          audio.removeAttribute('src');
+          if(this.activeAudio===audio)this.activeAudio=null;
+          resolve(state);
+        };
+        audio.onerror=()=>finish('unavailable');
+        audio.onloadedmetadata=()=>{
+          if(!Number.isFinite(audio.duration)||audio.duration*1000<endMs-50)return finish('unavailable');
+          audio.currentTime=startMs/1000;
+          audio.play().catch(()=>finish('unavailable'));
+        };
+        audio.onpause=()=>{
+          if(generation!==this.generation)finish('interrupted');
+        };
+        ticker=window.setInterval(()=>{
+          if(generation!==this.generation)finish('interrupted');
+          else if(audio.currentTime*1000>=endMs-35)finish('played');
+        },35);
+      });
     }
     if(typeof window==='undefined'||!('speechSynthesis'in window))
       return Promise.resolve('unavailable');
@@ -79,8 +107,14 @@ export class LessonAudioController {
       if(voices.length){
         utterance.voice=voices[turn.speaker==='maya'?0:Math.min(1,voices.length-1)];
       }
-      utterance.onend=()=>finish(generation===this.generation?'played':'interrupted');
-      utterance.onerror=()=>finish('unavailable');
+      const watchdog=window.setTimeout(()=>finish('unavailable'),Math.max(16000,turn.english.length*250));
+      const originalFinish=finish;
+      const guardedFinish=(value:'played'|'interrupted'|'unavailable')=>{
+        window.clearTimeout(watchdog);
+        originalFinish(value);
+      };
+      utterance.onend=()=>guardedFinish(generation===this.generation?'played':'interrupted');
+      utterance.onerror=()=>guardedFinish(generation===this.generation?'unavailable':'interrupted');
       this.currentUtterance=utterance;
       window.speechSynthesis.speak(utterance);
     });
