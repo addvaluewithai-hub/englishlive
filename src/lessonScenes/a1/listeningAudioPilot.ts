@@ -43,11 +43,11 @@ export const A1_U1_L01_AUDIO:LessonAudioPackage = {
   vttUrl:null,
   approved:false,
   turns:[
-    {id:'greeting',speaker:'maya',english:"Hello. I'm Maya. What's your name?"},
+    {id:'greeting',speaker:'maya',english:"Good morning! I'm Maya. What's your name?"},
     {id:'reply-name',speaker:'leo',english:"Hi, Maya. My name is Leo."},
     {id:'how-are-you',speaker:'maya',english:"How are you, Leo?"},
-    {id:'fine-thanks',speaker:'leo',english:"I'm fine, thanks. And you?"},
-    {id:'okay-bye',speaker:'maya',english:"I'm okay, thank you. Bye!"},
+    {id:'fine-thanks',speaker:'leo',english:"Pretty good, thanks. And you?"},
+    {id:'okay-bye',speaker:'maya',english:"Really good, thank you. Bye!"},
     {id:'bye',speaker:'leo',english:"Bye, Maya!"}
   ],
   clips:[
