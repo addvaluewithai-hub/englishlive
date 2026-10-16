@@ -299,6 +299,7 @@ export function SceneLessonScreen() {
     if(!listeningLab||!audio)return false;
     holdMicForTeacherContinuation.current = true;
     setLearnerMicEnabled(false);
+    setStatus('speaking');
     const result=await audio.play(clipId);
     compactLog.current.push({role:'TOOL',text:`[lesson audio] ${clipId} → ${result.status} (${result.mode})`});
     if(result.status==='played'){
@@ -531,6 +532,7 @@ export function SceneLessonScreen() {
 
   async function closeLive() {
     clearScriptTimers();
+    lessonAudio.current?.close();
     pendingScriptBoard.current = null;
     pendingQuizFeedback.current = null;
     setScriptPaused(false);
@@ -633,7 +635,16 @@ export function SceneLessonScreen() {
     const characterPerformance = new CharacterPerformanceController(() => host.current);
     performer.current = characterPerformance;
     if(listeningLab){
-      lessonAudio.current = new LessonAudioController(A1_U1_L01_AUDIO,setLessonAudioState);
+      lessonAudio.current = new LessonAudioController(A1_U1_L01_AUDIO,(state)=>{
+        setLessonAudioState(state);
+        if(state.status==='playing'){
+          setLearnerMicEnabled(false);
+          setStatus('speaking');
+        } else if(!scripted.current.isReading && !playback.current?.isPlaying){
+          setStatus('listening');
+          if(!sceneRuntime.currentScene.activity)setLearnerMicEnabled(true);
+        }
+      });
     }
 
     let live: GeminiLiveTransport;
@@ -753,6 +764,7 @@ export function SceneLessonScreen() {
           void queue.enqueue(data, pcmSampleRate(mimeType));
         },
         onInterrupted: () => {
+          lessonAudio.current?.interrupt();
           if (teacherLab && scripted.current.isReading) {
             scripted.current.pause();
             clearScriptTimers();
