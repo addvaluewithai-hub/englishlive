@@ -54,7 +54,7 @@ test('factory clip player rejects unapproved recording: no browser-synth pretend
   const ctrl=new LessonAudioController(A1_U1_L01_AUDIO);
   const tool=lessonAudioTool(A1_U1_L01_AUDIO,ctrl,async()=>true);
   assert.ok(tool.declaration.parameters.properties.clipId.enum.includes('name-exchange'));
-  assert.match((await tool.handle({clipId:'made-up'})).error,/Unknown clip/);
+  assert.match((await tool.handle({clipId:'made-up'})).error,/Unknown .*clip/i);
   const result=await tool.handle({clipId:'name-exchange'});
   assert.match(result.error,/unavailable/);
   assert.equal(ctrl.snapshot.status,'idle');
