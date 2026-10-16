@@ -9,7 +9,7 @@ export const A1_U1_L01_LISTENING_PILOT:SceneLessonDefinition={
   title:"Hello. I'm … · Listening Classroom",
   subtitle:'Hear a first meeting; learn to greet, exchange names, and ask how someone is.',
   performance:'Greet, exchange names, handle wellbeing and simple politeness in a fresh first meeting.',
-  coreLanguage:['Hello / Hi','Good morning',"I'm … / My name is …","What's your name?","How are you?","I'm fine / I'm okay","Thanks / Thank you","Bye"],
+  coreLanguage:['Hello / Hi','Good morning',"I'm … / My name is …","What's your name?","How are you?","I'm fine / I'm okay","pretty good / really good","Thanks / Thank you","Bye"],
   boundaries:[
     'Follow A1 Stage 07 U1-L01, not the older broader A1 legacy scene definition.',
     'No age, origin, job, spelling, long numbers, or news-reaction routines; those belong to later lessons.',
@@ -23,7 +23,7 @@ export const A1_U1_L01_LISTENING_PILOT:SceneLessonDefinition={
       id:'first-listen',
       title:'Listen to a first meeting',
       goal:'Recognize what two people exchange when they meet for the first time.',
-      teaching:{explainInArabic:['Give a very short setup, let the full two-person audio play, then ask one broad comprehension question. Do not preteach answers.'],englishTargets:['Hello','How are you?','Bye'],constraints:['Keep first listening meaning-focused, no full visible transcript until after listening.']},
+      teaching:{explainInArabic:['Give a very short setup, let the full two-person audio play, then ask one broad comprehension question. Do not preteach answers.'],englishTargets:['Good morning','Hi','How are you?'],constraints:['Keep first listening meaning-focused, no full visible transcript until after listening.']},
       interaction:{kind:'elicitation',setup:'Ask broad comprehension MC after the first listening.',learnerTask:'Choose what the people were doing.',supportLadder:['Replay the full conversation','Explain that they are meeting for the first time']},
       activity:{promptAr:'Maya وLeo كانوا بيتكلموا عن إيه؟',options:[
         {id:'meeting',text:'They meet, say their names, and ask how they are.'},
@@ -31,14 +31,14 @@ export const A1_U1_L01_LISTENING_PILOT:SceneLessonDefinition={
         {id:'directions',text:'They ask for directions.'},
       ],correctOptionId:'meeting',
       successAr:'تمام! اتقابلوا، عرفوا أسماءهم، وسألوا عن الحال.',
-      retryAr:'اسمع البداية: Hello و What’s your name? دول تحية وتعارف، مش شراء أو اتجاهات.'
+      retryAr:'اسمع البداية: Good morning و What’s your name? دول تحية وتعارف، مش شراء أو اتجاهات.'
       }
     },
     {
       id:'say-your-name',
       title:'Say your name',
       goal:'Recognize I’m / My name is and the question What’s your name?',
-      teaching:{explainInArabic:['Replay the two authored name lines; explain natural name chunks in context.'],englishTargets:["I'm Maya.","My name is Leo.","What's your name?"],constraints:['No age/country/job questions','No conjugation tables']},
+      teaching:{explainInArabic:['Replay the two authored name lines; explain natural name chunks in context.'],englishTargets:['Good morning',"I'm Maya.","My name is Leo.","What's your name?"],constraints:['No age/country/job questions','No conjugation tables']},
       interaction:{kind:'micro_practice',setup:'Ask a changed-name choice.',learnerTask:'Choose a natural answer to What’s your name?',supportLadder:['Replay the name exchange','Explain the answer choice with a new example']},
       activity:{promptAr:'لما حد يسألك What’s your name? أنهي رد مناسب؟',options:[
         {id:'name',text:"I'm Noor."},
@@ -53,14 +53,14 @@ export const A1_U1_L01_LISTENING_PILOT:SceneLessonDefinition={
       id:'ask-how-are-you',
       title:'How are you?',
       goal:'Recognize a polite response to a basic wellbeing question.',
-      teaching:{explainInArabic:['Replay the authored wellbeing lines and explain question/answer with thanks and And you?.'],englishTargets:['How are you?',"I'm fine, thanks.","And you?","I'm okay, thank you."],constraints:['Stay in short basic wellbeing and politeness','No feelings chart']},
+      teaching:{explainInArabic:['Replay the authored wellbeing lines and explain question/answer with thanks and And you?.'],englishTargets:['How are you?','Pretty good, thanks.','Really good, thank you.',"I'm fine, thanks.",'And you?'],constraints:['Stay in short basic wellbeing and politeness','No feelings chart']},
       interaction:{kind:'micro_practice',setup:'Use contextual comprehension MC.',learnerTask:'Choose the answer to How are you?',supportLadder:['Replay wellbeing clip','Contrast answer about how someone is with answer about their name']},
       activity:{promptAr:'Leo سأل عن الحال. أنهي رد طبيعي؟',options:[
         {id:'name',text:"My name is Maya."},
         {id:'fine',text:"I'm fine, thanks. And you?"},
         {id:'place',text:"I'm from Cairo."},
       ],correctOptionId:'fine',
-      successAr:'أحسنت! I’m fine, thanks إجابة عن الحال، وAnd you? بترد السؤال بلطف.',
+      successAr:'أحسنت! I’m fine, thanks إجابة طبيعية عن الحال، زي Pretty good, thanks وReally good, thank you اللي سمعناهم.',
       retryAr:'How are you? معناها إزيك، فالإجابة عن الحال: I’m fine, thanks. And you?'
       }
     },
