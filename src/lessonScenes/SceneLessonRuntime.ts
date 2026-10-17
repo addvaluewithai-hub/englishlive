@@ -330,6 +330,36 @@ ${JSON.stringify(this.scenePayload(this.currentScene), null, 2)}
     return true;
   }
 
+  /**
+   * Preview MC progression belongs to the app, not to Gemini deciding whether to
+   * invoke a tool. Call ONLY on the PCM queue's genuinely audible turn-complete
+   * callback, AFTER markQuizFeedbackPlayed(sceneId) recorded that exact playback.
+   * It delegates to the SAME evidence-logging complete_scene path; a wrong MC
+   * records review-needed reception, never productive mastery.
+   */
+  completeGradedPreviewQuizAfterAudio(sceneId: string): {
+    error?: string;
+    completedSceneId?: string;
+    lessonComplete?: boolean;
+    nextScene?: { id?: string };
+  } {
+    if (!this.preview || this.state.completedAt || this.currentScene.id !== sceneId
+      || !this.narrationComplete || !this.currentScene.activity
+      || !this.state.scenes[sceneId]?.activityAnswered
+      || !this.state.scenes[sceneId]?.activityFeedbackPlayed) {
+      return {error: 'Cannot advance a quiz without an answered question and actually completed spoken feedback.'};
+    }
+    return this.completeSceneTool().handle({
+      evidenceType: 'receptive_comprehension',
+      supportUsed: 'none',
+      freshIndependentRetry: false,
+      learnerTurnsObserved: 0,
+      summary: this.state.scenes[sceneId].activityPassed
+        ? 'Correct application-graded question; authored spoken feedback delivered.'
+        : 'Incorrect application-graded question; authored spoken feedback delivered, review needed.',
+    }) as { error?: string; completedSceneId?: string; lessonComplete?: boolean; nextScene?: { id?: string } };
+  }
+
   private persistAndEmit() {
     this.state.updatedAt = new Date().toISOString();
     const snapshot = this.snapshot;
