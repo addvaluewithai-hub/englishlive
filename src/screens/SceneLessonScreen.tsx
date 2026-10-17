@@ -1013,7 +1013,7 @@ export function SceneLessonScreen() {
               extra={v04Review && currentScene.id === 's04-reading-note' ? (
                 <A1V04ReadingNote
                   text={A1_V04_BEATS['s04-reading-note']?.[0]?.board?.type === 'note'
-                    ? A1_V04_BEATS['s04-reading-note'][0].board.body : ''}/>
+                    ? (A1_V04_BEATS['s04-reading-note'][0].board.body ?? '') : ''}/>
               ) : listeningLab && (!v04Review || teachingBeats[currentScene.id]?.some(beat=>beat.audioClipId)) ? (
                 <LessonAudioPanel audio={activeAudio}
                   sceneClipId={teachingBeats[currentScene.id]?.find(beat=>beat.audioClipId)?.audioClipId ?? 'full-conversation'}
