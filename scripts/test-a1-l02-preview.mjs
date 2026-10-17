@@ -8,6 +8,7 @@ import { A1_L02_FRAMES, A1L02LearningVisual } from '../src/lessonScenes/a1/A1L02
 import { LESSON_QA_REGISTRY, assertQaRegistration, buildLessonQaCases } from '../src/qa/lessonQaRegistry.ts';
 import { validateLessonAudio, getAuthoredClip } from '../src/lessonScenes/a1/listeningAudioPilot.ts';
 import { getQaLessonVisual } from '../src/qa/lessonQaVisuals.ts';
+import { SceneLessonRuntime } from '../src/lessonScenes/SceneLessonRuntime.ts';
 
 test('L02 is an isolated seven-scene teaching preview; older L01 previews are retained',()=>{
   assert.equal(lesson.id,'a1-u1-l02-age-review');
@@ -106,4 +107,48 @@ test('real factory output corresponds to the exact reviewed source, not L01 sour
  assert.equal(a.phone.lastDigits,'68');
  assert.ok(a.phone.transcriptRecognizedLastDigits);
  assert.equal(a.humanAuditionVerified,false);
+});
+
+test('app-owned quiz handoff cannot skip before audible feedback, then advances without a Gemini tool call',()=>{
+  const runtime=new SceneLessonRuntime(lesson,{preview:true});
+  runtime.markLessonOpeningComplete();
+  runtime.markScriptedNarrationComplete('listen-first');
+  const picked=runtime.submitBoardChoice('listen-first','card');
+  assert.deepEqual(picked,{accepted:true,correct:true});
+  const tooEarly=runtime.completeGradedPreviewQuizAfterAudio('listen-first');
+  assert.match(tooEarly.error,/without an answered question and actually completed spoken feedback/);
+  assert.equal(runtime.currentScene.id,'listen-first');
+  assert.equal(runtime.markQuizFeedbackPlayed('listen-first'),true);
+  const next=runtime.completeGradedPreviewQuizAfterAudio('listen-first');
+  assert.equal(next.error,undefined);
+  assert.equal(next.completedSceneId,'listen-first');
+  assert.equal(next.nextScene?.id,'age-meaning');
+  assert.equal(runtime.currentScene.id,'age-meaning');
+  assert.equal(runtime.snapshot.scenes['listen-first'].activityPassed,true);
+  assert.equal(runtime.snapshot.scenes['listen-first'].evidence[0].evidenceType,'receptive_comprehension');
+  assert.equal(runtime.snapshot.scenes['listen-first'].evidence[0].learnerTurnsObserved,0);
+  assert.ok(!runtime.snapshot.completedAt,'first quiz is not full lesson graduation');
+  const twice=runtime.completeGradedPreviewQuizAfterAudio('listen-first');
+  assert.ok(twice.error,'stale callback cannot advance a second scene');
+
+  // A wrong answer must also hand off without silently upgrading its skill.
+  runtime.markScriptedNarrationComplete('age-meaning');
+  assert.deepEqual(runtime.submitBoardChoice('age-meaning','21'),{accepted:true,correct:false});
+  assert.ok(runtime.completeGradedPreviewQuizAfterAudio('age-meaning').error,'must wait for real feedback');
+  runtime.markQuizFeedbackPlayed('age-meaning');
+  const nextWrong=runtime.completeGradedPreviewQuizAfterAudio('age-meaning');
+  assert.equal(nextWrong.nextScene?.id,'number-patterns');
+  assert.equal(runtime.snapshot.scenes['age-meaning'].activityPassed,false);
+  assert.match(runtime.snapshot.scenes['age-meaning'].evidence[0].summary,/incorrectly|Review needed/i);
+  assert.equal(runtime.snapshot.scenes['age-meaning'].evidence[0].learnerTurnsObserved,0);
+});
+test('real PCM callback has app-owned handoff and audible-feedback recovery, not a Gemini complete_scene hope',async()=>{
+  const src=await readFile(new URL('../src/screens/SceneLessonScreen.tsx',import.meta.url),'utf8');
+  assert.match(src,/if \(teacherLab && pendingQuizFeedback\.current\)/);
+  assert.match(src,/sceneRuntime\.markQuizFeedbackPlayed\(result\.sceneId\)/);
+  assert.match(src,/sceneRuntime\.completeGradedPreviewQuizAfterAudio\(result\.sceneId\)/);
+  assert.doesNotMatch(src,/\[QUIZ_FEEDBACK_FINISHED\]/,'Model text instruction is not reliable app progression');
+  assert.match(src,/quizFeedbackTimeout\.current=window\.setTimeout/);
+  assert.match(src,/function retryQuizFeedback\(\)/);
+  assert.match(src,/إعادة شرح الإجابة/);
 });
