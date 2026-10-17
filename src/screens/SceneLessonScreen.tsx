@@ -1093,7 +1093,7 @@ export function SceneLessonScreen() {
         {error ? <div className="premium-live-error" role="alert">{error}</div> : null}
         {quizFeedbackRetryVisible && pendingQuizFeedback.current?.sceneId===currentScene.id ? (
           <button type="button" className="teacher-pilot-resume"
-            onClick={retryQuizFeedback} disabled={!transport.current?.connected || teacherSpeaking}>
+            onClick={retryQuizFeedback} disabled={!transport.current?.connected || scripted.current.isReading || lessonAudioState.status!=='idle'}>
             <ProductIcon name="refresh" size={18} /> إعادة شرح الإجابة
           </button>
         ) : null}
