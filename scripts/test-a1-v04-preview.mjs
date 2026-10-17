@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { readFile } from 'node:fs/promises';
 import {
   A1_U1_L01_V04_LESSON as lesson, A1_V04_BEATS as beats,
   A1_V04_FEEDBACK as feedback, A1_U1_L01_V04_AUDIO as audio,
@@ -24,7 +25,7 @@ test('v04 natural listening contains eight reviewed source turns and honest miss
   assert.equal(audio.clips.length,5);
   assert.equal(audio.approved,false);
   assert.equal(audio.audioUrl,null);
-  assert.equal(audio.factoryJobId,'NOT-COMMISSIONED-v04-editorial-review');
+  assert.equal(audio.factoryJobId,'englotti-a1-u1-l01-v04-preview-20261017-01');
   assert.equal(getAuthoredClip(audio,'full-conversation').length,8);
   assert.equal(getAuthoredClip(audio,'greetings-names').length,3);
   assert.equal(getAuthoredClip(audio,'wellbeing').length,3);
@@ -68,4 +69,19 @@ test('six MCs have balanced answer positions and exact teacher correction for ea
   }
   assert.equal(lesson.scenes.at(-1).activity,undefined);
   assert.match(beats['s07-new-speaking'][0].line,/Sam/);
+});
+
+test('paid TTS job is exact immutable v04 eight-turn script with two expected voices, but no approved output yet', async()=>{
+  const req=JSON.parse(await readFile(new URL('../production/a1-u1-l01/gemini-tts-request-v04-preview.json',import.meta.url),'utf8'));
+  assert.deepEqual(req.turns.map(t=>t.text),audio.turns.map(t=>t.english),'Never dispatch stale pilot02 script');
+  assert.deepEqual(req.turns.map(t=>t.speaker),audio.turns.map(t=>t.speaker==='maya'?'Maya':'Leo'));
+  assert.deepEqual(req.speakers,{Maya:'Aoede',Leo:'Achird'});
+  assert.equal(req.model,'gemini-3.8-flash-tts');
+  assert.equal(req.routing,'explicit');
+  assert.equal(req.allow_model_fallback,false);
+  assert.equal(req.transcript.write_vtt,true);
+  assert.equal(req.transcript.diarization,true);
+  assert.equal(req.metadata.jobId,audio.factoryJobId);
+  assert.equal(audio.approved,false);
+  assert.equal(audio.audioUrl,null);
 });
