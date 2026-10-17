@@ -31,6 +31,8 @@ import { A1_LISTENING_BEATS, A1_LISTENING_FEEDBACK } from '../lessonScenes/a1/li
 import { A1_U1_L01_AUDIO } from '../lessonScenes/a1/listeningAudioPilot';
 import { A1FirstMeetingVisual } from '../lessonScenes/a1/A1FirstMeetingVisual';
 import { A1V04ReviewVisual, A1V04ReadingNote } from '../lessonScenes/a1/A1V04ReviewVisual';
+import { A1L02LearningVisual } from '../lessonScenes/a1/A1L02LearningVisual';
+import { A1_L02_LESSON, A1_L02_BEATS, A1_L02_FEEDBACK, A1_L02_AUDIO } from '../lessonScenes/a1/l02AgePreview';
 import { A1_U1_L01_V04_LESSON, A1_V04_BEATS, A1_V04_FEEDBACK, A1_U1_L01_V04_AUDIO } from '../lessonScenes/a1/v04Preview';
 import { LessonAudioPanel } from '../lessonScenes/LessonAudioPanel';
 import { TeacherLabBoardLayer } from '../lessonScenes/TeacherLabBoardLayer';
@@ -38,6 +40,7 @@ import { ScriptedNarrationDirector } from '../lessonScenes/ScriptedNarrationDire
 import { B1_TEACHER_LAB_SCRIPT, B1_TEACHER_LAB_QUIZ_FEEDBACK, type TeachingBeat } from '../lessonScenes/b1/teacherLabScript';
 import '../lessonScenes/teacherBoardPilot.css';
 import { SceneLessonRuntime } from '../lessonScenes/SceneLessonRuntime';
+import { handoffAnsweredQuizAfterAudiblePcm } from '../lessonScenes/previewQuizHandoff';
 import type { SceneLessonState } from '../lessonScenes/types';
 import { GeminiLiveTransport } from '../live/GeminiLiveTransport';
 import type { LiveClientTool } from '../live/tools';
@@ -185,15 +188,16 @@ export function SceneLessonScreen() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const v04Review = lessonId === 'a1-u1-l01-v04-review';
+  const l02Review = lessonId === 'a1-u1-l02-age-review';
   const listeningLab = (lessonId === 'a1-u1-l01-hello-im' && params.get('listeningLab') === '1')
-    || lessonId === 'a1-u1-l01-listening-lab' || v04Review;
+    || lessonId === 'a1-u1-l01-listening-lab' || v04Review || l02Review;
   const teacherLab = listeningLab || (lessonId === 'b1-u1-l02-keep-conversation-going' && params.get('teacherLab') === '1');
-  const localLesson = v04Review ? A1_U1_L01_V04_LESSON
+  const localLesson = l02Review ? A1_L02_LESSON : v04Review ? A1_U1_L01_V04_LESSON
     : listeningLab ? A1_U1_L01_LISTENING_PILOT
     : teacherLab ? B1_L02_TEACHER_BOARD_PILOT : getRequiredSceneLesson(lessonId);
-  const teachingBeats = v04Review ? A1_V04_BEATS : listeningLab ? A1_LISTENING_BEATS : B1_TEACHER_LAB_SCRIPT;
-  const quizFeedback = v04Review ? A1_V04_FEEDBACK : listeningLab ? A1_LISTENING_FEEDBACK : B1_TEACHER_LAB_QUIZ_FEEDBACK;
-  const activeAudio = v04Review ? A1_U1_L01_V04_AUDIO : A1_U1_L01_AUDIO;
+  const teachingBeats = l02Review ? A1_L02_BEATS : v04Review ? A1_V04_BEATS : listeningLab ? A1_LISTENING_BEATS : B1_TEACHER_LAB_SCRIPT;
+  const quizFeedback = l02Review ? A1_L02_FEEDBACK : v04Review ? A1_V04_FEEDBACK : listeningLab ? A1_LISTENING_FEEDBACK : B1_TEACHER_LAB_QUIZ_FEEDBACK;
+  const activeAudio = l02Review ? A1_L02_AUDIO : v04Review ? A1_U1_L01_V04_AUDIO : A1_U1_L01_AUDIO;
   const profile = readLearnerProfile();
   const character = getCharacterDefinition(params.get('character') ?? profile?.characterId);
   const knownItems = knownItemsForLesson(localLesson.id);
@@ -214,6 +218,8 @@ export function SceneLessonScreen() {
   const scripted = useRef(new ScriptedNarrationDirector());
   const pendingScriptBoard = useRef<{ sceneId: string; beatId: string; board: SupportBoard | null } | null>(null);
   const pendingQuizFeedback = useRef<{ sceneId: string; correct: boolean } | null>(null);
+  const quizFeedbackTimeout = useRef<number | null>(null);
+  const [quizFeedbackRetryVisible,setQuizFeedbackRetryVisible] = useState(false);
   const [visibleBeatId, setVisibleBeatId] = useState('');
   const scriptNextTimer = useRef<number | null>(null);
   const scriptWatchdog = useRef<number | null>(null);
@@ -245,7 +251,24 @@ export function SceneLessonScreen() {
   const [pace, setPace] = useState<LessonSpeakingPace>(initialCheckpoint.current?.pace ?? 'relaxed');
   const [preflightReady, setPreflightReady] = useState(knownItems.length === 0 && !initialCheckpoint.current);
 
+  function clearQuizFeedbackTimeout() {
+    if (quizFeedbackTimeout.current !== null) window.clearTimeout(quizFeedbackTimeout.current);
+    quizFeedbackTimeout.current = null;
+  }
+
+  function scheduleQuizFeedbackRetry(sceneId:string) {
+    clearQuizFeedbackTimeout();
+    quizFeedbackTimeout.current=window.setTimeout(()=>{
+      if(pendingQuizFeedback.current?.sceneId !== sceneId ||
+        runtime.current?.currentScene.id !== sceneId)return;
+      setQuizFeedbackRetryVisible(true);
+      setError('شرح الإجابة الصوتي ما اكتملش. اضغط «إعادة شرح الإجابة» عشان تسمعه ونكمل بدون تخطي الصوت.');
+    },25_000);
+  }
+
   function clearScriptTimers() {
+    clearQuizFeedbackTimeout();
+    setQuizFeedbackRetryVisible(false);
     if (scriptNextTimer.current !== null) window.clearTimeout(scriptNextTimer.current);
     if (scriptWatchdog.current !== null) window.clearTimeout(scriptWatchdog.current);
     scriptNextTimer.current = null;
@@ -497,6 +520,24 @@ export function SceneLessonScreen() {
     setToolsOpen(false);
   }
 
+  function retryQuizFeedback() {
+    const pending=pendingQuizFeedback.current;
+    const live=transport.current;
+    if(!pending || !live?.connected || runtime.current?.currentScene.id!==pending.sceneId
+      || scripted.current.isReading || playback.current?.isPlaying)return;
+    const line=v04Review && !pending.correct
+      ? A1_V04_FEEDBACK[pending.sceneId]?.wrongByOption?.[runtime.current.snapshot.scenes[pending.sceneId]?.activityChoiceId ?? '']
+        ?? quizFeedback[pending.sceneId]?.wrong
+      : quizFeedback[pending.sceneId]?.[pending.correct ? 'correct':'wrong'];
+    if(!line)return;
+    setError(null);
+    setQuizFeedbackRetryVisible(false);
+    holdMicForTeacherContinuation.current=true;
+    setLearnerMicEnabled(false);
+    live.sendText('READ:\n'+line);
+    scheduleQuizFeedbackRetry(pending.sceneId);
+  }
+
   function chooseBoardActivity(sceneId: string, optionId: string) {
     const sceneRuntime = runtime.current;
     const live = transport.current;
@@ -513,6 +554,9 @@ export function SceneLessonScreen() {
         : quizFeedback[sceneId]?.[answer.correct ? 'correct' : 'wrong'];
       if (authoredFeedback) {
         pendingQuizFeedback.current = { sceneId, correct: answer.correct };
+        setQuizFeedbackRetryVisible(false);
+        setError(null);
+        scheduleQuizFeedbackRetry(sceneId);
         compactLog.current.push({ role: 'SCRIPT', text: `[${sceneId}/quiz-${answer.correct ? 'correct' : 'wrong'}] ${authoredFeedback}` });
         holdMicForTeacherContinuation.current = true;
         setLearnerMicEnabled(false);
@@ -723,11 +767,27 @@ export function SceneLessonScreen() {
           return;
         }
         if (teacherLab && pendingQuizFeedback.current) {
+          // The actual PCM queue has emitted audible turn-complete. The app
+          // commits the deterministic MC and schedules the next authored scene,
+          // rather than hoping Gemini autonomously calls complete_scene.
           const result = pendingQuizFeedback.current;
           pendingQuizFeedback.current = null;
+          clearQuizFeedbackTimeout();
+          setQuizFeedbackRetryVisible(false);
           holdMicForTeacherContinuation.current = false;
-          if (sceneRuntime.markQuizFeedbackPlayed(result.sceneId)) {
-            live.sendText(`[QUIZ_FEEDBACK_FINISHED] The app graded the authored MC answer as ${result.correct ? 'CORRECT' : 'INCORRECT'}. You have audibly read the authored explanation. NOW call complete_scene, learnerTurnsObserved=0, evidenceType=receptive_comprehension, supportUsed=none, freshIndependentRetry=false. Summary: ${result.correct ? 'Correct board comprehension' : 'Incorrect comprehension; explained correct answer; needs later review'}. This is NOT speaking mastery. Do not speak anything else before the tool call.`);
+          if(sceneRuntime.currentScene.id !== result.sceneId)return;
+          const done=handoffAnsweredQuizAfterAudiblePcm(sceneRuntime,result.sceneId);
+          if(done.error) {
+            setError('شرح Otti خلص، بس حصل خطأ في الانتقال: '+done.error);
+            return;
+          }
+          appendToolLog('app_owned_quiz_handoff',{sceneId:result.sceneId},done);
+          learnerSceneAfterSpeech.current=null;
+          clearDecisionNudge();
+          const nextId=done.nextScene?.id;
+          if(nextId){
+            if(scriptNextTimer.current !== null)window.clearTimeout(scriptNextTimer.current);
+            scriptNextTimer.current=window.setTimeout(()=>startScriptScene(nextId),400);
           }
           return;
         }
@@ -1009,12 +1069,12 @@ export function SceneLessonScreen() {
               choiceId={quizState?.activityChoiceId}
               questionReady={quizReady && status === 'listening' && Boolean(transport.current?.connected)}
               onChoose={chooseBoardActivity}
-              Visual={v04Review ? A1V04ReviewVisual : listeningLab ? A1FirstMeetingVisual : undefined}
+              Visual={l02Review ? A1L02LearningVisual : v04Review ? A1V04ReviewVisual : listeningLab ? A1FirstMeetingVisual : undefined}
               extra={v04Review && currentScene.id === 's04-reading-note' ? (
                 <A1V04ReadingNote
                   text={A1_V04_BEATS['s04-reading-note']?.[0]?.board?.type === 'note'
                     ? (A1_V04_BEATS['s04-reading-note'][0].board.body ?? '') : ''}/>
-              ) : listeningLab && (!v04Review || teachingBeats[currentScene.id]?.some(beat=>beat.audioClipId)) ? (
+              ) : listeningLab && (!(v04Review || l02Review) || teachingBeats[currentScene.id]?.some(beat=>beat.audioClipId)) ? (
                 <LessonAudioPanel audio={activeAudio}
                   sceneClipId={teachingBeats[currentScene.id]?.find(beat=>beat.audioClipId)?.audioClipId ?? 'full-conversation'}
                   state={lessonAudioState} heardFull={Boolean(heardClips['full-conversation'])}
@@ -1028,6 +1088,12 @@ export function SceneLessonScreen() {
         ) : null}
 
         {error ? <div className="premium-live-error" role="alert">{error}</div> : null}
+        {quizFeedbackRetryVisible && pendingQuizFeedback.current?.sceneId===currentScene.id ? (
+          <button type="button" className="teacher-pilot-resume"
+            onClick={retryQuizFeedback} disabled={!transport.current?.connected || scripted.current.isReading || lessonAudioState.status!=='idle'}>
+            <ProductIcon name="refresh" size={18} /> إعادة شرح الإجابة
+          </button>
+        ) : null}
       </main>
 
       <footer className="premium-lesson-footer">

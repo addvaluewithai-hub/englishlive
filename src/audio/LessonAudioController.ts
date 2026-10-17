@@ -56,7 +56,9 @@ export class LessonAudioController {
     // Browsers are allowed to reject autoplay, codec or CORS policy. Report
     // failure instead of pretending the learner heard the clip.
     if(typeof Audio==='undefined')return {clipId,status:'unavailable',source:'gemini-tts-factory'};
-    const audio=new Audio(this.authored.audioUrl);
+    // Some lessons have a separately recorded voice message, not a sentence
+    // cut from the conversational WAV. Keep it in this same gated controller.
+    const audio=new Audio(clip.audioUrl ?? this.authored.audioUrl);
     audio.preload='auto';
     this.activeAudio=audio;
     // Gate the live microphone BEFORE network fetch/metadata/seeking begins.

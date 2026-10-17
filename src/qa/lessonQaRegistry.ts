@@ -6,6 +6,7 @@ import { A1_U1_L01_LISTENING_PILOT } from '../lessonScenes/a1/listeningTeacherPi
 import { A1_LISTENING_BEATS } from '../lessonScenes/a1/listeningTeacherScript';
 import { A1_U1_L01_AUDIO, validateLessonAudio } from '../lessonScenes/a1/listeningAudioPilot';
 import { A1_U1_L01_V04_LESSON, A1_V04_BEATS, A1_U1_L01_V04_AUDIO } from '../lessonScenes/a1/v04Preview';
+import { A1_L02_LESSON, A1_L02_BEATS, A1_L02_AUDIO } from '../lessonScenes/a1/l02AgePreview';
 
 /**
  * Registry for deterministic classroom QA, NOT published lesson enrollment.
@@ -21,6 +22,13 @@ export interface LessonQaRegistration {
   audio?: typeof A1_U1_L01_AUDIO;
 }
 export const LESSON_QA_REGISTRY: Readonly<Record<string, LessonQaRegistration>> = {
+  [A1_L02_LESSON.id]: {
+    lesson:A1_L02_LESSON,
+    beats:A1_L02_BEATS,
+    finalSpeakingSceneId:'fresh-speaking',
+    visualKey:'a1-l02-age-board',
+    audio:A1_L02_AUDIO,
+  },
   [A1_U1_L01_V04_LESSON.id]: {
     lesson:A1_U1_L01_V04_LESSON,
     beats:A1_V04_BEATS,

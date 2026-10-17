@@ -393,3 +393,24 @@
     transform: none !important;
   }
 }
+
+/* A1 L02: target language and numeric meanings are the focal art, never portraits.
+   Desktop feedback keeps Otti away from age/number/phone MC options. */
+.teacher-pilot-card .a1-l02-meaning-board {
+  flex: 1 1 auto;
+  min-height: 85px;
+  max-height: 52%;
+  width: 100%;
+  border-radius: 15px;
+}
+@media (min-width: 621px) {
+  .premium-lesson-stage.is-teacher-lab.has-board:has(.a1-l02-meaning-board):has(.teacher-pilot-retry) .premium-lesson-character,
+  .premium-lesson-stage.is-teacher-lab.has-board:has(.a1-l02-meaning-board):has(.teacher-pilot-right) .premium-lesson-character {
+    position: absolute !important;
+    inset: auto 4px 4px auto !important;
+    width: 54px !important;
+    height: 54px !important;
+    padding: 0 !important;
+    transform: none !important;
+  }
+}

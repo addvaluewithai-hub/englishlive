@@ -1,0 +1,99 @@
+{
+  "factoryRunId": 39050780673,
+  "factoryRunUrl": "https://github.com/addvaluewithai-hub/gemini-tts/actions/runs/39050780673",
+  "factoryPullRequest": "https://github.com/addvaluewithai-hub/gemini-tts/pull/42",
+  "lessonId": "a1-u1-l02-age-review",
+  "source": "english-course Draft PR #14",
+  "status": "PREVIEW_AUDIO_STRUCTURAL_AUDIT_ONLY",
+  "sourceRolesUnchanged": true,
+  "curriculumOwner13RulingsApproved": false,
+  "releaseApproved": false,
+  "humanAuditionVerified": false,
+  "conversation": {
+    "jobId": "englotti-a1-u1-l02-dialogue-v01-20261017",
+    "model": "gemini-3.8-flash-tts",
+    "speakerVoices": {
+      "Maya": "Aoede",
+      "Leo": "Achird"
+    },
+    "wordsExpected": 41,
+    "wordsRecognized": 41,
+    "wavDurationMs": 19120,
+    "sampleRateHz": 24000,
+    "channels": 1,
+    "bitsPerSample": 16,
+    "wordNormalization": "Gemini transcription normalized spoken nineteen/twenty-one into digit tokens 19/21; word sequence consistent across 8 source turns.",
+    "turnBoundsMs": [
+      [
+        0,
+        2670
+      ],
+      [
+        2670,
+        4930
+      ],
+      [
+        4930,
+        7560
+      ],
+      [
+        7560,
+        10600
+      ],
+      [
+        10600,
+        11680
+      ],
+      [
+        11680,
+        14270
+      ],
+      [
+        14270,
+        17580
+      ],
+      [
+        17580,
+        19120
+      ]
+    ],
+    "measurement": "At the seven diarized speaker-change silences, selected 80ms RMS minimum using unpacked PCM; each source word wholly contained by a turn boundary.",
+    "audioUrl": "https://res.cloudinary.com/as9o12al/video/upload/v1792255538/gemini-tts/englotti-a1-u1-l02-dialogue-v01-20261017.wav",
+    "transcriptUrl": "https://res.cloudinary.com/as9o12al/raw/upload/v1792255539/gemini-tts/englotti-a1-u1-l02-dialogue-v01-20261017.transcript.json",
+    "vttUrl": "https://res.cloudinary.com/as9o12al/raw/upload/v1792255540/gemini-tts/englotti-a1-u1-l02-dialogue-v01-20261017.transcript.vtt"
+  },
+  "phone": {
+    "jobId": "englotti-a1-u1-l02-phone-v01-20261017",
+    "model": "gemini-3.8-flash-tts",
+    "voice": "Erinome",
+    "wavDurationMs": 10280,
+    "sampleRateHz": 24000,
+    "channels": 1,
+    "bitsPerSample": 16,
+    "script": "Hello. This is a practice number: five, zero, two, six, eight, three, six, eight. Thank you.",
+    "recognized": "Hello, this is a practice number 50 2 6 8 3 6 8 Thank you.",
+    "observedWordCount": 15,
+    "scriptWordCount": 16,
+    "firstTwoDigitRecognitionNote": "Gemini transcription fused spoken 'five, zero' into numeric token '50'. This transcription alone does not establish that both digits sounded clearly distinct; manual listening still required.",
+    "lastDigits": "68",
+    "transcriptRecognizedLastDigits": true,
+    "lastDigitsEvidence": "Recognized word tokens at approx 8000-9200 ms were separate '6' and '8', matching assessed last two digits.",
+    "sourceTurnBoundsMs": [
+      0,
+      10280
+    ],
+    "audioUrl": "https://res.cloudinary.com/as9o12al/video/upload/v1792255549/gemini-tts/englotti-a1-u1-l02-phone-v01-20261017.wav",
+    "transcriptUrl": "https://res.cloudinary.com/as9o12al/raw/upload/v1792255550/gemini-tts/englotti-a1-u1-l02-phone-v01-20261017.transcript.json",
+    "vttUrl": "https://res.cloudinary.com/as9o12al/raw/upload/v1792255550/gemini-tts/englotti-a1-u1-l02-phone-v01-20261017.transcript.vtt"
+  },
+  "qualityBoundaries": {
+    "recordedBoth": true,
+    "previewPlaybackEnabled": true,
+    "sourceIds13StillOwnerPending": true,
+    "frontendBuildVerified": false,
+    "fullResponsiveFrameReviewVerified": false,
+    "actualBrowserLoginAndGeminiLiveMicVerified": false,
+    "novicePedagogicalAcceptance": false
+  },
+  "auditCaveat": "Static inspection of exact WAV headers and actual Gemini word timestamps; not a human audio quality review. QA tests/Cloudflare and owner playback still required."
+}

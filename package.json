@@ -16,6 +16,7 @@
     "test:learn-qa-registry": "node --import tsx --test scripts/test-learn-qa-registry.mjs",
     "test:a1-listening": "node --import tsx --test scripts/test-a1-listening-pilot.mjs",
     "test:a1-v04": "node --import tsx --test scripts/test-a1-v04-preview.mjs",
+    "test:a1-l02": "node --import tsx --test scripts/test-a1-l02-preview.mjs",
     "qa:learn:frames:all": "node --import tsx scripts/capture-all-learn-frame-sheets.mjs",
     "preview": "vite preview",
     "cf:dev": "npm run build && wrangler pages dev dist",
