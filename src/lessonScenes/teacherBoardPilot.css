@@ -376,3 +376,20 @@
   .a1-v04-readable-note p { margin: 1px 0; }
   .teacher-pilot-card:has(.a1-v04-readable-note) { gap: 3px; }
 }
+
+/* Owner review 2026-10-17: desktop full-frame QA caught Otti overlapping
+ * s01-first-listen/gist-choice wrong-feedback at 1280x900.
+ * During v04 feedback (both correct and wrong), leave the answer/reasoning
+ * unobstructed and keep Otti visible only as a small bottom-corner tutor.
+ * Scoped to v04; do not change the old A1 pilot or B1 visual engine. */
+@media (min-width: 621px) {
+  .premium-lesson-stage.is-teacher-lab.has-board:has(.a1-v04-learning-visual):has(.teacher-pilot-retry) .premium-lesson-character,
+  .premium-lesson-stage.is-teacher-lab.has-board:has(.a1-v04-learning-visual):has(.teacher-pilot-right) .premium-lesson-character {
+    position: absolute !important;
+    inset: auto 4px 4px auto !important;
+    width: 54px !important;
+    height: 54px !important;
+    padding: 0 !important;
+    transform: none !important;
+  }
+}
