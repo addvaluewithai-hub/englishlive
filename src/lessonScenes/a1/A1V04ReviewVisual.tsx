@@ -1,4 +1,4 @@
-import { useId } from 'react';
+import { useId, type ReactNode } from 'react';
 
 /**
  * Content-led A1 v04 board.
@@ -117,7 +117,7 @@ function BoardText({x,y,children,size=20,color=INK,weight=800,rtl=false}:
     direction={rtl?'rtl':'ltr'} unicodeBidi="isolate">{children}</text>;
 }
 function Card({x,w=318,accent='#e0f6ef',children,y=81,h=111}:
-  {x:number;w?:number;accent?:string;children:React.ReactNode;y?:number;h?:number}) {
+  {x:number;w?:number;accent?:string;children:ReactNode;y?:number;h?:number}) {
   return <g><rect x={x} y={y} width={w} height={h} rx={20} fill={BGCARD} stroke={LINE} strokeWidth="2"/>
     <rect x={x+3} y={y+3} width={w-6} height={7} rx={4} fill={accent}/>{children}</g>;
 }
