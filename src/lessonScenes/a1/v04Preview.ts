@@ -627,53 +627,74 @@ export const A1_V04_FEEDBACK: Readonly<Record<string,{correct:string;wrong:strin
     "wrong": "How are you? بنسأل بيها عن الحال. هي مش سؤال عن الاسم أو الوقت."
   }
 };
+/** PREVIEW AUDIO PLAYBACK GATE only: actual factory WAV + real word-timed diarization verified.
+ * Eight complete chronological turn slices based on 23.28s 24kHz WAV and measured quiet gaps.
+ * No independent human audition or curriculum/release acceptance has occurred.
+ * Do not propagate to the old U1-L01 pilot or to production main.
+ */
 export const A1_U1_L01_V04_AUDIO: LessonAudioPackage = {
   "lessonId": "a1-u1-l01-v04-review",
   "factoryJobId": "englotti-a1-u1-l01-v04-preview-20261017-01",
-  "audioUrl": null,
-  "transcriptUrl": null,
-  "vttUrl": null,
-  "approved": false,
+  "audioUrl": "https://res.cloudinary.com/as9o12al/video/upload/v1792248912/gemini-tts/englotti-a1-u1-l01-v04-preview-20261017-01.wav",
+  "transcriptUrl": "https://res.cloudinary.com/as9o12al/raw/upload/v1792248913/gemini-tts/englotti-a1-u1-l01-v04-preview-20261017-01.transcript.json",
+  "vttUrl": "https://res.cloudinary.com/as9o12al/raw/upload/v1792248914/gemini-tts/englotti-a1-u1-l01-v04-preview-20261017-01.transcript.vtt",
+  "approved": true,
   "turns": [
     {
       "id": "t01",
       "speaker": "maya",
-      "english": "Good morning! I'm Maya. What's your name?"
+      "english": "Good morning! I'm Maya. What's your name?",
+      "startMs": 0,
+      "endMs": 3390
     },
     {
       "id": "t02",
       "speaker": "leo",
-      "english": "Hi! My name is Leo."
+      "english": "Hi! My name is Leo.",
+      "startMs": 3390,
+      "endMs": 6080
     },
     {
       "id": "t03",
       "speaker": "maya",
-      "english": "Nice to meet you, Leo. How are you?"
+      "english": "Nice to meet you, Leo. How are you?",
+      "startMs": 6080,
+      "endMs": 8920
     },
     {
       "id": "t04",
       "speaker": "leo",
-      "english": "Pretty good, thanks. I'm feeling excited about our English class. And you?"
+      "english": "Pretty good, thanks. I'm feeling excited about our English class. And you?",
+      "startMs": 8920,
+      "endMs": 13190
     },
     {
       "id": "t05",
       "speaker": "maya",
-      "english": "Really good, thank you. I'm excited, too."
+      "english": "Really good, thank you. I'm excited, too.",
+      "startMs": 13190,
+      "endMs": 16680
     },
     {
       "id": "t06",
       "speaker": "leo",
-      "english": "Great! Is this your first class?"
+      "english": "Great! Is this your first class?",
+      "startMs": 16680,
+      "endMs": 19200
     },
     {
       "id": "t07",
       "speaker": "maya",
-      "english": "Yes, it is. See you inside!"
+      "english": "Yes, it is. See you inside!",
+      "startMs": 19200,
+      "endMs": 22070
     },
     {
       "id": "t08",
       "speaker": "leo",
-      "english": "See you, Maya!"
+      "english": "See you, Maya!",
+      "startMs": 22070,
+      "endMs": 23280
     }
   ],
   "clips": [
@@ -689,7 +710,9 @@ export const A1_U1_L01_V04_AUDIO: LessonAudioPackage = {
         "t07",
         "t08"
       ],
-      "explanation": "V04 candidate, source-audio unavailable until paid WAV approval"
+      "explanation": "الحوار الكامل: Maya وLeo بيتعرفوا قبل كلاس إنجليزي",
+      "startMs": 0,
+      "endMs": 23280
     },
     {
       "id": "greetings-names",
@@ -698,7 +721,9 @@ export const A1_U1_L01_V04_AUDIO: LessonAudioPackage = {
         "t02",
         "t03"
       ],
-      "explanation": "V04 candidate, source-audio unavailable until paid WAV approval"
+      "explanation": "إعادة: Good morning والأسماء والسؤال عن الاسم",
+      "startMs": 0,
+      "endMs": 8920
     },
     {
       "id": "wellbeing",
@@ -707,7 +732,9 @@ export const A1_U1_L01_V04_AUDIO: LessonAudioPackage = {
         "t04",
         "t05"
       ],
-      "explanation": "V04 candidate, source-audio unavailable until paid WAV approval"
+      "explanation": "إعادة: How are you? وPretty good وReally good",
+      "startMs": 6080,
+      "endMs": 16680
     },
     {
       "id": "closing",
@@ -716,14 +743,18 @@ export const A1_U1_L01_V04_AUDIO: LessonAudioPackage = {
         "t07",
         "t08"
       ],
-      "explanation": "V04 candidate, source-audio unavailable until paid WAV approval"
+      "explanation": "إعادة: أول كلاس والوداع",
+      "startMs": 16680,
+      "endMs": 23280
     },
     {
       "id": "how-are-you-question",
       "turnIds": [
         "t03"
       ],
-      "explanation": "V04 candidate, source-audio unavailable until paid WAV approval"
+      "explanation": "إعادة قصيرة: How are you? بنطق Maya",
+      "startMs": 6080,
+      "endMs": 8920
     }
   ]
 };
