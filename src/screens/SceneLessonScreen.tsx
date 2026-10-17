@@ -40,6 +40,7 @@ import { ScriptedNarrationDirector } from '../lessonScenes/ScriptedNarrationDire
 import { B1_TEACHER_LAB_SCRIPT, B1_TEACHER_LAB_QUIZ_FEEDBACK, type TeachingBeat } from '../lessonScenes/b1/teacherLabScript';
 import '../lessonScenes/teacherBoardPilot.css';
 import { SceneLessonRuntime } from '../lessonScenes/SceneLessonRuntime';
+import { handoffAnsweredQuizAfterAudiblePcm } from '../lessonScenes/previewQuizHandoff';
 import type { SceneLessonState } from '../lessonScenes/types';
 import { GeminiLiveTransport } from '../live/GeminiLiveTransport';
 import type { LiveClientTool } from '../live/tools';
@@ -775,11 +776,7 @@ export function SceneLessonScreen() {
           setQuizFeedbackRetryVisible(false);
           holdMicForTeacherContinuation.current = false;
           if(sceneRuntime.currentScene.id !== result.sceneId)return;
-          if(!sceneRuntime.markQuizFeedbackPlayed(result.sceneId)) {
-            setError('تعذّر تسجيل نهاية شرح الإجابة. حاول تعيد فتح الدرس لو المشكلة استمرت.');
-            return;
-          }
-          const done=sceneRuntime.completeGradedPreviewQuizAfterAudio(result.sceneId);
+          const done=handoffAnsweredQuizAfterAudiblePcm(sceneRuntime,result.sceneId);
           if(done.error) {
             setError('شرح Otti خلص، بس حصل خطأ في الانتقال: '+done.error);
             return;
