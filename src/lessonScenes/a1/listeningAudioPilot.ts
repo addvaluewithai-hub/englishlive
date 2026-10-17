@@ -9,7 +9,7 @@
  */
 export interface LessonAudioTurn {
   id:string;
-  speaker:'maya'|'leo';
+  speaker:'maya'|'leo'|'recording';
   english:string;
   /** Final reviewed bounds in the single Gemini TTS WAV, after delivery. */
   startMs?:number;
@@ -19,6 +19,10 @@ export interface LessonAudioClip {
   id:string;
   turnIds:readonly string[];
   explanation:string;
+  /** Optional second genuine source WAV for a separately prerecorded task. */
+  audioUrl?:string;
+  transcriptUrl?:string;
+  vttUrl?:string;
   /** Bounds MUST come from a reviewed factory result, not sample script length. */
   startMs?:number;
   endMs?:number;
@@ -83,6 +87,8 @@ export function validateLessonAudio(packageData:LessonAudioPackage){
         throw Error('Approved package missing reviewed source turn bounds: '+t.id);
     }
     for(const c of packageData.clips){
+      if(c.audioUrl && (!c.audioUrl.startsWith('https://') || !c.transcriptUrl?.startsWith('https://') || !c.vttUrl?.startsWith('https://')))
+        throw Error('Secondary audio clip must have its own real hosted WAV/transcript/VTT: '+c.id);
       if(!Number.isFinite(c.startMs)||!Number.isFinite(c.endMs)||c.startMs!<0||c.endMs!<=c.startMs!)
         throw Error('Approved package missing reviewed clip bounds: '+c.id);
     }
