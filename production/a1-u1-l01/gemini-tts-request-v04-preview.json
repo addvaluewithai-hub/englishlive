@@ -1,0 +1,71 @@
+{
+  "turns": [
+    {
+      "speaker": "Maya",
+      "text": "Good morning! I'm Maya. What's your name?",
+      "style": "Friendly natural American English adult female, clear A1-friendly pace, genuinely curious on questions, short conversational pauses, warm and relaxed. Avoid dramatic acting or exaggerated slow speech."
+    },
+    {
+      "speaker": "Leo",
+      "text": "Hi! My name is Leo.",
+      "style": "Friendly natural American English adult male, calm and approachable, clear A1-friendly pace, lightly enthusiastic when saying excited, no artificial elongation."
+    },
+    {
+      "speaker": "Maya",
+      "text": "Nice to meet you, Leo. How are you?",
+      "style": "Friendly natural American English adult female, clear A1-friendly pace, genuinely curious on questions, short conversational pauses, warm and relaxed. Avoid dramatic acting or exaggerated slow speech."
+    },
+    {
+      "speaker": "Leo",
+      "text": "Pretty good, thanks. I'm feeling excited about our English class. And you?",
+      "style": "Friendly natural American English adult male, calm and approachable, clear A1-friendly pace, lightly enthusiastic when saying excited, no artificial elongation."
+    },
+    {
+      "speaker": "Maya",
+      "text": "Really good, thank you. I'm excited, too.",
+      "style": "Friendly natural American English adult female, clear A1-friendly pace, genuinely curious on questions, short conversational pauses, warm and relaxed. Avoid dramatic acting or exaggerated slow speech."
+    },
+    {
+      "speaker": "Leo",
+      "text": "Great! Is this your first class?",
+      "style": "Friendly natural American English adult male, calm and approachable, clear A1-friendly pace, lightly enthusiastic when saying excited, no artificial elongation."
+    },
+    {
+      "speaker": "Maya",
+      "text": "Yes, it is. See you inside!",
+      "style": "Friendly natural American English adult female, clear A1-friendly pace, genuinely curious on questions, short conversational pauses, warm and relaxed. Avoid dramatic acting or exaggerated slow speech."
+    },
+    {
+      "speaker": "Leo",
+      "text": "See you, Maya!",
+      "style": "Friendly natural American English adult male, calm and approachable, clear A1-friendly pace, lightly enthusiastic when saying excited, no artificial elongation."
+    }
+  ],
+  "speakers": {
+    "Maya": "Aoede",
+    "Leo": "Achird"
+  },
+  "routing": "explicit",
+  "model": "gemini-3.8-flash-tts",
+  "allow_model_fallback": false,
+  "format": "wav",
+  "sample_rate": 24000,
+  "temperature": 1,
+  "transcript": {
+    "language_codes": [
+      "en-US"
+    ],
+    "diarization": true,
+    "write_vtt": true
+  },
+  "metadata": {
+    "lessonId": "a1-u1-l01-v04-review",
+    "sourceLessonId": "U1-L01",
+    "purpose": "owner-requested-private-evaluation-no-curriculum-release",
+    "edition": "v04-preview01",
+    "source": "english-course review/a1-u1-l01-source-scope-decision-brief-20261017/U1-L01-NATURAL-FIRST-CONTACT-v04.CANDIDATE.json",
+    "jobId": "englotti-a1-u1-l01-v04-preview-20261017-01",
+    "ownerSourceRulings": "PENDING_12",
+    "productMergeAuthorized": "false"
+  }
+}

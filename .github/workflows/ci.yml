@@ -21,6 +21,7 @@ jobs:
       - run: npm run test:learn-pilot
       - run: npm run test:learn-qa-registry
       - run: npm run test:a1-listening
+      - run: npm run test:a1-v04
       - run: npm run test:a1:coverage
 
       - run: npm run test:practice

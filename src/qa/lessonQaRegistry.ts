@@ -5,6 +5,7 @@ import { B1_TEACHER_LAB_SCRIPT } from '../lessonScenes/b1/teacherLabScript';
 import { A1_U1_L01_LISTENING_PILOT } from '../lessonScenes/a1/listeningTeacherPilot';
 import { A1_LISTENING_BEATS } from '../lessonScenes/a1/listeningTeacherScript';
 import { A1_U1_L01_AUDIO, validateLessonAudio } from '../lessonScenes/a1/listeningAudioPilot';
+import { A1_U1_L01_V04_LESSON, A1_V04_BEATS, A1_U1_L01_V04_AUDIO } from '../lessonScenes/a1/v04Preview';
 
 /**
  * Registry for deterministic classroom QA, NOT published lesson enrollment.
@@ -20,6 +21,13 @@ export interface LessonQaRegistration {
   audio?: typeof A1_U1_L01_AUDIO;
 }
 export const LESSON_QA_REGISTRY: Readonly<Record<string, LessonQaRegistration>> = {
+  [A1_U1_L01_V04_LESSON.id]: {
+    lesson:A1_U1_L01_V04_LESSON,
+    beats:A1_V04_BEATS,
+    finalSpeakingSceneId:'s07-new-speaking',
+    visualKey:'a1-v04-review',
+    audio:A1_U1_L01_V04_AUDIO,
+  },
   [A1_U1_L01_LISTENING_PILOT.id]: {
     lesson:A1_U1_L01_LISTENING_PILOT,
     beats:A1_LISTENING_BEATS,

@@ -30,6 +30,8 @@ import { A1_U1_L01_LISTENING_PILOT } from '../lessonScenes/a1/listeningTeacherPi
 import { A1_LISTENING_BEATS, A1_LISTENING_FEEDBACK } from '../lessonScenes/a1/listeningTeacherScript';
 import { A1_U1_L01_AUDIO } from '../lessonScenes/a1/listeningAudioPilot';
 import { A1FirstMeetingVisual } from '../lessonScenes/a1/A1FirstMeetingVisual';
+import { A1V04ReviewVisual, A1V04ReadingNote } from '../lessonScenes/a1/A1V04ReviewVisual';
+import { A1_U1_L01_V04_LESSON, A1_V04_BEATS, A1_V04_FEEDBACK, A1_U1_L01_V04_AUDIO } from '../lessonScenes/a1/v04Preview';
 import { LessonAudioPanel } from '../lessonScenes/LessonAudioPanel';
 import { TeacherLabBoardLayer } from '../lessonScenes/TeacherLabBoardLayer';
 import { ScriptedNarrationDirector } from '../lessonScenes/ScriptedNarrationDirector';
@@ -182,13 +184,16 @@ export function SceneLessonScreen() {
   const { lessonId } = useParams();
   const [params] = useSearchParams();
   const navigate = useNavigate();
+  const v04Review = lessonId === 'a1-u1-l01-v04-review';
   const listeningLab = (lessonId === 'a1-u1-l01-hello-im' && params.get('listeningLab') === '1')
-    || lessonId === 'a1-u1-l01-listening-lab';
+    || lessonId === 'a1-u1-l01-listening-lab' || v04Review;
   const teacherLab = listeningLab || (lessonId === 'b1-u1-l02-keep-conversation-going' && params.get('teacherLab') === '1');
-  const localLesson = listeningLab ? A1_U1_L01_LISTENING_PILOT
+  const localLesson = v04Review ? A1_U1_L01_V04_LESSON
+    : listeningLab ? A1_U1_L01_LISTENING_PILOT
     : teacherLab ? B1_L02_TEACHER_BOARD_PILOT : getRequiredSceneLesson(lessonId);
-  const teachingBeats = listeningLab ? A1_LISTENING_BEATS : B1_TEACHER_LAB_SCRIPT;
-  const quizFeedback = listeningLab ? A1_LISTENING_FEEDBACK : B1_TEACHER_LAB_QUIZ_FEEDBACK;
+  const teachingBeats = v04Review ? A1_V04_BEATS : listeningLab ? A1_LISTENING_BEATS : B1_TEACHER_LAB_SCRIPT;
+  const quizFeedback = v04Review ? A1_V04_FEEDBACK : listeningLab ? A1_LISTENING_FEEDBACK : B1_TEACHER_LAB_QUIZ_FEEDBACK;
+  const activeAudio = v04Review ? A1_U1_L01_V04_AUDIO : A1_U1_L01_AUDIO;
   const profile = readLearnerProfile();
   const character = getCharacterDefinition(params.get('character') ?? profile?.characterId);
   const knownItems = knownItemsForLesson(localLesson.id);
@@ -374,7 +379,7 @@ export function SceneLessonScreen() {
     const registeredTools:LiveClientTool[] = [...sceneRuntime.tools];
     if(listeningLab && lessonAudio.current) {
       registeredTools.push(lessonAudioTool(
-        A1_U1_L01_AUDIO,lessonAudio.current,
+        activeAudio,lessonAudio.current,
         async ()=>{
           if(scripted.current.isReading) return false;
           return waitForTeacherAudioDrain(
@@ -503,7 +508,9 @@ export function SceneLessonScreen() {
     if (answer.accepted) {
       appendQuickActionLog(`[board] ${sceneId} choice=${optionId} ${answer.correct ? 'correct' : 'incorrect'}`);
       learnerSceneAfterSpeech.current = null;
-      const authoredFeedback = quizFeedback[sceneId]?.[answer.correct ? 'correct' : 'wrong'];
+      const authoredFeedback = v04Review && !answer.correct
+        ? A1_V04_FEEDBACK[sceneId]?.wrongByOption?.[optionId] ?? quizFeedback[sceneId]?.wrong
+        : quizFeedback[sceneId]?.[answer.correct ? 'correct' : 'wrong'];
       if (authoredFeedback) {
         pendingQuizFeedback.current = { sceneId, correct: answer.correct };
         compactLog.current.push({ role: 'SCRIPT', text: `[${sceneId}/quiz-${answer.correct ? 'correct' : 'wrong'}] ${authoredFeedback}` });
@@ -648,7 +655,7 @@ export function SceneLessonScreen() {
     const characterPerformance = new CharacterPerformanceController(() => host.current);
     performer.current = characterPerformance;
     if(listeningLab){
-      lessonAudio.current = new LessonAudioController(A1_U1_L01_AUDIO,(state)=>{
+      lessonAudio.current = new LessonAudioController(activeAudio,(state)=>{
         setLessonAudioState(state);
         if(state.status!=='idle'){
           setLearnerMicEnabled(false);
@@ -1002,14 +1009,18 @@ export function SceneLessonScreen() {
               choiceId={quizState?.activityChoiceId}
               questionReady={quizReady && status === 'listening' && Boolean(transport.current?.connected)}
               onChoose={chooseBoardActivity}
-              Visual={listeningLab ? A1FirstMeetingVisual : undefined}
-              extra={listeningLab ? (
-                <LessonAudioPanel audio={A1_U1_L01_AUDIO}
-                  sceneClipId={teachingBeats[currentScene.id]?.find(b=>b.audioClipId)?.audioClipId ?? 'full-conversation'}
+              Visual={v04Review ? A1V04ReviewVisual : listeningLab ? A1FirstMeetingVisual : undefined}
+              extra={v04Review && currentScene.id === 's04-reading-note' ? (
+                <A1V04ReadingNote
+                  text={A1_V04_BEATS['s04-reading-note']?.[0]?.board?.type === 'note'
+                    ? (A1_V04_BEATS['s04-reading-note'][0].board.body ?? '') : ''}/>
+              ) : listeningLab && (!v04Review || teachingBeats[currentScene.id]?.some(beat=>beat.audioClipId)) ? (
+                <LessonAudioPanel audio={activeAudio}
+                  sceneClipId={teachingBeats[currentScene.id]?.find(beat=>beat.audioClipId)?.audioClipId ?? 'full-conversation'}
                   state={lessonAudioState} heardFull={Boolean(heardClips['full-conversation'])}
                   disabled={scripted.current.isReading || teacherSpeaking || !liveLesson}
                   onPlay={replayAuthoredAudio}/>
-              ):undefined}
+              ) : undefined}
             />
           ) : (
             <div className="premium-board-layer" aria-live="polite"><ConversationBoard board={board} /></div>

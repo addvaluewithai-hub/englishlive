@@ -1,0 +1,85 @@
+{
+  "status": "completed",
+  "factoryRunId": 39042763821,
+  "factoryRunUrl": "https://github.com/addvaluewithai-hub/gemini-tts/actions/runs/39042763821",
+  "productPR": "https://github.com/addvaluewithai-hub/englishlive/pull/56",
+  "jobId": "englotti-a1-u1-l01-v04-preview-20261017-01",
+  "sourceEdition": "v04-preview01",
+  "factoryModel": "gemini-3.8-flash-tts",
+  "factoryStatus": "completed",
+  "attemptsBeforeSuccess": 0,
+  "audioFormat": "wav",
+  "sampleRate": 24000,
+  "audioChannels": 1,
+  "pcmBitsPerSample": 16,
+  "audioDurationMs": 23280,
+  "generatedWavBytes": 1123554,
+  "transcriptionDurationMs": 23000,
+  "recognizedWordCount": 54,
+  "sourceWordCount": 54,
+  "diarizationEnabled": true,
+  "speakers": [
+    "spk:0",
+    "spk:1"
+  ],
+  "sourceTurnSpeakers": [
+    "Maya",
+    "Leo",
+    "Maya",
+    "Leo",
+    "Maya",
+    "Leo",
+    "Maya",
+    "Leo"
+  ],
+  "sourceWordSequenceMatched": true,
+  "minorPunctuationNormalizationOnly": true,
+  "transcriptMatchesSourceTurnOrder": true,
+  "turnBoundsMs": [
+    [
+      0,
+      3390
+    ],
+    [
+      3390,
+      6080
+    ],
+    [
+      6080,
+      8920
+    ],
+    [
+      8920,
+      13190
+    ],
+    [
+      13190,
+      16680
+    ],
+    [
+      16680,
+      19200
+    ],
+    [
+      19200,
+      22070
+    ],
+    [
+      22070,
+      23280
+    ]
+  ],
+  "auditMethod": "Factory transcript word timestamps from real 24 kHz WAV. Each turn boundary chosen at lowest measured 100 ms RMS in silence gap, with all diarized source words wholly enclosed; all 8 turns contiguous and in original order.",
+  "waveformSilenceBoundaryCheck": true,
+  "allSpokenWordsInsideAssignedClips": true,
+  "hosted": {
+    "audioUrl": "https://res.cloudinary.com/as9o12al/video/upload/v1792248912/gemini-tts/englotti-a1-u1-l01-v04-preview-20261017-01.wav",
+    "transcriptUrl": "https://res.cloudinary.com/as9o12al/raw/upload/v1792248913/gemini-tts/englotti-a1-u1-l01-v04-preview-20261017-01.transcript.json",
+    "vttUrl": "https://res.cloudinary.com/as9o12al/raw/upload/v1792248914/gemini-tts/englotti-a1-u1-l01-v04-preview-20261017-01.transcript.vtt"
+  },
+  "independentHumanAudioAudition": false,
+  "productionReleaseAuthorized": false,
+  "curriculumApproved": false,
+  "nextManualQA": "Owner listen to all 8 turns and every edited clip in EnglishLive preview; check Maya/Leo voice naturalness and clip boundary clicks; do not claim fully accepted audio or educational pass before real browser/live review.",
+  "originalPilotUnchanged": true
+}
