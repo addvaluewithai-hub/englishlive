@@ -30,7 +30,7 @@ import { A1_U1_L01_LISTENING_PILOT } from '../lessonScenes/a1/listeningTeacherPi
 import { A1_LISTENING_BEATS, A1_LISTENING_FEEDBACK } from '../lessonScenes/a1/listeningTeacherScript';
 import { A1_U1_L01_AUDIO } from '../lessonScenes/a1/listeningAudioPilot';
 import { A1FirstMeetingVisual } from '../lessonScenes/a1/A1FirstMeetingVisual';
-import { A1V04ReviewVisual } from '../lessonScenes/a1/A1V04ReviewVisual';
+import { A1V04ReviewVisual, A1V04ReadingNote } from '../lessonScenes/a1/A1V04ReviewVisual';
 import { A1_U1_L01_V04_LESSON, A1_V04_BEATS, A1_V04_FEEDBACK, A1_U1_L01_V04_AUDIO } from '../lessonScenes/a1/v04Preview';
 import { LessonAudioPanel } from '../lessonScenes/LessonAudioPanel';
 import { TeacherLabBoardLayer } from '../lessonScenes/TeacherLabBoardLayer';
@@ -1010,13 +1010,17 @@ export function SceneLessonScreen() {
               questionReady={quizReady && status === 'listening' && Boolean(transport.current?.connected)}
               onChoose={chooseBoardActivity}
               Visual={v04Review ? A1V04ReviewVisual : listeningLab ? A1FirstMeetingVisual : undefined}
-              extra={listeningLab ? (
+              extra={v04Review && currentScene.id === 's04-reading-note' ? (
+                <A1V04ReadingNote
+                  text={A1_V04_BEATS['s04-reading-note']?.[0]?.board?.type === 'note'
+                    ? A1_V04_BEATS['s04-reading-note'][0].board.body : ''}/>
+              ) : listeningLab && (!v04Review || teachingBeats[currentScene.id]?.some(beat=>beat.audioClipId)) ? (
                 <LessonAudioPanel audio={activeAudio}
-                  sceneClipId={teachingBeats[currentScene.id]?.find(b=>b.audioClipId)?.audioClipId ?? 'full-conversation'}
+                  sceneClipId={teachingBeats[currentScene.id]?.find(beat=>beat.audioClipId)?.audioClipId ?? 'full-conversation'}
                   state={lessonAudioState} heardFull={Boolean(heardClips['full-conversation'])}
                   disabled={scripted.current.isReading || teacherSpeaking || !liveLesson}
                   onPlay={replayAuthoredAudio}/>
-              ):undefined}
+              ) : undefined}
             />
           ) : (
             <div className="premium-board-layer" aria-live="polite"><ConversationBoard board={board} /></div>
