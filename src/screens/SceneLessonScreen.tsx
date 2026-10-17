@@ -217,6 +217,8 @@ export function SceneLessonScreen() {
   const scripted = useRef(new ScriptedNarrationDirector());
   const pendingScriptBoard = useRef<{ sceneId: string; beatId: string; board: SupportBoard | null } | null>(null);
   const pendingQuizFeedback = useRef<{ sceneId: string; correct: boolean } | null>(null);
+  const quizFeedbackTimeout = useRef<number | null>(null);
+  const [quizFeedbackRetryVisible,setQuizFeedbackRetryVisible] = useState(false);
   const [visibleBeatId, setVisibleBeatId] = useState('');
   const scriptNextTimer = useRef<number | null>(null);
   const scriptWatchdog = useRef<number | null>(null);
@@ -248,7 +250,24 @@ export function SceneLessonScreen() {
   const [pace, setPace] = useState<LessonSpeakingPace>(initialCheckpoint.current?.pace ?? 'relaxed');
   const [preflightReady, setPreflightReady] = useState(knownItems.length === 0 && !initialCheckpoint.current);
 
+  function clearQuizFeedbackTimeout() {
+    if (quizFeedbackTimeout.current !== null) window.clearTimeout(quizFeedbackTimeout.current);
+    quizFeedbackTimeout.current = null;
+  }
+
+  function scheduleQuizFeedbackRetry(sceneId:string) {
+    clearQuizFeedbackTimeout();
+    quizFeedbackTimeout.current=window.setTimeout(()=>{
+      if(pendingQuizFeedback.current?.sceneId !== sceneId ||
+        runtime.current?.currentScene.id !== sceneId)return;
+      setQuizFeedbackRetryVisible(true);
+      setError('شرح الإجابة الصوتي ما اكتملش. اضغط «إعادة شرح الإجابة» عشان تسمعه ونكمل بدون تخطي الصوت.');
+    },25_000);
+  }
+
   function clearScriptTimers() {
+    clearQuizFeedbackTimeout();
+    setQuizFeedbackRetryVisible(false);
     if (scriptNextTimer.current !== null) window.clearTimeout(scriptNextTimer.current);
     if (scriptWatchdog.current !== null) window.clearTimeout(scriptWatchdog.current);
     scriptNextTimer.current = null;
@@ -500,6 +519,24 @@ export function SceneLessonScreen() {
     setToolsOpen(false);
   }
 
+  function retryQuizFeedback() {
+    const pending=pendingQuizFeedback.current;
+    const live=transport.current;
+    if(!pending || !live?.connected || runtime.current?.currentScene.id!==pending.sceneId
+      || scripted.current.isReading || playback.current?.isPlaying)return;
+    const line=v04Review && !pending.correct
+      ? A1_V04_FEEDBACK[pending.sceneId]?.wrongByOption?.[runtime.current.snapshot.scenes[pending.sceneId]?.activityChoiceId ?? '']
+        ?? quizFeedback[pending.sceneId]?.wrong
+      : quizFeedback[pending.sceneId]?.[pending.correct ? 'correct':'wrong'];
+    if(!line)return;
+    setError(null);
+    setQuizFeedbackRetryVisible(false);
+    holdMicForTeacherContinuation.current=true;
+    setLearnerMicEnabled(false);
+    live.sendText('READ:\\n'+line);
+    scheduleQuizFeedbackRetry(pending.sceneId);
+  }
+
   function chooseBoardActivity(sceneId: string, optionId: string) {
     const sceneRuntime = runtime.current;
     const live = transport.current;
@@ -516,6 +553,9 @@ export function SceneLessonScreen() {
         : quizFeedback[sceneId]?.[answer.correct ? 'correct' : 'wrong'];
       if (authoredFeedback) {
         pendingQuizFeedback.current = { sceneId, correct: answer.correct };
+        setQuizFeedbackRetryVisible(false);
+        setError(null);
+        scheduleQuizFeedbackRetry(sceneId);
         compactLog.current.push({ role: 'SCRIPT', text: `[${sceneId}/quiz-${answer.correct ? 'correct' : 'wrong'}] ${authoredFeedback}` });
         holdMicForTeacherContinuation.current = true;
         setLearnerMicEnabled(false);
@@ -726,11 +766,31 @@ export function SceneLessonScreen() {
           return;
         }
         if (teacherLab && pendingQuizFeedback.current) {
+          // The actual PCM queue has emitted audible turn-complete. The app
+          // commits the deterministic MC and schedules the next authored scene,
+          // rather than hoping Gemini autonomously calls complete_scene.
           const result = pendingQuizFeedback.current;
           pendingQuizFeedback.current = null;
+          clearQuizFeedbackTimeout();
+          setQuizFeedbackRetryVisible(false);
           holdMicForTeacherContinuation.current = false;
-          if (sceneRuntime.markQuizFeedbackPlayed(result.sceneId)) {
-            live.sendText(`[QUIZ_FEEDBACK_FINISHED] The app graded the authored MC answer as ${result.correct ? 'CORRECT' : 'INCORRECT'}. You have audibly read the authored explanation. NOW call complete_scene, learnerTurnsObserved=0, evidenceType=receptive_comprehension, supportUsed=none, freshIndependentRetry=false. Summary: ${result.correct ? 'Correct board comprehension' : 'Incorrect comprehension; explained correct answer; needs later review'}. This is NOT speaking mastery. Do not speak anything else before the tool call.`);
+          if(sceneRuntime.currentScene.id !== result.sceneId)return;
+          if(!sceneRuntime.markQuizFeedbackPlayed(result.sceneId)) {
+            setError('تعذّر تسجيل نهاية شرح الإجابة. حاول تعيد فتح الدرس لو المشكلة استمرت.');
+            return;
+          }
+          const done=sceneRuntime.completeGradedPreviewQuizAfterAudio(result.sceneId);
+          if(done.error) {
+            setError('شرح Otti خلص، بس حصل خطأ في الانتقال: '+done.error);
+            return;
+          }
+          appendToolLog('app_owned_quiz_handoff',{sceneId:result.sceneId},done);
+          learnerSceneAfterSpeech.current=null;
+          clearDecisionNudge();
+          const nextId=done.nextScene?.id;
+          if(nextId){
+            if(scriptNextTimer.current !== null)window.clearTimeout(scriptNextTimer.current);
+            scriptNextTimer.current=window.setTimeout(()=>startScriptScene(nextId),400);
           }
           return;
         }
@@ -1031,6 +1091,12 @@ export function SceneLessonScreen() {
         ) : null}
 
         {error ? <div className="premium-live-error" role="alert">{error}</div> : null}
+        {quizFeedbackRetryVisible && pendingQuizFeedback.current?.sceneId===currentScene.id ? (
+          <button type="button" className="teacher-pilot-resume"
+            onClick={retryQuizFeedback} disabled={!transport.current?.connected || teacherSpeaking}>
+            <ProductIcon name="refresh" size={18} /> إعادة شرح الإجابة
+          </button>
+        ) : null}
       </main>
 
       <footer className="premium-lesson-footer">
