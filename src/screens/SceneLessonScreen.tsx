@@ -533,7 +533,7 @@ export function SceneLessonScreen() {
     setQuizFeedbackRetryVisible(false);
     holdMicForTeacherContinuation.current=true;
     setLearnerMicEnabled(false);
-    live.sendText('READ:\\n'+line);
+    live.sendText('READ:\n'+line);
     scheduleQuizFeedbackRetry(pending.sceneId);
   }
 
