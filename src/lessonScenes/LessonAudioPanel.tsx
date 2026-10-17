@@ -16,7 +16,7 @@ export function LessonAudioPanel({
   const playing=state.status==='playing';
   const loading=state.status==='loading';
   const busy=loading||playing;
-  const speaker=state.speaker==='maya'?'Maya':state.speaker==='leo'?'Leo':null;
+  const speaker=state.speaker==='maya'?'Maya':state.speaker==='leo'?'Leo':state.speaker==='recording'?'Recorded message':null;
   const spokenLine=heardFull && playing ? audio.turns.find(turn=>turn.id===state.turnId)?.english : null;
   return <div className="a1-audio-panel" role="group" aria-label="Lesson recording playback">
     <div className="a1-audio-panel-copy">
