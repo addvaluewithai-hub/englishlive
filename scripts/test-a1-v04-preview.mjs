@@ -19,13 +19,25 @@ test('isolated v04 is registered; the old pilot remains unmodified',()=>{
   assertQaRegistration(registry);
   assert.ok(getQaLessonVisual('a1-v04-review'));
 });
-test('v04 natural listening contains eight reviewed source turns and honest missing WAV status',()=>{
+test('v04 recording is real reviewed-preview WAV from single fixed Gemini job with eight time-bounded turns',()=>{
   validateLessonAudio(audio);
   assert.equal(audio.turns.length,8);
   assert.equal(audio.clips.length,5);
-  assert.equal(audio.approved,false);
-  assert.equal(audio.audioUrl,null);
+  assert.equal(audio.approved,true);
+  assert.equal(audio.audioUrl,'https://res.cloudinary.com/as9o12al/video/upload/v1792248912/gemini-tts/englotti-a1-u1-l01-v04-preview-20261017-01.wav');
   assert.equal(audio.factoryJobId,'englotti-a1-u1-l01-v04-preview-20261017-01');
+  assert.match(audio.transcriptUrl,/\.transcript\.json$/);
+  assert.match(audio.vttUrl,/\.transcript\.vtt$/);
+  const boundaries=[0,3390,6080,8920,13190,16680,19200,22070,23280];
+  assert.deepEqual(audio.turns.map(t=>t.startMs),boundaries.slice(0,-1));
+  assert.deepEqual(audio.turns.map(t=>t.endMs),boundaries.slice(1));
+  for (const c of audio.clips) {
+    const first=audio.turns.findIndex(t=>t.id===c.turnIds[0]);
+    const last=audio.turns.findIndex(t=>t.id===c.turnIds.at(-1));
+    assert.equal(c.startMs,audio.turns[first].startMs);
+    assert.equal(c.endMs,audio.turns[last].endMs);
+    assert.ok(c.endMs>c.startMs);
+  }
   assert.equal(getAuthoredClip(audio,'full-conversation').length,8);
   assert.equal(getAuthoredClip(audio,'greetings-names').length,3);
   assert.equal(getAuthoredClip(audio,'wellbeing').length,3);
@@ -45,13 +57,13 @@ test('all twenty-two teacher beats and bespoke SVG QA states are captured from a
   assert.equal(cases.filter(c=>c.state==='wrong-feedback').length,6);
   assert.equal(cases.at(-1).state,'complete');
 });
-test('gist preview has no premature topic clue or source-audio fake pass',()=>{
+test('gist preview has no premature topic clue even though verified source WAV is now present',()=>{
   const pre=beats['s01-first-listen'];
   const priorText=pre[0].line + ' ' + JSON.stringify(pre[0].board) + ' ' + JSON.stringify(pre[1].board);
   assert.doesNotMatch(priorText,/(first meeting|first class|كلاس إنجليزي|classmates|بتتعرفوا|بيتقابلوا)/i);
   assert.equal(pre[1].audioClipId,'full-conversation');
-  assert.equal(audio.audioUrl,null);
-  assert.equal(audio.approved,false);
+  assert.match(audio.audioUrl,/\.wav$/);
+  assert.equal(audio.approved,true);
   const q=lesson.scenes[0].activity;
   assert.equal(q?.correctOptionId,'new-classmates');
   assert.equal(q.options.indexOf(q.options.find(o=>o.id==='new-classmates')),2);
@@ -71,7 +83,7 @@ test('six MCs have balanced answer positions and exact teacher correction for ea
   assert.match(beats['s07-new-speaking'][0].line,/Sam/);
 });
 
-test('paid TTS job is exact immutable v04 eight-turn script with two expected voices, but no approved output yet', async()=>{
+test('completed single paid TTS job is exact immutable v04 eight-turn script with two original voices', async()=>{
   const req=JSON.parse(await readFile(new URL('../production/a1-u1-l01/gemini-tts-request-v04-preview.json',import.meta.url),'utf8'));
   assert.deepEqual(req.turns.map(t=>t.text),audio.turns.map(t=>t.english),'Never dispatch stale pilot02 script');
   assert.deepEqual(req.turns.map(t=>t.speaker),audio.turns.map(t=>t.speaker==='maya'?'Maya':'Leo'));
@@ -82,6 +94,22 @@ test('paid TTS job is exact immutable v04 eight-turn script with two expected vo
   assert.equal(req.transcript.write_vtt,true);
   assert.equal(req.transcript.diarization,true);
   assert.equal(req.metadata.jobId,audio.factoryJobId);
-  assert.equal(audio.approved,false);
-  assert.equal(audio.audioUrl,null);
+  assert.equal(audio.approved,true);
+  assert.ok(audio.audioUrl?.startsWith('https://res.cloudinary.com/as9o12al/'));
+});
+
+test('verified audio transcript coverage matches exact source and overlap-safe clip bounds',async()=>{
+  const audit=JSON.parse(await readFile(new URL('../production/a1-u1-l01/gemini-tts-v04-delivery-audit.json',import.meta.url),'utf8'));
+  assert.equal(audit.status,'completed');
+  assert.equal(audit.factoryRunId,39042763821);
+  assert.equal(audit.jobId,audio.factoryJobId);
+  assert.equal(audit.audioFormat,'wav');
+  assert.equal(audit.sampleRate,24000);
+  assert.equal(audit.audioDurationMs,23280);
+  assert.equal(audit.recognizedWordCount,54);
+  assert.deepEqual(audit.speakers,['spk:0','spk:1']);
+  assert.equal(audit.independentHumanAudioAudition,false);
+  assert.equal(audit.curriculumApproved,false);
+  assert.deepEqual(audit.turnBoundsMs,audio.turns.map(t=>[t.startMs,t.endMs]));
+  assert.equal(audit.waveformSilenceBoundaryCheck,true);
 });
