@@ -587,58 +587,77 @@ export const A1_L02_FEEDBACK:Readonly<Record<string,{correct:string;wrong:string
     "wrong": "How old are you? هتسأل عن الرقم من البداية. Who is nineteen? هتسأل مين الشخص. لكن للتأكد: Are you nineteen?"
   }
 };
+/** Audio preview playback gate only. Two independently recorded factory jobs: source dialogue (19.12s) and voicemail (10.28s). Actual audio verified as mono 24kHz PCM; word transcript normalized 'nineteen' to 19 and phone 'five zero' to '50'. 7 source-turn split boundaries selected at 80ms RMS minima inside diarized speaker gaps. NO human audio audition or curriculum approval. */
 export const A1_L02_AUDIO:LessonAudioPackage = {
   "lessonId": "a1-u1-l02-age-review",
   "factoryJobId": "englotti-a1-u1-l02-dialogue-v01-20261017",
-  "audioUrl": null,
-  "transcriptUrl": null,
-  "vttUrl": null,
-  "approved": false,
+  "audioUrl": "https://res.cloudinary.com/as9o12al/video/upload/v1792255538/gemini-tts/englotti-a1-u1-l02-dialogue-v01-20261017.wav",
+  "transcriptUrl": "https://res.cloudinary.com/as9o12al/raw/upload/v1792255539/gemini-tts/englotti-a1-u1-l02-dialogue-v01-20261017.transcript.json",
+  "vttUrl": "https://res.cloudinary.com/as9o12al/raw/upload/v1792255540/gemini-tts/englotti-a1-u1-l02-dialogue-v01-20261017.transcript.vtt",
+  "approved": true,
   "turns": [
     {
       "id": "t01",
       "speaker": "maya",
-      "english": "Here's your English class card, Leo."
+      "english": "Here's your English class card, Leo.",
+      "startMs": 0,
+      "endMs": 2670
     },
     {
       "id": "t02",
       "speaker": "leo",
-      "english": "Thanks! What do I write?"
+      "english": "Thanks! What do I write?",
+      "startMs": 2670,
+      "endMs": 4930
     },
     {
       "id": "t03",
       "speaker": "maya",
-      "english": "Your name and age. How old are you?"
+      "english": "Your name and age. How old are you?",
+      "startMs": 4930,
+      "endMs": 7560
     },
     {
       "id": "t04",
       "speaker": "leo",
-      "english": "I'm nineteen years old. What about you?"
+      "english": "I'm nineteen years old. What about you?",
+      "startMs": 7560,
+      "endMs": 10600
     },
     {
       "id": "t05",
       "speaker": "maya",
-      "english": "I'm twenty-one."
+      "english": "I'm twenty-one.",
+      "startMs": 10600,
+      "endMs": 11680
     },
     {
       "id": "t06",
       "speaker": "leo",
-      "english": "Nineteen goes here, right?"
+      "english": "Nineteen goes here, right?",
+      "startMs": 11680,
+      "endMs": 14270
     },
     {
       "id": "t07",
       "speaker": "maya",
-      "english": "Yes. Write nineteen in this box."
+      "english": "Yes. Write nineteen in this box.",
+      "startMs": 14270,
+      "endMs": 17580
     },
     {
       "id": "t08",
       "speaker": "leo",
-      "english": "Great, thank you!"
+      "english": "Great, thank you!",
+      "startMs": 17580,
+      "endMs": 19120
     },
     {
       "id": "phone-01",
       "speaker": "recording",
-      "english": "Hello. This is a practice number: five, zero, two, six, eight, three, six, eight. Thank you."
+      "english": "Hello. This is a practice number: five, zero, two, six, eight, three, six, eight. Thank you.",
+      "startMs": 0,
+      "endMs": 10280
     }
   ],
   "clips": [
@@ -654,7 +673,9 @@ export const A1_L02_AUDIO:LessonAudioPackage = {
         "t07",
         "t08"
       ],
-      "explanation": "الحوار الكامل عن بطاقة السن، مش رسالة التليفون"
+      "explanation": "الحوار الكامل عن بطاقة السن، مش رسالة التليفون",
+      "startMs": 0,
+      "endMs": 19120
     },
     {
       "id": "age-exchange",
@@ -663,14 +684,21 @@ export const A1_L02_AUDIO:LessonAudioPackage = {
         "t04",
         "t05"
       ],
-      "explanation": "سؤال السن والإجابات القصيرة والطويلة"
+      "explanation": "سؤال السن والإجابات القصيرة والطويلة",
+      "startMs": 4930,
+      "endMs": 11680
     },
     {
       "id": "phone-message",
       "turnIds": [
         "phone-01"
       ],
-      "explanation": "رسالة مسجلة منفصلة فيها رقم تليفون تدريبي من 8 خانات"
+      "explanation": "رسالة مسجلة منفصلة فيها رقم تليفون تدريبي من 8 خانات",
+      "startMs": 0,
+      "endMs": 10280,
+      "audioUrl": "https://res.cloudinary.com/as9o12al/video/upload/v1792255549/gemini-tts/englotti-a1-u1-l02-phone-v01-20261017.wav",
+      "transcriptUrl": "https://res.cloudinary.com/as9o12al/raw/upload/v1792255550/gemini-tts/englotti-a1-u1-l02-phone-v01-20261017.transcript.json",
+      "vttUrl": "https://res.cloudinary.com/as9o12al/raw/upload/v1792255550/gemini-tts/englotti-a1-u1-l02-phone-v01-20261017.transcript.vtt"
     }
   ]
 };
