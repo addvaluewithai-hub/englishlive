@@ -1,11 +1,13 @@
 import type { ComponentType } from 'react';
 import { TeacherLabVisual } from '../lessonScenes/TeacherLabVisual';
 import { A1FirstMeetingVisual } from '../lessonScenes/a1/A1FirstMeetingVisual';
+import { A1V04ReviewVisual } from '../lessonScenes/a1/A1V04ReviewVisual';
 
 /** Authoring registry: every independently produced lesson MUST supply bespoke art. */
 const VISUALS: Readonly<Record<string, ComponentType<{sceneId:string;beatId:string}>>> = {
   'b1-relationship-journey': TeacherLabVisual,
   'a1-first-meeting': A1FirstMeetingVisual,
+  'a1-v04-review': A1V04ReviewVisual,
 };
 
 export function getQaLessonVisual(key:string):ComponentType<{sceneId:string;beatId:string}> {
