@@ -88,8 +88,8 @@ test('no answer leak in actual first-listen or independent phone recording',asyn
 test('QA registry captures all beats, audio states, six correct and six wrong outcomes',()=>{
   const cases=buildLessonQaCases(LESSON_QA_REGISTRY[lesson.id]);
   assert.equal(cases.filter(c=>c.state==='teaching'||c.state==='speaking-listening').length,20);
-  assert.equal(cases.filter(c=>c.state==='audio-loading').length,3);
-  assert.equal(cases.filter(c=>c.state==='audio-playing').length,3);
+  assert.equal(cases.filter(c=>c.state==='audio-loading').length,4); // full; age replay; age-question replay; separate phone
+  assert.equal(cases.filter(c=>c.state==='audio-playing').length,4); // full; age replay; age-question replay; separate phone
   assert.equal(cases.filter(c=>c.state==='question').length,6);
   assert.equal(cases.filter(c=>c.state==='correct-feedback').length,6);
   assert.equal(cases.filter(c=>c.state==='wrong-feedback').length,6);
