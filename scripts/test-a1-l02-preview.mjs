@@ -72,7 +72,7 @@ test('six activities have correct keys and spoken feedback; wrong choices never 
   assert.equal(lesson.scenes.at(-1).interaction.kind,'fresh_transfer');
   assert.match(lesson.scenes.at(-1).interaction.setup,/24/);
 });
-test('no answer leak in actual first-listen or independent phone recording',()=>{
+test('no answer leak in actual first-listen or independent phone recording',async()=>{
   for(const k of ['listen-first/listen-neutral','listen-first/listen-question','voicemail/voicemail-context','voicemail/voicemail-question']){
     const f=A1_L02_FRAMES[k];
     const x=[f.title,f.items.join(' '),f.gloss??'',f.footer].join(' ');
